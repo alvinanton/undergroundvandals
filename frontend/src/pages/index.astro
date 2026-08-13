@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Underground Vandals | Coming Soon">
+  <section class="flex flex-col items-center justify-center min-h-[65vh] text-center px-4">
+    
+    {/* Status Badge with pulse animation */}
+    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-mono uppercase tracking-wider mb-6">
+      <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+      System Initialization
+    </div>
+
+    {/* Main Title */}
+    <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight uppercase max-w-3xl">
+      Underground <span class="text-orange-500">Vandals</span>
+    </h1>
+
+    {/* Subtitle */}
+    <p class="text-zinc-400 text-base sm:text-lg max-w-xl mt-4 leading-relaxed font-sans">
+      We are preparing the platform for media content deployment.
+    </p>
+
+    {/* System Status Cards */}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-10 w-full max-w-lg text-left font-mono text-xs">
+      <div class="p-3.5 bg-zinc-900/60 border border-zinc-800/80 rounded-xl flex items-center justify-between">
+        <span class="text-zinc-500">API Backend</span>
+        <span class="text-emerald-400 font-medium">● ONLINE</span>
+      </div>
+      <div class="p-3.5 bg-zinc-900/60 border border-zinc-800/80 rounded-xl flex items-center justify-between">
+        <span class="text-zinc-500">PostgreSQL</span>
+        <span class="text-emerald-400 font-medium">● READY</span>
+      </div>
+      <div class="p-3.5 bg-zinc-900/60 border border-zinc-800/80 rounded-xl flex items-center justify-between">
+        <span class="text-zinc-500">Frontend UI</span>
+        <span class="text-amber-400 font-medium">● IN PROGRESS</span>
+      </div>
+    </div>
+
+  </section>
+</Layout>

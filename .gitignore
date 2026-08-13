@@ -1,0 +1,15 @@
+# Visual Studio & C# Backend (.NET)
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+
+# Astro / Frontend Node
+node_modules/
+dist/
+.astro/
+
+# Archivos de entorno / secretos
+.env
+.env.*

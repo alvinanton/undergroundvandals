@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: underground_postgres
+    environment:
+      POSTGRES_USER: ug_user
+      POSTGRES_PASSWORD: ug_password
+      POSTGRES_DB: underground_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
