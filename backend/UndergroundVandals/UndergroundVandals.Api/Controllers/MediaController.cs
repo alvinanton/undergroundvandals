@@ -88,7 +88,7 @@ public class MediaController : ControllerBase
     }
 
     // POST: api/media/upload
-    [Authorize]
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPost("upload")]
     public async Task<ActionResult<MediaResponseDto>> Upload([FromForm] CreateMediaDto dto)
     {
@@ -137,7 +137,7 @@ public class MediaController : ControllerBase
     }
 
     // PATCH: api/media/{id}/archive
-    [Authorize]
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPatch("{id:guid}/archive")]
     public async Task<IActionResult> ToggleArchive(Guid id)
     {
@@ -158,7 +158,7 @@ public class MediaController : ControllerBase
     }
 
     // DELETE: api/media/{id}
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -178,7 +178,7 @@ public class MediaController : ControllerBase
     }
 
     // PUT: api/media/{id}
-    [Authorize]
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<MediaResponseDto>> Update(Guid id, [FromBody] UpdateMediaDto dto)
     {
@@ -186,7 +186,7 @@ public class MediaController : ControllerBase
 
         if (item == null)
             return NotFound(new { message = "Media item not found." });
-                
+
         item.Title = dto.Title;
         item.Category = string.IsNullOrWhiteSpace(dto.Category) ? "General" : dto.Category;
         item.Description = dto.Description;

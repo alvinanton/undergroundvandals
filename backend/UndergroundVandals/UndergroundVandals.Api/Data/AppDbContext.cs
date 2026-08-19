@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using UndergroundVandals.Api.Entities;
-using UndergroundVandals.Api.Models;
 
 namespace UndergroundVandals.Api.Data;
 
@@ -12,4 +11,13 @@ public class AppDbContext : DbContext
 
     public DbSet<MediaItem> MediaItems => Set<MediaItem>();
     public DbSet<User> Users => Set<User>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.Role)
+            .HasConversion<string>();
+    }
 }

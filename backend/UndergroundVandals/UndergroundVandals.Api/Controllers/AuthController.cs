@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using UndergroundVandals.Api.Data;
 using UndergroundVandals.Api.DTOs;
-using UndergroundVandals.Api.Models;
+using UndergroundVandals.Api.Entities;
 
 namespace UndergroundVandals.Api.Controllers;
 
@@ -23,6 +23,9 @@ public class AuthController : ControllerBase
         _configuration = configuration;
     }
 
+    /// <summary>
+    /// Authenticates a user, checks active status, updates last login time, and generates a JWT.
+    /// </summary>
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
@@ -33,12 +36,24 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid credentials." });
         }
 
+        // Verify that the account is active
+        if (!user.IsActive)
+        {
+            return Unauthorized(new { message = "Account is deactivated. Please contact an administrator." });
+        }
+
+        // Update last login timestamp
+        user.LastLoginAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
         var token = GenerateJwtToken(user);
 
-        return Ok(new AuthResponseDto(token, user.Username, user.Role));
+        return Ok(new AuthResponseDto(token, user.Username, user.Role.ToString()));
     }
 
-    // Temporary endpoint to create the initial admin user
+    /// <summary>
+    /// Temporary endpoint to seed the initial admin user into the database.
+    /// </summary>
     [HttpPost("seed-admin")]
     public async Task<IActionResult> SeedAdmin([FromBody] LoginDto dto)
     {
@@ -52,7 +67,9 @@ public class AuthController : ControllerBase
             Username = "Admin",
             Email = dto.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-            Role = "Admin"
+            Role = UserRole.Admin,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Users.Add(adminUser);
@@ -61,6 +78,9 @@ public class AuthController : ControllerBase
         return Ok(new { message = "Admin user successfully created." });
     }
 
+    /// <summary>
+    /// Generates a JWT token containing user identity claims and assigned role.
+    /// </summary>
     private string GenerateJwtToken(User user)
     {
         var jwtSettings = _configuration.GetSection("JwtSettings");
@@ -71,7 +91,7 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role)
+            new Claim(ClaimTypes.Role, user.Role.ToString())
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
