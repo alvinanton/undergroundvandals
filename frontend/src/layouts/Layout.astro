@@ -1,4 +1,5 @@
 ---
+import Analytics from '@vercel/analytics/astro';
 import "../styles/global.css";
 
 interface Props {
@@ -60,5 +61,6 @@ const { title = "Underground Vandals" } = Astro.props;
 				reserved.
 			</p>
 		</footer>
+		<Analytics />
 	</body>
 </html>
