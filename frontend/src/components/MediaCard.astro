@@ -6,49 +6,90 @@ interface Props {
 }
 
 const { item } = Astro.props;
+
+// Extensiones conocidas de video
+const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.m4v'];
+const urlLower = item.url ? item.url.toLowerCase() : '';
+const hasVideoExtension = videoExtensions.some(ext => urlLower.endsWith(ext));
+
+// Detección inteligente de video
+const isVideo = 
+  item.type === 1 || 
+  item.type === '1' || 
+  (typeof item.type === 'string' && item.type.toLowerCase() === 'video') ||
+  hasVideoExtension;
 ---
 
-<div class="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all duration-300 shadow-lg group flex flex-col justify-between">
+{/* Agregamos la clase media-card-item y data-hashtags para el sistema de filtrado */}
+<div 
+  class="media-card-item bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all duration-300 shadow-lg group flex flex-col justify-between"
+  data-hashtags={JSON.stringify(item.hashtags || [])}
+>
   <div>
-    {/* Media Preview */}
-    <div class="relative aspect-square overflow-hidden bg-zinc-950">
-      {item.type === 0 ? (
+    {/* Disparador del Modal */}
+    <button 
+      type="button"
+      class="media-card-trigger relative aspect-square w-full overflow-hidden bg-zinc-950 text-left focus:outline-none cursor-pointer group"
+      data-url={item.url}
+      data-type={isVideo ? 'video' : 'image'}
+      data-description={item.description || ''}
+      data-category={item.category || ''}
+      data-hashtags={JSON.stringify(item.hashtags || [])}
+    >
+      {!isVideo ? (
         <img 
           src={item.url} 
-          alt={item.title} 
+          alt={item.description || item.title || "Graffiti item"} 
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
           loading="lazy"
         />
       ) : (
-        <video 
-          src={item.url} 
-          controls 
-          class="w-full h-full object-cover"
-        />
-      )}
-      
-      <span class="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-xs px-2.5 py-1 rounded-full text-zinc-300 border border-zinc-700/50">
-        {item.category}
-      </span>
-    </div>
-
-    {/* Info Block */}
-    <div class="p-4">
-      <h3 class="font-bold text-lg text-zinc-100 truncate">{item.title}</h3>
-      {item.description && (
-        <p class="text-zinc-400 text-sm mt-1 line-clamp-2">{item.description}</p>
-      )}
-
-      {/* Hashtags */}
-      {item.hashtags && item.hashtags.length > 0 && (
-        <div class="flex flex-wrap gap-1.5 mt-3">
-          {item.hashtags.map((tag) => (
-            <span class="text-xs font-mono text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-md">
-              #{tag}
+        <div class="relative w-full h-full">
+          <video 
+            src={item.url} 
+            class="w-full h-full object-cover pointer-events-none" 
+            muted 
+          />
+          <div class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+            <span class="w-12 h-12 flex items-center justify-center rounded-full bg-black/60 text-white border border-zinc-700/50 backdrop-blur-sm group-hover:scale-110 transition-transform">
+              ▶
             </span>
-          ))}
+          </div>
         </div>
       )}
-    </div>
+      
+      {/* Category Badge */}
+      {item.category && (
+        <span class="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-xs px-2.5 py-1 rounded-full text-zinc-300 border border-zinc-700/50 pointer-events-none">
+          {item.category}
+        </span>
+      )}
+    </button>
+
+    {/* Info Block */}
+    {(item.description || (item.hashtags && item.hashtags.length > 0)) && (
+      <div class="p-4">
+        {item.description && (
+          <p class="text-zinc-300 text-sm line-clamp-2 leading-relaxed">
+            {item.description}
+          </p>
+        )}
+
+        {/* Hashtags Clickeables más Pequeños */}
+        {item.hashtags && item.hashtags.length > 0 && (
+          <div class={`flex flex-wrap gap-1.5 ${item.description ? 'mt-3' : 'mt-0'}`}>
+            {item.hashtags.map((tag) => (
+              <button
+                type="button"
+                class="hashtag-btn text-[10px] font-mono text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 hover:border-orange-500/40 px-1.5 py-0.5 rounded transition-all cursor-pointer"
+                data-tag={tag}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
   </div>
 </div>

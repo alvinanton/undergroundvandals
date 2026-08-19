@@ -1,0 +1,199 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const token = Astro.cookies.get('uv_auth_token')?.value;
+const user = Astro.locals.user;
+
+// Route Guard: Redirigir a login si no hay token o a dashboard si no es Admin
+if (!token) return Astro.redirect('/admin/login');
+if (user?.role !== 'Admin') return Astro.redirect('/admin');
+---
+
+<Layout title="Users Management | Underground Vandals">
+  <div class="space-y-8 max-w-5xl mx-auto pb-12">
+    
+    {/* Header */}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
+      <div>
+        <a href="/admin" class="text-xs font-mono text-zinc-400 hover:text-orange-500 mb-2 inline-block transition-colors">
+          ← Back to Dashboard
+        </a>
+        <h1 class="text-3xl font-black uppercase tracking-tight text-white">
+          Users <span class="text-orange-500">Management</span>
+        </h1>
+      </div>
+
+      <button 
+        id="open-create-modal"
+        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+      >
+        + Create Editor
+      </button>
+    </div>
+
+    {/* Table */}
+    <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 backdrop-blur-md shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+              <th class="py-3 px-4">Username</th>
+              <th class="py-3 px-4">Email</th>
+              <th class="py-3 px-4">Role</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body" class="divide-y divide-zinc-800/50 text-xs font-mono">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-zinc-500">Loading users...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {/* Modal: Create User */}
+  <div id="create-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-md w-full space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-zinc-800/80 pb-4">
+        <h3 class="text-base font-bold text-white uppercase tracking-wide">Create New Editor</h3>
+        <button id="close-create-modal" class="text-zinc-400 hover:text-white font-mono text-sm">✕</button>
+      </div>
+
+      <form id="create-user-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">Username *</label>
+          <input type="text" name="username" required class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">Email *</label>
+          <input type="email" name="email" required class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">Password *</label>
+          <input type="password" name="password" required class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500" />
+        </div>
+
+        <div id="modal-status" class="hidden text-xs font-mono text-center rounded-lg p-2.5"></div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" id="cancel-create" class="px-4 py-2 bg-zinc-800 text-zinc-300 font-mono text-xs uppercase rounded-lg">Cancel</button>
+          <button type="submit" id="submit-create" class="px-4 py-2 bg-orange-500 text-zinc-950 font-black font-mono text-xs uppercase rounded-lg">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:5098';
+
+  function getToken(): string | undefined {
+    return document.cookie.split('; ').find(row => row.startsWith('uv_auth_token='))?.split('=')[1];
+  }
+
+  async function fetchUsers() {
+    const tableBody = document.getElementById('users-table-body');
+    if (!tableBody) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/users`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      if (!res.ok) throw new Error();
+      
+      const users = await res.json();
+      
+      tableBody.innerHTML = users.map((u: any) => `
+        <tr class="hover:bg-zinc-800/30 transition-colors">
+          <td class="py-3 px-4 font-bold text-zinc-200">${u.username}</td>
+          <td class="py-3 px-4 text-zinc-400">${u.email}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-full">${u.role}</span>
+          </td>
+          <td class="py-3 px-4">
+            ${u.isActive 
+              ? `<span class="px-2 py-0.5 text-[10px] bg-emerald-950/60 text-emerald-400 border border-emerald-900/80 rounded-full">Active</span>`
+              : `<span class="px-2 py-0.5 text-[10px] bg-red-950/60 text-red-400 border border-red-900/80 rounded-full">Inactive</span>`
+            }
+          </td>
+          <td class="py-3 px-4 text-right">
+            ${u.role !== 'Admin' ? `
+              <button 
+                data-user-id="${u.id}" 
+                class="toggle-status-btn px-2.5 py-1 text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded transition-colors cursor-pointer"
+              >
+                ${u.isActive ? 'Deactivate' : 'Activate'}
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+
+      attachToggleListeners();
+
+    } catch {
+      tableBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-red-400 font-mono">Error loading users list.</td></tr>`;
+    }
+  }
+
+  function attachToggleListeners() {
+    document.querySelectorAll('.toggle-status-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-user-id');
+        try {
+          const res = await fetch(`${API_URL}/api/users/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+          });
+          if (res.ok) fetchUsers();
+        } catch {
+          alert('Failed to change user status.');
+        }
+      });
+    });
+  }
+
+  // Modal logic
+  const modal = document.getElementById('create-modal');
+  document.getElementById('open-create-modal')?.addEventListener('click', () => modal?.classList.remove('hidden'));
+  document.getElementById('close-create-modal')?.addEventListener('click', () => modal?.classList.add('hidden'));
+  document.getElementById('cancel-create')?.addEventListener('click', () => modal?.classList.add('hidden'));
+
+  // Create Form Handler
+  document.getElementById('create-user-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    try {
+      const res = await fetch(`${API_URL}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          username: formData.get('username'),
+          email: formData.get('email'),
+          password: formData.get('password'),
+          role: 'Editor'
+        })
+      });
+
+      if (!res.ok) throw new Error('Could not create user.');
+
+      modal?.classList.add('hidden');
+      form.reset();
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || 'Error creating user');
+    }
+  });
+
+  fetchUsers();
+</script>

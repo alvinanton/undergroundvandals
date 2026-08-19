@@ -1,41 +1,242 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import MediaCard from '../components/MediaCard.astro';
+import type { MediaItem } from '../types/media';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+
+let mediaItems: MediaItem[] = [];
+
+try {
+  const response = await fetch(`${API_URL}/api/media`);
+  if (response.ok) {
+    mediaItems = await response.json();
+  }
+} catch (error) {
+  console.error("Error fetching media items for gallery:", error);
+}
 ---
 
-<Layout title="Underground Vandals | Coming Soon">
-  <section class="flex flex-col items-center justify-center min-h-[65vh] text-center px-4">
+<Layout title="Graffiti Archive | Underground Vandals">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-10">
     
-    {/* Status Badge with pulse animation */}
-    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-mono uppercase tracking-wider mb-6">
-      <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-      System Initialization
+    {/* Header con Indicador de Filtro */}
+    <header class="flex items-center justify-between border-b border-zinc-800/80 py-2 mb-5">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+        <h1 class="text-xs font-mono font-semibold uppercase tracking-widest text-zinc-400">
+          Graffiti Archive
+        </h1>
+
+        {/* Indicador de Filtro Activo */}
+        <div id="active-filter-badge" class="hidden items-center gap-1.5 ml-2 pl-2 border-l border-zinc-800">
+          <span class="text-[11px] font-mono text-zinc-500">Filtering:</span>
+          <span id="active-tag-name" class="text-[11px] font-mono text-orange-400 bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 rounded"></span>
+          <button 
+            id="clear-filter-btn" 
+            type="button" 
+            class="text-[10px] font-mono text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+            title="Clear filter"
+          >
+            ✕ Clear
+          </button>
+        </div>
+      </div>
+
+      <span id="item-count-badge" class="text-xs font-mono text-zinc-600 uppercase tracking-wider">
+        [{mediaItems.length} items]
+      </span>
+    </header>
+
+    {/* Grid de Media Cards */}
+    {mediaItems.length > 0 ? (
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {mediaItems.map((item) => (
+          <MediaCard item={item} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-20 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl max-w-2xl mx-auto">
+        <p class="text-zinc-500 font-mono text-sm">[ NO DATA RECORDED IN ARCHIVE ]</p>
+      </div>
+    )}
+
+  </main>
+
+  {/* MODAL LIGHTBOX GLOBAL */}
+  <div 
+    id="media-modal" 
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6"
+  >
+    <button 
+      id="modal-close" 
+      class="absolute top-4 right-4 z-10 p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+      aria-label="Close modal"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+
+    <div class="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl">
+      <div id="modal-media-container" class="w-full flex items-center justify-center max-h-[75vh] bg-black"></div>
+
+      <div id="modal-info" class="w-full p-4 bg-zinc-900/90 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <p id="modal-description" class="text-zinc-200 text-sm font-medium leading-relaxed"></p>
+          <div id="modal-hashtags" class="flex flex-wrap gap-1.5 mt-2"></div>
+        </div>
+        <span id="modal-category" class="text-xs font-mono px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full border border-zinc-700/50 shrink-0"></span>
+      </div>
     </div>
-
-    {/* Main Title */}
-    <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight uppercase max-w-3xl">
-      Underground <span class="text-orange-500">Vandals</span>
-    </h1>
-
-    {/* Subtitle */}
-    <p class="text-zinc-400 text-base sm:text-lg max-w-xl mt-4 leading-relaxed font-sans">
-      We are preparing the platform for media content deployment.
-    </p>
-
-    {/* System Status Cards */}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-10 w-full max-w-lg text-left font-mono text-xs">
-      <div class="p-3.5 bg-zinc-900/60 border border-zinc-800/80 rounded-xl flex items-center justify-between">
-        <span class="text-zinc-500">API Backend</span>
-        <span class="text-emerald-400 font-medium">● ONLINE</span>
-      </div>
-      <div class="p-3.5 bg-zinc-900/60 border border-zinc-800/80 rounded-xl flex items-center justify-between">
-        <span class="text-zinc-500">PostgreSQL</span>
-        <span class="text-emerald-400 font-medium">● READY</span>
-      </div>
-      <div class="p-3.5 bg-zinc-900/60 border border-zinc-800/80 rounded-xl flex items-center justify-between">
-        <span class="text-zinc-500">Frontend UI</span>
-        <span class="text-amber-400 font-medium">● IN PROGRESS</span>
-      </div>
-    </div>
-
-  </section>
+  </div>
 </Layout>
+
+{/* LÓGICA INTERACTIVA DEL MODAL Y FILTROS */}
+<script>
+  const modal = document.getElementById('media-modal');
+  const closeBtn = document.getElementById('modal-close');
+  const mediaContainer = document.getElementById('modal-media-container');
+  const modalDesc = document.getElementById('modal-description');
+  const modalCategory = document.getElementById('modal-category');
+  const modalHashtags = document.getElementById('modal-hashtags');
+
+  // Elementos del Filtro
+  const activeFilterBadge = document.getElementById('active-filter-badge');
+  const activeTagName = document.getElementById('active-tag-name');
+  const clearFilterBtn = document.getElementById('clear-filter-btn');
+  const itemCountBadge = document.getElementById('item-count-badge');
+
+  let currentTagFilter: string | null = null;
+
+  // Lógica de Filtrado
+  function applyTagFilter(tag: string | null) {
+    currentTagFilter = tag;
+    const cards = document.querySelectorAll('.media-card-item');
+    let visibleCount = 0;
+
+    cards.forEach((card) => {
+      const cardTags: string[] = JSON.parse((card as HTMLElement).dataset.hashtags || '[]');
+      if (!tag || cardTags.includes(tag)) {
+        card.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+
+    // ActualizarUI del Header
+    if (tag) {
+      if (activeFilterBadge) {
+        activeFilterBadge.classList.remove('hidden');
+        activeFilterBadge.classList.add('flex');
+      }
+      if (activeTagName) activeTagName.textContent = `#${tag}`;
+    } else {
+      if (activeFilterBadge) {
+        activeFilterBadge.classList.add('hidden');
+        activeFilterBadge.classList.remove('flex');
+      }
+    }
+
+    if (itemCountBadge) {
+      itemCountBadge.textContent = `[${visibleCount} items]`;
+    }
+  }
+
+  // Delegación de eventos para clicks en hashtags (tanto en la tarjeta como en el modal)
+  document.addEventListener('click', (e) => {
+    const target = (e.target as HTMLElement).closest('.hashtag-btn');
+    if (target) {
+      e.stopPropagation();
+      const tag = target.getAttribute('data-tag');
+      if (tag) {
+        // Si el modal está abierto, lo cerramos
+        closeModal();
+        applyTagFilter(tag);
+      }
+    }
+  });
+
+  // Botón para limpiar el filtro
+  clearFilterBtn?.addEventListener('click', () => {
+    applyTagFilter(null);
+  });
+
+  // Lógica del Modal
+  function openModal(data: DOMStringMap) {
+    if (!mediaContainer || !modal) return;
+
+    mediaContainer.innerHTML = '';
+
+    if (data.type === 'video') {
+      const video = document.createElement('video');
+      video.src = data.url || '';
+      video.controls = true;
+      video.autoplay = true;
+      video.className = 'max-h-[75vh] w-auto max-w-full object-contain';
+      mediaContainer.appendChild(video);
+    } else {
+      const img = document.createElement('img');
+      img.src = data.url || '';
+      img.className = 'max-h-[75vh] w-auto max-w-full object-contain';
+      mediaContainer.appendChild(img);
+    }
+
+    if (modalDesc) modalDesc.textContent = data.description || '';
+
+    if (modalCategory) {
+      if (data.category) {
+        modalCategory.textContent = data.category;
+        modalCategory.classList.remove('hidden');
+      } else {
+        modalCategory.classList.add('hidden');
+      }
+    }
+
+    if (modalHashtags) {
+      modalHashtags.innerHTML = '';
+      try {
+        const tags: string[] = JSON.parse(data.hashtags || '[]');
+        tags.forEach((tag) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'hashtag-btn text-[10px] font-mono text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 px-1.5 py-0.5 rounded transition-all cursor-pointer';
+          btn.setAttribute('data-tag', tag);
+          btn.textContent = `#${tag}`;
+          modalHashtags.appendChild(btn);
+        });
+      } catch (e) {
+        console.error('Error parsing hashtags for modal', e);
+      }
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    if (mediaContainer) mediaContainer.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  document.querySelectorAll('.media-card-trigger').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const data = (trigger as HTMLElement).dataset;
+      openModal(data);
+    });
+  });
+
+  closeBtn?.addEventListener('click', closeModal);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+</script>
