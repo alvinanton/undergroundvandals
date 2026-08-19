@@ -176,4 +176,35 @@ public class MediaController : ControllerBase
 
         return NoContent();
     }
+
+    // PUT: api/media/{id}
+    [Authorize]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<MediaResponseDto>> Update(Guid id, [FromBody] UpdateMediaDto dto)
+    {
+        var item = await _context.MediaItems.FindAsync(id);
+
+        if (item == null)
+            return NotFound(new { message = "Media item not found." });
+                
+        item.Title = dto.Title;
+        item.Category = string.IsNullOrWhiteSpace(dto.Category) ? "General" : dto.Category;
+        item.Description = dto.Description;
+        item.Hashtags = dto.Hashtags ?? new List<string>();
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new MediaResponseDto
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Description = item.Description,
+            Type = item.Type,
+            Url = item.Url,
+            Category = item.Category,
+            Hashtags = item.Hashtags,
+            IsArchived = item.IsArchived,
+            CreatedAt = item.CreatedAt
+        });
+    }
 }
