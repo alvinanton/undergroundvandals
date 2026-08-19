@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UndergroundVandals.Api.Data;
 using UndergroundVandals.Api.DTOs;
@@ -87,6 +88,7 @@ public class MediaController : ControllerBase
     }
 
     // POST: api/media/upload
+    [Authorize]
     [HttpPost("upload")]
     public async Task<ActionResult<MediaResponseDto>> Upload([FromForm] CreateMediaDto dto)
     {
@@ -135,6 +137,7 @@ public class MediaController : ControllerBase
     }
 
     // PATCH: api/media/{id}/archive
+    [Authorize]
     [HttpPatch("{id:guid}/archive")]
     public async Task<IActionResult> ToggleArchive(Guid id)
     {
@@ -155,6 +158,7 @@ public class MediaController : ControllerBase
     }
 
     // DELETE: api/media/{id}
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
