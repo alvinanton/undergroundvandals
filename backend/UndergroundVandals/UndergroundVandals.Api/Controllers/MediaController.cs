@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UndergroundVandals.Api.Data;
@@ -21,7 +22,6 @@ public class MediaController : ControllerBase
         _fileStorageService = fileStorageService;
     }
 
-    // GET: api/media
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MediaResponseDto>>> GetAll(
         [FromQuery] string? category,
@@ -31,19 +31,13 @@ public class MediaController : ControllerBase
         var query = _context.MediaItems.AsQueryable();
 
         if (!includeArchived)
-        {
             query = query.Where(m => !m.IsArchived);
-        }
 
         if (!string.IsNullOrWhiteSpace(category))
-        {
             query = query.Where(m => m.Category.ToLower() == category.ToLower());
-        }
 
         if (!string.IsNullOrWhiteSpace(tag))
-        {
             query = query.Where(m => m.Hashtags.Contains(tag.ToLower()));
-        }
 
         var items = await query
             .OrderByDescending(m => m.CreatedAt)
@@ -52,23 +46,28 @@ public class MediaController : ControllerBase
                 Id = m.Id,
                 Title = m.Title,
                 Description = m.Description,
-                Type = m.Type,
-                Url = m.Url,
                 Category = m.Category,
                 Hashtags = m.Hashtags,
                 IsArchived = m.IsArchived,
-                CreatedAt = m.CreatedAt
+                CreatedAt = m.CreatedAt,
+                Media = m.MediaAssets.Select(a => new MediaAssetDto
+                {
+                    Id = a.Id,
+                    Url = a.Url,
+                    Type = a.Type == MediaType.Photo ? "image" : "video"
+                }).ToList()
             })
             .ToListAsync();
 
         return Ok(items);
     }
 
-    // GET: api/media/{id}
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<MediaResponseDto>> GetById(Guid id)
     {
-        var item = await _context.MediaItems.FindAsync(id);
+        var item = await _context.MediaItems
+            .Include(m => m.MediaAssets)
+            .FirstOrDefaultAsync(m => m.Id == id);
 
         if (item == null)
             return NotFound(new { message = "Media item not found." });
@@ -78,44 +77,53 @@ public class MediaController : ControllerBase
             Id = item.Id,
             Title = item.Title,
             Description = item.Description,
-            Type = item.Type,
-            Url = item.Url,
             Category = item.Category,
             Hashtags = item.Hashtags,
             IsArchived = item.IsArchived,
-            CreatedAt = item.CreatedAt
+            CreatedAt = item.CreatedAt,
+            Media = item.MediaAssets.Select(a => new MediaAssetDto
+            {
+                Id = a.Id,
+                Url = a.Url,
+                Type = a.Type == MediaType.Photo ? "image" : "video"
+            }).ToList()
         });
     }
 
-    // POST: api/media/upload
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost("upload")]
+    [RequestSizeLimit(100 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 100 * 1024 * 1024)]
     public async Task<ActionResult<MediaResponseDto>> Upload([FromForm] CreateMediaDto dto)
     {
-        FileUploadResult uploadResult;
-
-        if (dto.Type == MediaType.Photo)
-        {
-            uploadResult = await _fileStorageService.UploadImageAsync(dto.File);
-        }
-        else
-        {
-            uploadResult = await _fileStorageService.UploadVideoAsync(dto.File);
-        }
-
-        if (!uploadResult.Success)
-            return BadRequest(new { message = uploadResult.Error });
+        if (dto.Files == null || !dto.Files.Any())
+            return BadRequest(new { message = "At least one file is required." });
 
         var mediaItem = new MediaItem
         {
             Title = dto.Title,
             Description = dto.Description,
-            Type = dto.Type,
-            Category = dto.Category,
-            Hashtags = dto.Hashtags ?? new List<string>(),
-            Url = uploadResult.Url,
-            PublicId = uploadResult.PublicId
+            Category = string.IsNullOrWhiteSpace(dto.Category) ? "General" : dto.Category,
+            Hashtags = dto.Hashtags ?? new List<string>()
         };
+
+        foreach (var file in dto.Files)
+        {
+            var isVideo = file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+            var uploadResult = isVideo
+                ? await _fileStorageService.UploadVideoAsync(file)
+                : await _fileStorageService.UploadImageAsync(file);
+
+            if (!uploadResult.Success)
+                return BadRequest(new { message = uploadResult.Error });
+
+            mediaItem.MediaAssets.Add(new MediaAsset
+            {
+                Url = uploadResult.Url,
+                PublicId = uploadResult.PublicId,
+                Type = isVideo ? MediaType.Video : MediaType.Photo
+            });
+        }
 
         _context.MediaItems.Add(mediaItem);
         await _context.SaveChangesAsync();
@@ -125,18 +133,95 @@ public class MediaController : ControllerBase
             Id = mediaItem.Id,
             Title = mediaItem.Title,
             Description = mediaItem.Description,
-            Type = mediaItem.Type,
-            Url = mediaItem.Url,
             Category = mediaItem.Category,
             Hashtags = mediaItem.Hashtags,
             IsArchived = mediaItem.IsArchived,
-            CreatedAt = mediaItem.CreatedAt
+            CreatedAt = mediaItem.CreatedAt,
+            Media = mediaItem.MediaAssets.Select(a => new MediaAssetDto
+            {
+                Id = a.Id,
+                Url = a.Url,
+                Type = a.Type == MediaType.Photo ? "image" : "video"
+            }).ToList()
         };
 
         return CreatedAtAction(nameof(GetById), new { id = mediaItem.Id }, response);
     }
 
-    // PATCH: api/media/{id}/archive
+    [Authorize(Roles = "Admin,Editor")]
+    [HttpPost("{id:guid}/assets")]
+    [RequestSizeLimit(100 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 100 * 1024 * 1024)]
+    public async Task<ActionResult<MediaResponseDto>> AddAssets(Guid id, [FromForm] List<IFormFile> files)
+    {
+        if (files == null || !files.Any())
+            return BadRequest(new { message = "At least one file is required." });
+
+        var item = await _context.MediaItems
+            .Include(m => m.MediaAssets)
+            .FirstOrDefaultAsync(m => m.Id == id);
+
+        if (item == null)
+            return NotFound(new { message = "Media item not found." });
+
+        foreach (var file in files)
+        {
+            var isVideo = file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+            var uploadResult = isVideo
+                ? await _fileStorageService.UploadVideoAsync(file)
+                : await _fileStorageService.UploadImageAsync(file);
+
+            if (!uploadResult.Success)
+                return BadRequest(new { message = uploadResult.Error });
+
+            item.MediaAssets.Add(new MediaAsset
+            {
+                Url = uploadResult.Url,
+                PublicId = uploadResult.PublicId,
+                Type = isVideo ? MediaType.Video : MediaType.Photo
+            });
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new MediaResponseDto
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Description = item.Description,
+            Category = item.Category,
+            Hashtags = item.Hashtags,
+            IsArchived = item.IsArchived,
+            CreatedAt = item.CreatedAt,
+            Media = item.MediaAssets.Select(a => new MediaAssetDto
+            {
+                Id = a.Id,
+                Url = a.Url,
+                Type = a.Type == MediaType.Photo ? "image" : "video"
+            }).ToList()
+        });
+    }
+
+    [Authorize(Roles = "Admin,Editor")]
+    [HttpDelete("assets/{assetId:guid}")]
+    public async Task<IActionResult> DeleteAsset(Guid assetId)
+    {
+        var asset = await _context.MediaAssets.FindAsync(assetId);
+
+        if (asset == null)
+            return NotFound(new { message = "Asset not found." });
+
+        if (!string.IsNullOrWhiteSpace(asset.PublicId))
+        {
+            await _fileStorageService.DeleteFileAsync(asset.PublicId);
+        }
+
+        _context.MediaAssets.Remove(asset);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     [Authorize(Roles = "Admin,Editor")]
     [HttpPatch("{id:guid}/archive")]
     public async Task<IActionResult> ToggleArchive(Guid id)
@@ -157,32 +242,35 @@ public class MediaController : ControllerBase
         });
     }
 
-    // DELETE: api/media/{id}
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var item = await _context.MediaItems.FindAsync(id);
+        var item = await _context.MediaItems
+            .Include(m => m.MediaAssets)
+            .FirstOrDefaultAsync(m => m.Id == id);
 
         if (item == null)
             return NotFound(new { message = "Media item not found." });
 
-        // 1. Delete the physical file from Cloudinary
-        await _fileStorageService.DeleteFileAsync(item.PublicId);
+        foreach (var asset in item.MediaAssets)
+        {
+            await _fileStorageService.DeleteFileAsync(asset.PublicId);
+        }
 
-        // 2. Delete the record from PostgreSQL
         _context.MediaItems.Remove(item);
         await _context.SaveChangesAsync();
 
         return NoContent();
     }
 
-    // PUT: api/media/{id}
     [Authorize(Roles = "Admin,Editor")]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<MediaResponseDto>> Update(Guid id, [FromBody] UpdateMediaDto dto)
     {
-        var item = await _context.MediaItems.FindAsync(id);
+        var item = await _context.MediaItems
+            .Include(m => m.MediaAssets)
+            .FirstOrDefaultAsync(m => m.Id == id);
 
         if (item == null)
             return NotFound(new { message = "Media item not found." });
@@ -199,12 +287,16 @@ public class MediaController : ControllerBase
             Id = item.Id,
             Title = item.Title,
             Description = item.Description,
-            Type = item.Type,
-            Url = item.Url,
             Category = item.Category,
             Hashtags = item.Hashtags,
             IsArchived = item.IsArchived,
-            CreatedAt = item.CreatedAt
+            CreatedAt = item.CreatedAt,
+            Media = item.MediaAssets.Select(a => new MediaAssetDto
+            {
+                Id = a.Id,
+                Url = a.Url,
+                Type = a.Type == MediaType.Photo ? "image" : "video"
+            }).ToList()
         });
     }
 }

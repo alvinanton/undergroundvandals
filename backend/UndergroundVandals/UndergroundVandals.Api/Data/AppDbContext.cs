@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
 
     public DbSet<MediaItem> MediaItems => Set<MediaItem>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<MediaAsset> MediaAssets { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

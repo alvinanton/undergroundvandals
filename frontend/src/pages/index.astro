@@ -20,7 +20,7 @@ try {
 <Layout title="Graffiti Archive | Underground Vandals">
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-10">
     
-    {/* Header con Indicador de Filtro */}
+    {/* Header with Filter Indicator */}
     <header class="flex items-center justify-between border-b border-zinc-800/80 py-2 mb-5">
       <div class="flex items-center gap-2.5 flex-wrap">
         <span class="w-2 h-2 rounded-full bg-orange-500"></span>
@@ -28,7 +28,7 @@ try {
           Graffiti Archive
         </h1>
 
-        {/* Indicador de Filtro Activo */}
+        {/* Active Filter Indicator */}
         <div id="active-filter-badge" class="hidden items-center gap-1.5 ml-2 pl-2 border-l border-zinc-800">
           <span class="text-[11px] font-mono text-zinc-500">Filtering:</span>
           <span id="active-tag-name" class="text-[11px] font-mono text-orange-400 bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 rounded"></span>
@@ -48,7 +48,7 @@ try {
       </span>
     </header>
 
-    {/* Grid de Media Cards */}
+    {/* Media Cards Grid */}
     {mediaItems.length > 0 ? (
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {mediaItems.map((item) => (
@@ -63,7 +63,7 @@ try {
 
   </main>
 
-  {/* MODAL LIGHTBOX GLOBAL */}
+  {/* GLOBAL LIGHTBOX MODAL */}
   <div 
     id="media-modal" 
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6"
@@ -92,7 +92,7 @@ try {
   </div>
 </Layout>
 
-{/* LÓGICA INTERACTIVA DEL MODAL Y FILTROS */}
+{/* INTERACTIVE MODAL & FILTER LOGIC */}
 <script>
   const modal = document.getElementById('media-modal');
   const closeBtn = document.getElementById('modal-close');
@@ -101,7 +101,7 @@ try {
   const modalCategory = document.getElementById('modal-category');
   const modalHashtags = document.getElementById('modal-hashtags');
 
-  // Elementos del Filtro
+  // Filter Elements
   const activeFilterBadge = document.getElementById('active-filter-badge');
   const activeTagName = document.getElementById('active-tag-name');
   const clearFilterBtn = document.getElementById('clear-filter-btn');
@@ -109,7 +109,7 @@ try {
 
   let currentTagFilter: string | null = null;
 
-  // Lógica de Filtrado
+  // Filtering Logic
   function applyTagFilter(tag: string | null) {
     currentTagFilter = tag;
     const cards = document.querySelectorAll('.media-card-item');
@@ -125,7 +125,6 @@ try {
       }
     });
 
-    // ActualizarUI del Header
     if (tag) {
       if (activeFilterBadge) {
         activeFilterBadge.classList.remove('hidden');
@@ -144,26 +143,27 @@ try {
     }
   }
 
-  // Delegación de eventos para clicks en hashtags (tanto en la tarjeta como en el modal)
+  // Delegated click handler for hashtag buttons (works both in grid cards and modal)
   document.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest('.hashtag-btn');
     if (target) {
       e.stopPropagation();
       const tag = target.getAttribute('data-tag');
       if (tag) {
-        // Si el modal está abierto, lo cerramos
         closeModal();
         applyTagFilter(tag);
       }
     }
   });
 
-  // Botón para limpiar el filtro
   clearFilterBtn?.addEventListener('click', () => {
     applyTagFilter(null);
   });
 
-  // Lógica del Modal
+  // =========================================================================
+  // MODAL LOGIC + MOBILE ENHANCEMENTS (BACK GESTURE & SWIPE DOWN)
+  // =========================================================================
+
   function openModal(data: DOMStringMap) {
     if (!mediaContainer || !modal) return;
 
@@ -179,7 +179,7 @@ try {
     } else {
       const img = document.createElement('img');
       img.src = data.url || '';
-      img.className = 'max-h-[75vh] w-auto max-w-full object-contain';
+      img.className = 'max-h-[75vh] w-auto max-w-full object-contain pointer-events-none select-none';
       mediaContainer.appendChild(img);
     }
 
@@ -214,16 +214,79 @@ try {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     document.body.style.overflow = 'hidden';
+
+    // Push state to browser history to catch mobile back gesture/button
+    if (!history.state?.modalOpen) {
+      history.pushState({ modalOpen: true }, '');
+    }
   }
 
-  function closeModal() {
-    if (!modal) return;
+  function closeModal(isPopState = false) {
+    if (!modal || modal.classList.contains('hidden')) return;
+
     modal.classList.add('hidden');
     modal.classList.remove('flex');
-    if (mediaContainer) mediaContainer.innerHTML = '';
+    if (mediaContainer) {
+      mediaContainer.innerHTML = '';
+      mediaContainer.style.transform = '';
+      mediaContainer.style.opacity = '';
+    }
     document.body.style.overflow = '';
+
+    // Clean history state if closed manually (click/button) instead of history pop event
+    if (!isPopState && history.state?.modalOpen) {
+      history.back();
+    }
   }
 
+  // Listener for mobile system back button/gesture
+  window.addEventListener('popstate', () => {
+    closeModal(true);
+  });
+
+  // Swipe Down gesture detection
+  let touchStartY = 0;
+  let touchCurrentY = 0;
+
+  if (mediaContainer) {
+    mediaContainer.addEventListener('touchstart', (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+      touchCurrentY = touchStartY;
+    }, { passive: true });
+
+    mediaContainer.addEventListener('touchmove', (e: TouchEvent) => {
+      touchCurrentY = e.touches[0].clientY;
+      const diffY = touchCurrentY - touchStartY;
+
+      // If pulling down, translate element and scale opacity proportionally
+      if (diffY > 0) {
+        mediaContainer.style.transform = `translateY(${diffY}px)`;
+        mediaContainer.style.opacity = `${Math.max(0.3, 1 - diffY / 300)}`;
+      }
+    }, { passive: true });
+
+    mediaContainer.addEventListener('touchend', () => {
+      const diffY = touchCurrentY - touchStartY;
+
+      // Close modal if pulled down past 100px threshold
+      if (diffY > 100) {
+        closeModal();
+      } else {
+        // Smoothly animate back to initial position
+        mediaContainer.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+        mediaContainer.style.transform = 'translateY(0)';
+        mediaContainer.style.opacity = '1';
+        setTimeout(() => {
+          if (mediaContainer) mediaContainer.style.transition = '';
+        }, 200);
+      }
+
+      touchStartY = 0;
+      touchCurrentY = 0;
+    });
+  }
+
+  // Standard Open/Close Event Listeners
   document.querySelectorAll('.media-card-trigger').forEach((trigger) => {
     trigger.addEventListener('click', () => {
       const data = (trigger as HTMLElement).dataset;
@@ -231,7 +294,7 @@ try {
     });
   });
 
-  closeBtn?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', () => closeModal());
   modal?.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });

@@ -95,7 +95,7 @@ const username =
                     Upload New Media
                 </h2>
                 <p class="text-xs text-zinc-400 mt-0.5">
-                    Add photos or videos directly to Cloudinary and database
+                    Add photos or videos directly to Cloudinary and database (Select multiple files for galleries)
                 </p>
             </div>
 
@@ -117,24 +117,7 @@ const username =
                     />
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label
-                            for="type"
-                            class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-2"
-                        >
-                            Media Type *
-                        </label>
-                        <select
-                            id="type"
-                            name="type"
-                            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors text-sm"
-                        >
-                            <option value="Photo">Photo</option>
-                            <option value="Video">Video</option>
-                        </select>
-                    </div>
-
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label
                             for="category"
@@ -154,21 +137,34 @@ const username =
 
                     <div>
                         <label
-                            for="file"
                             class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-2"
                         >
-                            File *
+                            Files (Images / Videos) *
                         </label>
-                        <input
-                            type="file"
-                            id="file"
-                            name="file"
-                            accept="image/*,video/*"
-                            required
-                            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-mono file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700 cursor-pointer"
-                        />
+                        <div class="flex items-center gap-3">
+                            <input
+                                type="file"
+                                id="files-input"
+                                accept="image/*,video/*"
+                                multiple
+                                class="hidden"
+                            />
+                            <button
+                                type="button"
+                                id="select-files-btn"
+                                class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-mono text-xs rounded-lg transition-colors cursor-pointer"
+                            >
+                                📁 Choose Files
+                            </button>
+                            <span id="file-count-label" class="text-xs font-mono text-zinc-400">
+                                No files selected
+                            </span>
+                        </div>
                     </div>
                 </div>
+
+                {/* Container for Pre-upload Previews */}
+                <div id="pre-upload-preview" class="flex flex-wrap gap-3 empty:hidden custom-scrollbar"></div>
 
                 <div>
                     <label
@@ -261,9 +257,9 @@ const username =
                         id="filter-type"
                         class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
                     >
-                        <option value="ALL">All Types</option>
-                        <option value="Photo">Photos</option>
-                        <option value="Video">Videos</option>
+                        <option value="ALL">All Media Types</option>
+                        <option value="image">Has Images</option>
+                        <option value="video">Has Videos</option>
                     </select>
                 </div>
                 <div>
@@ -295,15 +291,7 @@ const username =
                                     >↕</span
                                 >
                             </th>
-                            <th
-                                class="py-3 px-4 cursor-pointer hover:text-white transition-colors sort-header"
-                                data-sort="type"
-                            >
-                                Type <span
-                                    class="sort-icon inline-block ml-1 opacity-40"
-                                    >↕</span
-                                >
-                            </th>
+                            <th class="py-3 px-4">Assets Count</th>
                             <th
                                 class="py-3 px-4 cursor-pointer hover:text-white transition-colors sort-header"
                                 data-sort="isArchived"
@@ -342,31 +330,110 @@ const username =
         </div>
     </div>
 
-    {/* Full Image Preview Modal */}
+    {/* Pre-Upload File Preview Modal */}
     <div
-        id="image-modal"
+        id="pre-upload-modal"
         class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex flex-col items-center justify-center p-4"
     >
         <div
-            class="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center"
+            class="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center gap-4"
         >
             <button
-                id="modal-close-btn"
+                id="pre-upload-modal-close"
                 class="absolute -top-12 right-0 text-zinc-300 hover:text-orange-500 text-xs font-mono uppercase tracking-wider bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
             >
                 ✕ Close
             </button>
-            <img
-                id="modal-img"
-                src=""
-                alt=""
-                class="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl border border-zinc-800/80"
-            />
-            <p
-                id="modal-title"
-                class="text-zinc-300 font-mono text-xs mt-3 text-center uppercase tracking-wider"
+            <div id="pre-upload-modal-media-container" class="w-full flex justify-center items-center">
+                <img
+                    id="pre-upload-modal-img"
+                    src=""
+                    alt=""
+                    class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl border border-zinc-800/80 hidden"
+                />
+                <video
+                    id="pre-upload-modal-video"
+                    controls
+                    class="max-w-full max-h-[75vh] rounded-xl shadow-2xl border border-zinc-800/80 hidden"
+                ></video>
+            </div>
+            <div class="flex flex-wrap items-center justify-between w-full max-w-lg bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl gap-3">
+                <p
+                    id="pre-upload-modal-filename"
+                    class="text-zinc-300 font-mono text-xs uppercase tracking-wider truncate max-w-[250px]"
+                >
+                </p>
+                <button
+                    type="button"
+                    id="pre-upload-modal-discard-btn"
+                    class="px-3.5 py-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/80 text-red-400 hover:text-red-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ml-auto"
+                >
+                    ✕ Discard File
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {/* Full Image/Media Preview Carousel Modal */}
+    <div
+        id="image-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] hidden flex flex-col items-center justify-center p-4"
+    >
+        <div
+            class="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center justify-center"
+        >
+            <button
+                id="modal-close-btn"
+                class="absolute -top-12 right-0 text-zinc-300 hover:text-orange-500 text-xs font-mono uppercase tracking-wider bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg cursor-pointer transition-colors z-20"
             >
-            </p>
+                ✕ Close
+            </button>
+
+            {/* Previous Carousel Button */}
+            <button
+                id="modal-prev-btn"
+                class="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 hover:text-orange-500 border border-zinc-800/80 w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer select-none"
+                title="Previous item"
+            >
+                ❮
+            </button>
+
+            {/* Next Carousel Button */}
+            <button
+                id="modal-next-btn"
+                class="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 hover:text-orange-500 border border-zinc-800/80 w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer select-none"
+                title="Next item"
+            >
+                ❯
+            </button>
+
+            <div id="modal-media-container" class="w-full flex justify-center items-center">
+                <img
+                    id="modal-img"
+                    src=""
+                    alt=""
+                    class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl border border-zinc-800/80 hidden"
+                />
+                <video
+                    id="modal-video"
+                    controls
+                    class="max-w-full max-h-[75vh] rounded-xl shadow-2xl border border-zinc-800/80 hidden"
+                ></video>
+            </div>
+
+            <div class="flex items-center justify-between w-full max-w-lg mt-3 px-2">
+                <p
+                    id="modal-title"
+                    class="text-zinc-300 font-mono text-xs uppercase tracking-wider truncate"
+                >
+                </p>
+                <span
+                    id="modal-counter"
+                    class="text-orange-500 font-mono text-xs uppercase tracking-wider bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-md shrink-0 ml-3"
+                >
+                    1 / 1
+                </span>
+            </div>
         </div>
     </div>
 
@@ -376,7 +443,7 @@ const username =
         class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4"
     >
         <div
-            class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl relative"
+            class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
         >
             <div
                 class="flex justify-between items-center border-b border-zinc-800/80 pb-4"
@@ -388,12 +455,12 @@ const username =
                         Edit Media Item
                     </h3>
                     <p class="text-xs text-zinc-400">
-                        Update metadata without changing the uploaded file
+                        Update metadata or manage assets for this post
                     </p>
                 </div>
                 <button
                     id="edit-modal-close"
-                    class="text-zinc-400 hover:text-white font-mono text-sm cursor-pointer"
+                    class="text-zinc-400 hover:text-orange-500 font-mono text-sm cursor-pointer transition-colors"
                     >✕</button
                 >
             </div>
@@ -452,8 +519,40 @@ const username =
                     <textarea
                         id="edit-description"
                         rows="3"
-                        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500 resize-none"
+                        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500 resize-none custom-scrollbar"
                     ></textarea>
+                </div>
+
+                {/* Manage Assets Section inside Edit Modal */}
+                <div class="border-t border-zinc-800/80 pt-4 space-y-3">
+                    <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300">
+                        Current Assets
+                    </label>
+                    <div id="edit-assets-list" class="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-zinc-950/60 rounded-lg border border-zinc-800/80 custom-scrollbar">
+                        <!-- Dynamic assets thumbnails render here -->
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-mono text-zinc-400 mb-1.5">
+                            Add More Files to this Media Item:
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="file"
+                                id="add-more-files-input"
+                                accept="image/*,video/*"
+                                multiple
+                                class="text-xs text-zinc-400 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-mono file:bg-zinc-800 file:text-zinc-200 cursor-pointer"
+                            />
+                            <button
+                                type="button"
+                                id="add-files-btn"
+                                class="px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30 font-mono text-xs rounded transition-colors cursor-pointer shrink-0"
+                            >
+                                + Upload
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div
@@ -481,8 +580,35 @@ const username =
     </div>
 </Layout>
 
+<style>
+    /* Custom Dark Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #09090b;
+        border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #27272a;
+        border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #3f3f46;
+    }
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #27272a #09090b;
+    }
+</style>
+
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+
+    // Minimal SVGs for file types
+    const PHOTO_ICON_SVG = `<svg class="w-2.5 h-2.5 text-orange-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+    const PLAY_ICON_SVG = `<svg class="w-2.5 h-2.5 text-orange-400 fill-current ml-0.5" viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20"/></svg>`;
 
     // Client Role Check
     const isAdmin =
@@ -492,6 +618,13 @@ const username =
     let allMediaItems: any[] = [];
     let currentSortColumn: string = "createdAt";
     let sortDirection: "asc" | "desc" = "desc";
+    let selectedUploadFiles: File[] = [];
+    let activePreUploadIndex: number = -1;
+
+    // Gallery Carousel State
+    let currentGalleryAssets: any[] = [];
+    let currentGalleryIndex: number = 0;
+    let currentGalleryTitle: string = "";
 
     // Helper to extract JWT Token from cookies
     function getToken(): string | undefined {
@@ -507,10 +640,241 @@ const username =
         window.location.href = "/admin/login";
     });
 
+    // --- FILE PRE-UPLOAD PREVIEW SYSTEM ---
+    const filesInput = document.getElementById("files-input") as HTMLInputElement;
+    const selectFilesBtn = document.getElementById("select-files-btn");
+    const fileCountLabel = document.getElementById("file-count-label");
+    const preUploadPreviewContainer = document.getElementById("pre-upload-preview");
+
+    // Pre-Upload Modal Elements
+    const preUploadModal = document.getElementById("pre-upload-modal");
+    const preUploadModalImg = document.getElementById("pre-upload-modal-img") as HTMLImageElement;
+    const preUploadModalVideo = document.getElementById("pre-upload-modal-video") as HTMLVideoElement;
+    const preUploadModalFilename = document.getElementById("pre-upload-modal-filename");
+    const preUploadModalCloseBtn = document.getElementById("pre-upload-modal-close");
+    const preUploadModalDiscardBtn = document.getElementById("pre-upload-modal-discard-btn");
+
+    selectFilesBtn?.addEventListener("click", () => filesInput?.click());
+
+    filesInput?.addEventListener("change", (e) => {
+        const target = e.target as HTMLInputElement;
+        if (target.files && target.files.length > 0) {
+            const newFiles = Array.from(target.files);
+            selectedUploadFiles = [...selectedUploadFiles, ...newFiles];
+            target.value = ""; // Clear native input
+            renderPreUploadPreviews();
+        }
+    });
+
+    function renderPreUploadPreviews() {
+        if (!preUploadPreviewContainer || !fileCountLabel) return;
+
+        fileCountLabel.innerText = selectedUploadFiles.length > 0
+            ? `${selectedUploadFiles.length} file(s) selected`
+            : "No files selected";
+
+        preUploadPreviewContainer.innerHTML = selectedUploadFiles
+            .map((file, index) => {
+                const tempUrl = URL.createObjectURL(file);
+                const isVideo = file.type.startsWith("video/");
+                const fileTypeIcon = isVideo ? PLAY_ICON_SVG : PHOTO_ICON_SVG;
+
+                return `
+                <div 
+                    data-file-index="${index}"
+                    class="pre-upload-thumb relative group w-20 h-20 rounded-lg border border-zinc-800 overflow-hidden bg-black flex items-center justify-center cursor-pointer hover:border-orange-500/60 transition-all"
+                    title="Click to preview file"
+                >
+                    ${
+                        isVideo
+                            ? `<video src="${tempUrl}" class="w-full h-full object-cover pointer-events-none"></video>`
+                            : `<img src="${tempUrl}" class="w-full h-full object-cover pointer-events-none" />`
+                    }
+                    <span
+                        class="absolute top-1 left-1 bg-zinc-950/80 border border-zinc-800/80 rounded-md w-5 h-5 flex items-center justify-center shadow-md z-10 pointer-events-none select-none"
+                        title="${isVideo ? "Video file" : "Image file"}"
+                    >
+                        ${fileTypeIcon}
+                    </span>
+
+                    <button
+                        type="button"
+                        data-remove-index="${index}"
+                        class="remove-file-btn absolute top-1 right-1 bg-zinc-950/80 hover:bg-zinc-950 text-zinc-400 hover:text-orange-500 border border-zinc-800/80 rounded-md w-5 h-5 flex items-center justify-center text-[10px] font-mono transition-colors cursor-pointer shadow-md z-10"
+                        title="Remove file"
+                    >
+                        ✕
+                    </button>
+                </div>
+            `;
+            })
+            .join("");
+
+        // Attach delete events to pre-upload items
+        preUploadPreviewContainer.querySelectorAll(".remove-file-btn").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation(); // Prevent opening modal
+                const index = parseInt((e.currentTarget as HTMLElement).dataset.removeIndex || "-1");
+                if (index > -1) {
+                    selectedUploadFiles.splice(index, 1);
+                    renderPreUploadPreviews();
+                }
+            });
+        });
+
+        // Attach click event to thumbnails for full preview
+        preUploadPreviewContainer.querySelectorAll(".pre-upload-thumb").forEach((thumb) => {
+            thumb.addEventListener("click", (e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest(".remove-file-btn")) return;
+                const index = parseInt((e.currentTarget as HTMLElement).dataset.fileIndex || "-1");
+                if (index > -1) openPreUploadModal(index);
+            });
+        });
+    }
+
+    // Modal logic for Pre-Upload files
+    function openPreUploadModal(index: number) {
+        if (!preUploadModal || index < 0 || index >= selectedUploadFiles.length) return;
+        
+        activePreUploadIndex = index;
+        const file = selectedUploadFiles[index];
+        const tempUrl = URL.createObjectURL(file);
+        const isVideo = file.type.startsWith("video/");
+
+        if (isVideo) {
+            if (preUploadModalImg) preUploadModalImg.classList.add("hidden");
+            if (preUploadModalVideo) {
+                preUploadModalVideo.src = tempUrl;
+                preUploadModalVideo.classList.remove("hidden");
+            }
+        } else {
+            if (preUploadModalVideo) {
+                preUploadModalVideo.pause();
+                preUploadModalVideo.classList.add("hidden");
+            }
+            if (preUploadModalImg) {
+                preUploadModalImg.src = tempUrl;
+                preUploadModalImg.classList.remove("hidden");
+            }
+        }
+
+        if (preUploadModalFilename) {
+            preUploadModalFilename.innerText = file.name;
+        }
+
+        preUploadModal.classList.remove("hidden");
+    }
+
+    function closePreUploadModal() {
+        if (preUploadModal) preUploadModal.classList.add("hidden");
+        if (preUploadModalVideo) preUploadModalVideo.pause();
+        activePreUploadIndex = -1;
+    }
+
+    preUploadModalCloseBtn?.addEventListener("click", closePreUploadModal);
+    
+    preUploadModal?.addEventListener("click", (e) => {
+        if (e.target === preUploadModal) closePreUploadModal();
+    });
+
+    preUploadModalDiscardBtn?.addEventListener("click", () => {
+        if (activePreUploadIndex > -1 && activePreUploadIndex < selectedUploadFiles.length) {
+            selectedUploadFiles.splice(activePreUploadIndex, 1);
+            renderPreUploadPreviews();
+            closePreUploadModal();
+        }
+    });
+
+    // Handle Upload Form Submit
+    const uploadForm = document.getElementById("upload-form") as HTMLFormElement;
+    const uploadBtn = document.getElementById("upload-btn") as HTMLButtonElement;
+    const statusMsg = document.getElementById("status-message") as HTMLDivElement;
+
+    uploadForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!uploadBtn) return;
+
+        if (selectedUploadFiles.length === 0) {
+            showStatus("Please select at least one image or video file.", "error");
+            return;
+        }
+
+        uploadBtn.disabled = true;
+        uploadBtn.innerText = "Uploading Files...";
+        statusMsg.classList.add("hidden");
+
+        const token = getToken();
+        if (!token) {
+            showStatus("Authentication token missing. Please sign in again.", "error");
+            uploadBtn.disabled = false;
+            uploadBtn.innerText = "Upload to Gallery";
+            return;
+        }
+
+        const formData = new FormData();
+        const titleVal = (document.getElementById("title") as HTMLInputElement).value;
+        const categoryVal = (document.getElementById("category") as HTMLInputElement).value;
+        const hashtagsVal = (document.getElementById("hashtags") as HTMLInputElement).value;
+        const descriptionVal = (document.getElementById("description") as HTMLInputElement).value;
+
+        formData.append("Title", titleVal);
+        formData.append("Category", categoryVal || "General");
+        formData.append("Description", descriptionVal || "");
+
+        if (hashtagsVal) {
+            hashtagsVal.split(",").forEach((tag) => {
+                const trimmed = tag.trim();
+                if (trimmed) formData.append("Hashtags", trimmed);
+            });
+        }
+
+        // Attach active files from memory array
+        selectedUploadFiles.forEach((file) => {
+            formData.append("Files", file);
+        });
+
+        try {
+            const res = await fetch(`${API_URL}/api/media/upload`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to upload files.");
+            }
+
+            showStatus("Files uploaded successfully!", "success");
+            uploadForm.reset();
+            selectedUploadFiles = [];
+            renderPreUploadPreviews();
+            await fetchMediaList();
+        } catch (err: any) {
+            showStatus(err.message || "An error occurred during upload.", "error");
+        } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.innerText = "Upload to Gallery";
+        }
+    });
+
+    function showStatus(msg: string, type: "success" | "error") {
+        if (!statusMsg) return;
+        statusMsg.innerText = msg;
+        statusMsg.classList.remove("hidden");
+        if (type === "success") {
+            statusMsg.className = "text-xs font-mono text-center rounded-lg p-3 bg-emerald-950/80 text-emerald-400 border border-emerald-800";
+        } else {
+            statusMsg.className = "text-xs font-mono text-center rounded-lg p-3 bg-red-950/80 text-red-400 border border-red-800";
+        }
+    }
+
     // Handle Refresh Button
-    const refreshBtn = document.getElementById(
-        "refresh-btn",
-    ) as HTMLButtonElement;
+    const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
     refreshBtn?.addEventListener("click", async () => {
         refreshBtn.disabled = true;
         refreshBtn.innerText = "↻ Refreshing...";
@@ -520,15 +884,9 @@ const username =
     });
 
     // Filter & Search Event Listeners
-    document
-        .getElementById("search-input")
-        ?.addEventListener("input", renderMediaTable);
-    document
-        .getElementById("filter-type")
-        ?.addEventListener("change", renderMediaTable);
-    document
-        .getElementById("filter-status")
-        ?.addEventListener("change", renderMediaTable);
+    document.getElementById("search-input")?.addEventListener("input", renderMediaTable);
+    document.getElementById("filter-type")?.addEventListener("change", renderMediaTable);
+    document.getElementById("filter-status")?.addEventListener("change", renderMediaTable);
 
     // Sorting Event Listeners
     document.querySelectorAll(".sort-header").forEach((header) => {
@@ -575,45 +933,294 @@ const username =
         });
     }
 
-    // Image Preview Modal Controls
+    // Media Gallery Carousel Modal Controls
     const imageModal = document.getElementById("image-modal");
     const modalImg = document.getElementById("modal-img") as HTMLImageElement;
+    const modalVideo = document.getElementById("modal-video") as HTMLVideoElement;
     const modalTitle = document.getElementById("modal-title");
+    const modalCounter = document.getElementById("modal-counter");
     const modalCloseBtn = document.getElementById("modal-close-btn");
+    const modalPrevBtn = document.getElementById("modal-prev-btn");
+    const modalNextBtn = document.getElementById("modal-next-btn");
+
+    function openMediaGallery(assets: any[], initialIndex: number = 0, title: string = "") {
+        if (!imageModal || !assets || assets.length === 0) return;
+
+        currentGalleryAssets = assets;
+        currentGalleryIndex = initialIndex;
+        currentGalleryTitle = title;
+
+        updateGalleryView();
+        imageModal.classList.remove("hidden");
+    }
+
+    function updateGalleryView() {
+        if (currentGalleryAssets.length === 0) return;
+
+        const currentAsset = currentGalleryAssets[currentGalleryIndex];
+        if (!currentAsset) return;
+
+        const isVideo = currentAsset.type === "video";
+
+        if (isVideo) {
+            if (modalImg) modalImg.classList.add("hidden");
+            if (modalVideo) {
+                modalVideo.src = currentAsset.url;
+                modalVideo.classList.remove("hidden");
+            }
+        } else {
+            if (modalVideo) {
+                modalVideo.pause();
+                modalVideo.classList.add("hidden");
+            }
+            if (modalImg) {
+                modalImg.src = currentAsset.url;
+                modalImg.classList.remove("hidden");
+            }
+        }
+
+        if (modalTitle) modalTitle.innerText = currentGalleryTitle;
+        if (modalCounter) {
+            modalCounter.innerText = `${currentGalleryIndex + 1} / ${currentGalleryAssets.length}`;
+        }
+
+        const hasMultiple = currentGalleryAssets.length > 1;
+        if (modalPrevBtn) modalPrevBtn.style.display = hasMultiple ? "flex" : "none";
+        if (modalNextBtn) modalNextBtn.style.display = hasMultiple ? "flex" : "none";
+    }
+
+    function prevGalleryItem() {
+        if (currentGalleryAssets.length <= 1) return;
+        currentGalleryIndex = (currentGalleryIndex - 1 + currentGalleryAssets.length) % currentGalleryAssets.length;
+        updateGalleryView();
+    }
+
+    function nextGalleryItem() {
+        if (currentGalleryAssets.length <= 1) return;
+        currentGalleryIndex = (currentGalleryIndex + 1) % currentGalleryAssets.length;
+        updateGalleryView();
+    }
 
     function closeImageModal() {
         if (imageModal) imageModal.classList.add("hidden");
+        if (modalVideo) modalVideo.pause();
+        currentGalleryAssets = [];
+        currentGalleryIndex = 0;
+        currentGalleryTitle = "";
     }
+
+    modalPrevBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        prevGalleryItem();
+    });
+
+    modalNextBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        nextGalleryItem();
+    });
 
     modalCloseBtn?.addEventListener("click", closeImageModal);
     imageModal?.addEventListener("click", (e) => {
-        if (e.target !== modalImg) closeImageModal();
+        if (e.target === imageModal) closeImageModal();
     });
 
-    // Edit Modal Controls
+    // Edit Modal Controls & Asset Management
     const editModal = document.getElementById("edit-modal");
     const editModalCloseBtn = document.getElementById("edit-modal-close");
     const editCancelBtn = document.getElementById("edit-cancel-btn");
     const editForm = document.getElementById("edit-form") as HTMLFormElement;
-    const editStatus = document.getElementById(
-        "edit-status",
-    ) as HTMLDivElement;
+    const editStatus = document.getElementById("edit-status") as HTMLDivElement;
+    const editAssetsList = document.getElementById("edit-assets-list");
+    const addMoreFilesInput = document.getElementById("add-more-files-input") as HTMLInputElement;
+    const addFilesBtn = document.getElementById("add-files-btn");
 
     function closeEditModal() {
         if (editModal) editModal.classList.add("hidden");
-        if (editStatus)
-            editStatus.className =
-                "hidden text-xs font-mono text-center rounded-lg p-2.5";
+        if (editStatus) editStatus.className = "hidden text-xs font-mono text-center rounded-lg p-2.5";
+        if (addMoreFilesInput) addMoreFilesInput.value = "";
     }
 
     editModalCloseBtn?.addEventListener("click", closeEditModal);
     editCancelBtn?.addEventListener("click", closeEditModal);
 
-    // Close Modals on ESC key
+    // Dynamic close when clicking outside (on backdrop)
+    editModal?.addEventListener("click", (e) => {
+        if (e.target === editModal) closeEditModal();
+    });
+
     window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
             closeImageModal();
             closeEditModal();
+            closePreUploadModal();
+        }
+        if (imageModal && !imageModal.classList.contains("hidden")) {
+            if (e.key === "ArrowLeft") prevGalleryItem();
+            if (e.key === "ArrowRight") nextGalleryItem();
+        }
+    });
+
+    // Render Assets inside Edit Modal
+    function renderEditAssets(item: any) {
+        if (!editAssetsList) return;
+        const assets = item.media || [];
+
+        if (assets.length === 0) {
+            editAssetsList.innerHTML = `<span class="text-xs text-zinc-500 font-mono py-1">No assets attached.</span>`;
+            return;
+        }
+
+        editAssetsList.innerHTML = assets
+            .map((asset: any) => {
+                const isVideo = asset.type === "video";
+                const fileTypeIcon = isVideo ? PLAY_ICON_SVG : PHOTO_ICON_SVG;
+
+                return `
+                <div 
+                    data-asset-url="${asset.url}"
+                    data-asset-type="${asset.type}"
+                    class="edit-asset-thumb relative group w-20 h-20 rounded-lg border border-zinc-800 overflow-hidden bg-black flex items-center justify-center cursor-pointer hover:border-orange-500/60 transition-all shrink-0"
+                    title="Click to preview file"
+                >
+                    ${
+                        isVideo
+                            ? `<video src="${asset.url}#t=0.1" class="w-full h-full object-cover pointer-events-none"></video>`
+                            : `<img src="${asset.url}" class="w-full h-full object-cover pointer-events-none" />`
+                    }
+                    <span
+                        class="absolute top-1 left-1 bg-zinc-950/80 border border-zinc-800/80 rounded-md w-5 h-5 flex items-center justify-center shadow-md z-10 pointer-events-none select-none"
+                        title="${isVideo ? "Video file" : "Image file"}"
+                    >
+                        ${fileTypeIcon}
+                    </span>
+
+                    <button
+                        type="button"
+                        data-asset-id="${asset.id}"
+                        data-item-id="${item.id}"
+                        class="delete-asset-btn absolute top-1 right-1 bg-zinc-950/80 hover:bg-zinc-950 text-zinc-400 hover:text-orange-500 border border-zinc-800/80 rounded-md w-5 h-5 flex items-center justify-center text-[10px] font-mono transition-colors cursor-pointer shadow-md z-10"
+                        title="Delete asset"
+                    >
+                        ✕
+                    </button>
+                </div>
+            `;
+            })
+            .join("");
+
+        // Attach click event to thumbnails for full carousel preview
+        editAssetsList.querySelectorAll(".edit-asset-thumb").forEach((thumb, index) => {
+            thumb.addEventListener("click", (e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest(".delete-asset-btn")) return;
+                if (assets && assets.length > 0) {
+                    openMediaGallery(assets, index, item.title || "");
+                }
+            });
+        });
+
+        // Attach listeners for asset deletion
+        editAssetsList.querySelectorAll(".delete-asset-btn").forEach((btn) => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const el = e.currentTarget as HTMLElement;
+                const assetId = el.dataset.assetId;
+                const itemId = el.dataset.itemId;
+                if (!assetId || !confirm("Delete this file permanently?")) return;
+
+                const token = getToken();
+                if (!token) return;
+
+                try {
+                    const res = await fetch(`${API_URL}/api/media/assets/${assetId}`, {
+                        method: "DELETE",
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+
+                    if (!res.ok) throw new Error("Failed to delete asset.");
+
+                    // Refresh media list and re-render modal
+                    await fetchMediaList();
+                    const updatedItem = allMediaItems.find((m) => m.id === itemId);
+                    if (updatedItem) renderEditAssets(updatedItem);
+                } catch (err: any) {
+                    alert(err.message || "Error deleting asset.");
+                }
+            });
+        });
+    }
+
+    // Add Additional Files to Existing Item Handler
+    addFilesBtn?.addEventListener("click", async () => {
+        const editId = (document.getElementById("edit-id") as HTMLInputElement).value;
+        const files = addMoreFilesInput?.files;
+        const token = getToken();
+
+        if (!editId || !files || files.length === 0 || !token) {
+            alert("Select at least one file to upload.");
+            return;
+        }
+
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append("files", files[i]);
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/api/media/${editId}/assets`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+            });
+
+            if (!res.ok) throw new Error("Failed to add new files.");
+
+            addMoreFilesInput.value = "";
+            await fetchMediaList();
+            const updatedItem = allMediaItems.find((m) => m.id === editId);
+            if (updatedItem) renderEditAssets(updatedItem);
+        } catch (err: any) {
+            alert(err.message || "Error adding files.");
+        }
+    });
+
+    // Edit Item Submit Handler
+    editForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const editId = (document.getElementById("edit-id") as HTMLInputElement).value;
+        const token = getToken();
+
+        if (!editId || !token) return;
+
+        const updatedData = {
+            title: (document.getElementById("edit-title") as HTMLInputElement).value,
+            category: (document.getElementById("edit-category") as HTMLInputElement).value || "General",
+            description: (document.getElementById("edit-description") as HTMLInputElement).value,
+            hashtags: (document.getElementById("edit-hashtags") as HTMLInputElement).value
+                .split(",")
+                .map((h) => h.trim())
+                .filter(Boolean),
+        };
+
+        try {
+            const res = await fetch(`${API_URL}/api/media/${editId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(updatedData),
+            });
+
+            if (!res.ok) throw new Error("Failed to update item.");
+
+            closeEditModal();
+            await fetchMediaList();
+        } catch (err: any) {
+            if (editStatus) {
+                editStatus.innerText = err.message || "Error updating item.";
+                editStatus.className = "text-xs font-mono text-center rounded-lg p-2.5 bg-red-950/80 text-red-400 border border-red-800 block";
+            }
         }
     });
 
@@ -623,9 +1230,7 @@ const username =
         if (!tableBody) return;
 
         try {
-            const response = await fetch(
-                `${API_URL}/api/media?includeArchived=true`,
-            );
+            const response = await fetch(`${API_URL}/api/media?includeArchived=true`);
             if (!response.ok) throw new Error("Failed to load gallery items.");
 
             allMediaItems = await response.json();
@@ -643,45 +1248,25 @@ const username =
         const tableBody = document.getElementById("media-table-body");
         if (!tableBody) return;
 
-        const searchQuery =
-            (document.getElementById("search-input") as HTMLInputElement)?.value
-                .toLowerCase()
-                .trim() || "";
-        const filterType =
-            (document.getElementById("filter-type") as HTMLSelectElement)
-                ?.value || "ALL";
-        const filterStatus =
-            (document.getElementById("filter-status") as HTMLSelectElement)
-                ?.value || "ALL";
+        const searchQuery = (document.getElementById("search-input") as HTMLInputElement)?.value.toLowerCase().trim() || "";
+        const filterType = (document.getElementById("filter-type") as HTMLSelectElement)?.value || "ALL";
+        const filterStatus = (document.getElementById("filter-status") as HTMLSelectElement)?.value || "ALL";
 
         // 1. Filter items
         let processedItems = allMediaItems.filter((item) => {
-            const isPhoto = item.type === "Photo" || item.type === 0;
-            const itemTypeStr = isPhoto ? "Photo" : "Video";
-
-            if (
-                filterType !== "ALL" &&
-                itemTypeStr.toLowerCase() !== filterType.toLowerCase()
-            ) {
-                return false;
-            }
+            const assets = item.media || [];
+            
+            if (filterType === "image" && !assets.some((a: any) => a.type === "image")) return false;
+            if (filterType === "video" && !assets.some((a: any) => a.type === "video")) return false;
 
             if (filterStatus === "ACTIVE" && item.isArchived) return false;
             if (filterStatus === "ARCHIVED" && !item.isArchived) return false;
 
             if (searchQuery) {
-                const matchTitle = item.title
-                    ?.toLowerCase()
-                    .includes(searchQuery);
-                const matchCategory = item.category
-                    ?.toLowerCase()
-                    .includes(searchQuery);
-                const matchHashtags = item.hashtags?.some((h: string) =>
-                    h.toLowerCase().includes(searchQuery),
-                );
-                if (!matchTitle && !matchCategory && !matchHashtags) {
-                    return false;
-                }
+                const matchTitle = item.title?.toLowerCase().includes(searchQuery);
+                const matchCategory = item.category?.toLowerCase().includes(searchQuery);
+                const matchHashtags = item.hashtags?.some((h: string) => h.toLowerCase().includes(searchQuery));
+                if (!matchTitle && !matchCategory && !matchHashtags) return false;
             }
 
             return true;
@@ -698,13 +1283,6 @@ const username =
             } else if (currentSortColumn === "title") {
                 valA = (valA || "").toString().toLowerCase();
                 valB = (valB || "").toString().toLowerCase();
-            } else if (currentSortColumn === "type") {
-                valA = (
-                    a.type === "Photo" || a.type === 0 ? "Photo" : "Video"
-                ).toLowerCase();
-                valB = (
-                    b.type === "Photo" || b.type === 0 ? "Photo" : "Video"
-                ).toLowerCase();
             } else if (currentSortColumn === "isArchived") {
                 valA = valA ? 1 : 0;
                 valB = valB ? 1 : 0;
@@ -725,25 +1303,35 @@ const username =
 
         tableBody.innerHTML = processedItems
             .map((item: any) => {
-                const isPhoto = item.type === "Photo" || item.type === 0;
+                const assets = item.media || [];
+                const primaryAsset = assets[0];
+                const countBadge = assets.length > 1 ? `<span class="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1">${assets.length} items</span>` : '';
+
+                let previewHtml = `<div class="w-12 h-12 bg-zinc-800 rounded-md border border-zinc-700 flex items-center justify-center text-zinc-500 text-[10px] font-mono">EMPTY</div>`;
+
+                if (primaryAsset) {
+                    if (primaryAsset.type === "image") {
+                        previewHtml = `<img 
+              src="${primaryAsset.url}" 
+              alt="${item.title}" 
+              data-item-id="${item.id}"
+              class="preview-thumb w-12 h-12 object-cover rounded-md border border-zinc-800 cursor-pointer hover:opacity-80 hover:border-orange-500 transition-all" 
+              title="Click to open gallery"
+            />`;
+                    } else {
+                        previewHtml = `<div 
+              data-item-id="${item.id}"
+              class="preview-thumb w-12 h-12 bg-zinc-800 rounded-md border border-zinc-700 flex items-center justify-center text-orange-500 font-bold text-[10px] cursor-pointer hover:border-orange-500 transition-all"
+              title="Click to open gallery"
+            >VIDEO</div>`;
+                    }
+                }
+
                 const statusBadge = item.isArchived
                     ? `<span class="px-2 py-0.5 text-[10px] font-mono bg-amber-950/60 text-amber-400 border border-amber-900/80 rounded-full">Archived</span>`
                     : `<span class="px-2 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-900/80 rounded-full">Active</span>`;
 
-                const previewHtml = isPhoto
-                    ? `<img 
-            src="${item.url}" 
-            alt="${item.title}" 
-            data-full-url="${item.url}"
-            class="preview-thumb w-12 h-12 object-cover rounded-md border border-zinc-800 cursor-pointer hover:opacity-80 hover:border-orange-500 transition-all" 
-            title="Click to expand"
-          />`
-                    : `<div class="w-12 h-12 bg-zinc-800 rounded-md border border-zinc-700 flex items-center justify-center text-orange-500 font-bold text-xs">VIDEO</div>`;
-
-                const hashtagsStr =
-                    item.hashtags?.length > 0
-                        ? item.hashtags.map((h: string) => `#${h}`).join(" ")
-                        : "";
+                const hashtagsStr = item.hashtags?.length > 0 ? item.hashtags.map((h: string) => `#${h}`).join(" ") : "";
 
                 const createdDate = item.createdAt
                     ? new Date(item.createdAt).toLocaleDateString("en-US", {
@@ -755,248 +1343,83 @@ const username =
 
                 return `
         <tr class="hover:bg-zinc-800/30 transition-colors">
-          <td class="py-3 px-4 align-middle">${previewHtml}</td>
-          <td class="py-3 px-4 align-middle">
-            <div class="font-bold text-zinc-200">${item.title}</div>
-            <div class="text-[11px] text-zinc-500 font-mono">${item.category || "General"} ${hashtagsStr ? "• " + hashtagsStr : ""}</div>
+          <td class="py-3 px-4">${previewHtml}</td>
+          <td class="py-3 px-4">
+            <div class="font-bold text-white">${item.title} ${countBadge}</div>
+            <div class="text-[11px] text-zinc-400 font-mono">${item.category || "General"} ${hashtagsStr ? "• " + hashtagsStr : ""}</div>
           </td>
-          <td class="py-3 px-4 align-middle font-mono text-zinc-400">${isPhoto ? "Photo" : "Video"}</td>
-          <td class="py-3 px-4 align-middle">${statusBadge}</td>
-          <td class="py-3 px-4 align-middle font-mono text-zinc-400 text-[11px] whitespace-nowrap">${createdDate}</td>
-          <td class="py-3 px-4 align-middle text-right whitespace-nowrap">
+          <td class="py-3 px-4 font-mono text-zinc-300 text-xs">
+            ${assets.length} file(s)
+          </td>
+          <td class="py-3 px-4">${statusBadge}</td>
+          <td class="py-3 px-4 text-zinc-400 font-mono text-xs">${createdDate}</td>
+          <td class="py-3 px-4 text-right">
             <div class="flex items-center justify-end gap-2">
-              <button 
-                data-edit-id="${item.id}" 
-                class="edit-btn px-2.5 py-1 text-[11px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded transition-colors cursor-pointer"
-              >
-                Edit
-              </button>
-              <button 
-                data-archive-id="${item.id}" 
-                class="archive-btn px-2.5 py-1 text-[11px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded transition-colors cursor-pointer"
-              >
-                ${item.isArchived ? "Unarchive" : "Archive"}
-              </button>
-              ${
-                  isAdmin
-                      ? `<button 
-                      data-delete-id="${item.id}" 
-                      class="delete-btn px-2.5 py-1 text-[11px] font-mono bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-900/60 rounded transition-colors cursor-pointer"
-                    >
-                      Delete
-                    </button>`
-                      : ""
-              }
+              <button data-action="edit" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded transition-colors cursor-pointer">Edit</button>
+              <button data-action="archive" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer">${item.isArchived ? "Unarchive" : "Archive"}</button>
+              ${isAdmin ? `<button data-action="delete" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer">Delete</button>` : ""}
             </div>
           </td>
         </tr>`;
             })
             .join("");
 
-        attachTableEventListeners();
-    }
+        // Attach Thumbnail Click Event for Full Post Gallery Carousel
+        document.querySelectorAll(".preview-thumb").forEach((thumb) => {
+            thumb.addEventListener("click", (e) => {
+                const el = e.currentTarget as HTMLElement;
+                const itemId = el.dataset.itemId;
+                if (!itemId) return;
 
-    // Attach Event Listeners to rendered table rows
-    function attachTableEventListeners() {
-        // Image preview handlers
-        document.querySelectorAll(".preview-thumb").forEach((img) => {
-            img.addEventListener("click", (e) => {
-                const target = e.currentTarget as HTMLImageElement;
-                const fullUrl =
-                    target.getAttribute("data-full-url") || target.src;
-                const title = target.alt;
-                if (modalImg) modalImg.src = fullUrl;
-                if (modalTitle) modalTitle.innerText = title;
-                if (imageModal) imageModal.classList.remove("hidden");
-            });
-        });
-
-        // Edit button handlers
-        document.querySelectorAll(".edit-btn").forEach((btn) => {
-            btn.addEventListener("click", (e) => {
-                const id = (e.currentTarget as HTMLElement).getAttribute(
-                    "data-edit-id",
-                );
-                const item = allMediaItems.find(
-                    (m) => m.id === id || m.id == id,
-                );
-                if (!item) return;
-
-                (
-                    document.getElementById("edit-id") as HTMLInputElement
-                ).value = item.id;
-                (
-                    document.getElementById("edit-title") as HTMLInputElement
-                ).value = item.title || "";
-                (
-                    document.getElementById(
-                        "edit-category",
-                    ) as HTMLInputElement
-                ).value = item.category || "";
-                (
-                    document.getElementById(
-                        "edit-hashtags",
-                    ) as HTMLInputElement
-                ).value = item.hashtags ? item.hashtags.join(", ") : "";
-                (
-                    document.getElementById(
-                        "edit-description",
-                    ) as HTMLTextAreaElement
-                ).value = item.description || "";
-
-                if (editModal) editModal.classList.remove("hidden");
-            });
-        });
-
-        // Archive button handlers
-        document.querySelectorAll(".archive-btn").forEach((btn) => {
-            btn.addEventListener("click", async (e) => {
-                const id = (e.currentTarget as HTMLElement).getAttribute(
-                    "data-archive-id",
-                );
-                try {
-                    const res = await fetch(
-                        `${API_URL}/api/media/${id}/archive`,
-                        {
-                            method: "PATCH",
-                            headers: { Authorization: `Bearer ${getToken()}` },
-                        },
-                    );
-                    if (res.ok) fetchMediaList();
-                } catch {
-                    alert("Error toggling archive status");
+                const item = allMediaItems.find((m) => m.id === itemId);
+                if (item && item.media && item.media.length > 0) {
+                    openMediaGallery(item.media, 0, item.title || "");
                 }
             });
         });
 
-        // Delete button handlers
-        document.querySelectorAll(".delete-btn").forEach((btn) => {
+        // Attach Action Buttons Events
+        document.querySelectorAll(".action-btn").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
-                const id = (e.currentTarget as HTMLElement).getAttribute(
-                    "data-delete-id",
-                );
-                if (
-                    !confirm(
-                        "Are you sure you want to delete this media item?",
-                    )
-                )
-                    return;
+                const el = e.currentTarget as HTMLElement;
+                const action = el.dataset.action;
+                const id = el.dataset.id;
+                if (!id || !action) return;
 
-                try {
-                    const res = await fetch(`${API_URL}/api/media/${id}`, {
-                        method: "DELETE",
-                        headers: { Authorization: `Bearer ${getToken()}` },
+                if (action === "edit") {
+                    const item = allMediaItems.find((m) => m.id === id);
+                    if (!item) return;
+
+                    (document.getElementById("edit-id") as HTMLInputElement).value = item.id;
+                    (document.getElementById("edit-title") as HTMLInputElement).value = item.title || "";
+                    (document.getElementById("edit-category") as HTMLInputElement).value = item.category || "";
+                    (document.getElementById("edit-hashtags") as HTMLInputElement).value = item.hashtags?.join(", ") || "";
+                    (document.getElementById("edit-description") as HTMLTextAreaElement).value = item.description || "";
+
+                    renderEditAssets(item);
+                    editModal?.classList.remove("hidden");
+                } else if (action === "archive") {
+                    const token = getToken();
+                    if (!token) return;
+                    await fetch(`${API_URL}/api/media/${id}/archive`, {
+                        method: "PATCH",
+                        headers: { Authorization: `Bearer ${token}` },
                     });
-                    if (res.ok) fetchMediaList();
-                } catch {
-                    alert("Error deleting media item");
+                    await fetchMediaList();
+                } else if (action === "delete") {
+                    if (!confirm("Are you sure you want to permanently delete this media item and all associated Cloudinary files?")) return;
+                    const token = getToken();
+                    if (!token) return;
+                    await fetch(`${API_URL}/api/media/${id}`, {
+                        method: "DELETE",
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    await fetchMediaList();
                 }
             });
         });
     }
 
-    // Upload Form Submit Listener
-    const uploadForm = document.getElementById(
-        "upload-form",
-    ) as HTMLFormElement;
-    const statusMsg = document.getElementById(
-        "status-message",
-    ) as HTMLDivElement;
-    const uploadBtn = document.getElementById(
-        "upload-btn",
-    ) as HTMLButtonElement;
-
-    uploadForm?.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        if (!uploadBtn) return;
-
-        uploadBtn.disabled = true;
-        uploadBtn.innerText = "Uploading...";
-        if (statusMsg)
-            statusMsg.className =
-                "hidden text-xs font-mono text-center rounded-lg p-3";
-
-        const formData = new FormData(uploadForm);
-
-        try {
-            const res = await fetch(`${API_URL}/api/media/upload`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${getToken()}`,
-                },
-                body: formData,
-            });
-
-            if (!res.ok) throw new Error("Failed to upload media");
-
-            if (statusMsg) {
-                statusMsg.innerText = "Successfully uploaded to gallery!";
-                statusMsg.className =
-                    "block text-xs font-mono text-center rounded-lg p-3 bg-emerald-950/80 border border-emerald-900 text-emerald-300";
-            }
-            uploadForm.reset();
-            fetchMediaList();
-        } catch (err: any) {
-            if (statusMsg) {
-                statusMsg.innerText = err.message || "Error uploading file";
-                statusMsg.className =
-                    "block text-xs font-mono text-center rounded-lg p-3 bg-red-950/80 border border-red-900 text-red-300";
-            }
-        } finally {
-            uploadBtn.disabled = false;
-            uploadBtn.innerText = "Upload to Gallery";
-        }
-    });
-
-    // Edit Form Submit Listener
-    editForm?.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const id = (document.getElementById("edit-id") as HTMLInputElement)
-            .value;
-        const title = (
-            document.getElementById("edit-title") as HTMLInputElement
-        ).value;
-        const category = (
-            document.getElementById("edit-category") as HTMLInputElement
-        ).value;
-        const hashtags = (
-            document.getElementById("edit-hashtags") as HTMLInputElement
-        ).value
-            .split(",")
-            .map((h) => h.trim())
-            .filter(Boolean);
-        const description = (
-            document.getElementById("edit-description") as HTMLTextAreaElement
-        ).value;
-
-        try {
-            const res = await fetch(`${API_URL}/api/media/${id}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${getToken()}`,
-                },
-                body: JSON.stringify({
-                    title,
-                    category,
-                    hashtags,
-                    description,
-                }),
-            });
-
-            if (!res.ok) throw new Error("Failed to update media");
-
-            closeEditModal();
-            fetchMediaList();
-        } catch (err: any) {
-            if (editStatus) {
-                editStatus.innerText = err.message || "Error updating item";
-                editStatus.className =
-                    "block text-xs font-mono text-center rounded-lg p-2.5 bg-red-950/80 border border-red-900 text-red-300";
-            }
-        }
-    });
-
-    // Initial Fetch
+    // Initial Load
     fetchMediaList();
 </script>
