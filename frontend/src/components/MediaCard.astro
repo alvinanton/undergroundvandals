@@ -7,46 +7,57 @@ interface Props {
 
 const { item } = Astro.props;
 
-// Extensiones conocidas de video
+// Casteo a 'any' para evitar errores de TypeScript con propiedades legacy/nuevas
+const itemAny = item as any;
+const rawAssets = itemAny?.media || itemAny?.assets || [];
+
+const assets = rawAssets.length > 0
+  ? rawAssets 
+  : (itemAny?.url ? [{ id: itemAny.id || '', url: itemAny.url, publicId: itemAny.publicId || '', type: itemAny.type ?? 0 }] : []);
+
+const primaryAsset = assets[0];
+const mediaUrl = primaryAsset?.url;
+
 const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.m4v'];
-const urlLower = item.url ? item.url.toLowerCase() : '';
+const urlLower = mediaUrl ? mediaUrl.toLowerCase() : '';
 const hasVideoExtension = videoExtensions.some(ext => urlLower.endsWith(ext));
 
-// Detección inteligente de video
 const isVideo = 
-  item.type === 1 || 
-  item.type === '1' || 
-  (typeof item.type === 'string' && item.type.toLowerCase() === 'video') ||
+  primaryAsset?.type === 1 || 
+  primaryAsset?.type === '1' || 
+  (typeof primaryAsset?.type === 'string' && primaryAsset.type.toLowerCase() === 'video') ||
   hasVideoExtension;
 ---
 
-{/* Agregamos la clase media-card-item y data-hashtags para el sistema de filtrado */}
 <div 
   class="media-card-item bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all duration-300 shadow-lg group flex flex-col justify-between"
-  data-hashtags={JSON.stringify(item.hashtags || [])}
+  data-hashtags={JSON.stringify(item?.hashtags || [])}
 >
   <div>
     {/* Disparador del Modal */}
     <button 
       type="button"
       class="media-card-trigger relative aspect-square w-full overflow-hidden bg-zinc-950 text-left focus:outline-none cursor-pointer group"
-      data-url={item.url}
-      data-type={isVideo ? 'video' : 'image'}
-      data-description={item.description || ''}
-      data-category={item.category || ''}
-      data-hashtags={JSON.stringify(item.hashtags || [])}
+      data-assets={JSON.stringify(assets)}
+      data-description={item?.description || ''}
+      data-category={item?.category || ''}
+      data-hashtags={JSON.stringify(item?.hashtags || [])}
     >
-      {!isVideo ? (
+      {!mediaUrl ? (
+        <div class="w-full h-full flex flex-col items-center justify-center bg-zinc-950 p-4 text-center border border-zinc-800/50">
+          <span class="text-zinc-600 text-xs font-mono">[ NO MEDIA ASSET ]</span>
+        </div>
+      ) : !isVideo ? (
         <img 
-          src={item.url} 
-          alt={item.description || item.title || "Graffiti item"} 
+          src={mediaUrl} 
+          alt={item?.description || item?.title || "Graffiti item"} 
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
           loading="lazy"
         />
       ) : (
         <div class="relative w-full h-full">
           <video 
-            src={item.url} 
+            src={mediaUrl} 
             class="w-full h-full object-cover pointer-events-none" 
             muted 
           />
@@ -58,26 +69,36 @@ const isVideo =
         </div>
       )}
       
-      {/* Category Badge */}
-      {item.category && (
+      {/* Indicador de múltiples archivos */}
+      {assets.length > 1 && (
+        <span class="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[11px] font-mono text-orange-400 px-2 py-0.5 rounded-full border border-orange-500/30 flex items-center gap-1.5 pointer-events-none">
+          <svg class="w-3 h-3 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+          {assets.length}
+        </span>
+      )}
+
+      {/* Badge de Categoría */}
+      {item?.category && (
         <span class="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-xs px-2.5 py-1 rounded-full text-zinc-300 border border-zinc-700/50 pointer-events-none">
           {item.category}
         </span>
       )}
     </button>
 
-    {/* Info Block */}
-    {(item.description || (item.hashtags && item.hashtags.length > 0)) && (
+    {/* Bloque de Información */}
+    {(item?.description || (item?.hashtags && item.hashtags.length > 0)) && (
       <div class="p-4">
-        {item.description && (
+        {item?.description && (
           <p class="text-zinc-300 text-sm line-clamp-2 leading-relaxed">
             {item.description}
           </p>
         )}
 
-        {/* Hashtags Clickeables más Pequeños */}
-        {item.hashtags && item.hashtags.length > 0 && (
-          <div class={`flex flex-wrap gap-1.5 ${item.description ? 'mt-3' : 'mt-0'}`}>
+        {/* Hashtags Clickeables */}
+        {item?.hashtags && item.hashtags.length > 0 && (
+          <div class={`flex flex-wrap gap-1.5 ${item?.description ? 'mt-3' : 'mt-0'}`}>
             {item.hashtags.map((tag) => (
               <button
                 type="button"

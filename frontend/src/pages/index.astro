@@ -63,14 +63,14 @@ try {
 
   </main>
 
-  {/* GLOBAL LIGHTBOX MODAL */}
+  {/* GLOBAL LIGHTBOX MODAL WITH CAROUSEL */}
   <div 
     id="media-modal" 
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6"
   >
     <button 
       id="modal-close" 
-      class="absolute top-4 right-4 z-10 p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+      class="absolute top-4 right-4 z-20 p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
       aria-label="Close modal"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,9 +78,40 @@ try {
       </svg>
     </button>
 
-    <div class="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl">
-      <div id="modal-media-container" class="w-full flex items-center justify-center max-h-[75vh] bg-black"></div>
+    <div class="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl group">
+      
+      {/* Carousel Container */}
+      <div id="modal-media-container" class="relative w-full flex items-center justify-center max-h-[75vh] min-h-[300px] bg-black overflow-hidden">
+        
+        {/* Carousel Prev/Next Controls */}
+        <button 
+          id="modal-prev" 
+          class="hidden absolute left-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all cursor-pointer"
+          aria-label="Previous asset"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
 
+        <button 
+          id="modal-next" 
+          class="hidden absolute right-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all cursor-pointer"
+          aria-label="Next asset"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+
+        {/* Media Viewport */}
+        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center"></div>
+
+        {/* Counter Badge */}
+        <span id="modal-counter" class="hidden absolute bottom-3 left-3 z-10 bg-black/70 backdrop-blur-md text-xs font-mono text-zinc-300 px-2.5 py-1 rounded-full border border-zinc-700/50"></span>
+      </div>
+
+      {/* Info Block */}
       <div id="modal-info" class="w-full p-4 bg-zinc-900/90 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <p id="modal-description" class="text-zinc-200 text-sm font-medium leading-relaxed"></p>
@@ -92,11 +123,15 @@ try {
   </div>
 </Layout>
 
-{/* INTERACTIVE MODAL & FILTER LOGIC */}
 <script>
   const modal = document.getElementById('media-modal');
   const closeBtn = document.getElementById('modal-close');
   const mediaContainer = document.getElementById('modal-media-container');
+  const assetWrapper = document.getElementById('modal-asset-wrapper');
+  const prevBtn = document.getElementById('modal-prev');
+  const nextBtn = document.getElementById('modal-next');
+  const counterBadge = document.getElementById('modal-counter');
+
   const modalDesc = document.getElementById('modal-description');
   const modalCategory = document.getElementById('modal-category');
   const modalHashtags = document.getElementById('modal-hashtags');
@@ -107,11 +142,18 @@ try {
   const clearFilterBtn = document.getElementById('clear-filter-btn');
   const itemCountBadge = document.getElementById('item-count-badge');
 
-  let currentTagFilter: string | null = null;
+  interface Asset {
+    id?: string;
+    url: string;
+    publicId?: string;
+    type: number | string;
+  }
+
+  let currentAssets: Asset[] = [];
+  let currentAssetIndex = 0;
 
   // Filtering Logic
   function applyTagFilter(tag: string | null) {
-    currentTagFilter = tag;
     const cards = document.querySelectorAll('.media-card-item');
     let visibleCount = 0;
 
@@ -143,7 +185,7 @@ try {
     }
   }
 
-  // Delegated click handler for hashtag buttons (works both in grid cards and modal)
+  // Delegated click handler for hashtags
   document.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest('.hashtag-btn');
     if (target) {
@@ -156,32 +198,78 @@ try {
     }
   });
 
-  clearFilterBtn?.addEventListener('click', () => {
-    applyTagFilter(null);
-  });
+  clearFilterBtn?.addEventListener('click', () => applyTagFilter(null));
 
   // =========================================================================
-  // MODAL LOGIC + MOBILE ENHANCEMENTS (BACK GESTURE & SWIPE DOWN)
+  // CAROUSEL & MODAL LOGIC
   // =========================================================================
 
-  function openModal(data: DOMStringMap) {
-    if (!mediaContainer || !modal) return;
+  function renderCurrentAsset() {
+    if (!assetWrapper || currentAssets.length === 0) return;
 
-    mediaContainer.innerHTML = '';
+    assetWrapper.innerHTML = '';
+    const asset = currentAssets[currentAssetIndex];
 
-    if (data.type === 'video') {
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.m4v'];
+    const urlLower = asset.url ? asset.url.toLowerCase() : '';
+    const isVideo = 
+      asset.type === 1 || 
+      asset.type === '1' || 
+      (typeof asset.type === 'string' && asset.type.toLowerCase() === 'video') ||
+      videoExtensions.some(ext => urlLower.endsWith(ext));
+
+    if (isVideo) {
       const video = document.createElement('video');
-      video.src = data.url || '';
+      video.src = asset.url;
       video.controls = true;
       video.autoplay = true;
       video.className = 'max-h-[75vh] w-auto max-w-full object-contain';
-      mediaContainer.appendChild(video);
+      assetWrapper.appendChild(video);
     } else {
       const img = document.createElement('img');
-      img.src = data.url || '';
+      img.src = asset.url;
       img.className = 'max-h-[75vh] w-auto max-w-full object-contain pointer-events-none select-none';
-      mediaContainer.appendChild(img);
+      assetWrapper.appendChild(img);
     }
+
+    // Controles del carrusel
+    if (currentAssets.length > 1) {
+      prevBtn?.classList.remove('hidden');
+      nextBtn?.classList.remove('hidden');
+      if (counterBadge) {
+        counterBadge.textContent = `${currentAssetIndex + 1} / ${currentAssets.length}`;
+        counterBadge.classList.remove('hidden');
+      }
+    } else {
+      prevBtn?.classList.add('hidden');
+      nextBtn?.classList.add('hidden');
+      counterBadge?.classList.add('hidden');
+    }
+  }
+
+  function nextAsset() {
+    if (currentAssets.length <= 1) return;
+    currentAssetIndex = (currentAssetIndex + 1) % currentAssets.length;
+    renderCurrentAsset();
+  }
+
+  function prevAsset() {
+    if (currentAssets.length <= 1) return;
+    currentAssetIndex = (currentAssetIndex - 1 + currentAssets.length) % currentAssets.length;
+    renderCurrentAsset();
+  }
+
+  function openModal(data: DOMStringMap) {
+    if (!modal) return;
+
+    try {
+      currentAssets = JSON.parse(data.assets || '[]');
+    } catch {
+      currentAssets = [];
+    }
+    currentAssetIndex = 0;
+
+    renderCurrentAsset();
 
     if (modalDesc) modalDesc.textContent = data.description || '';
 
@@ -215,7 +303,6 @@ try {
     modal.classList.add('flex');
     document.body.style.overflow = 'hidden';
 
-    // Push state to browser history to catch mobile back gesture/button
     if (!history.state?.modalOpen) {
       history.pushState({ modalOpen: true }, '');
     }
@@ -226,80 +313,70 @@ try {
 
     modal.classList.add('hidden');
     modal.classList.remove('flex');
-    if (mediaContainer) {
-      mediaContainer.innerHTML = '';
-      mediaContainer.style.transform = '';
-      mediaContainer.style.opacity = '';
-    }
+    if (assetWrapper) assetWrapper.innerHTML = '';
     document.body.style.overflow = '';
 
-    // Clean history state if closed manually (click/button) instead of history pop event
     if (!isPopState && history.state?.modalOpen) {
       history.back();
     }
   }
 
-  // Listener for mobile system back button/gesture
-  window.addEventListener('popstate', () => {
-    closeModal(true);
+  // Event Listeners de carrusel
+  prevBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    prevAsset();
   });
 
-  // Swipe Down gesture detection
+  nextBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    nextAsset();
+  });
+
+  window.addEventListener('popstate', () => closeModal(true));
+
+  // Navegación por teclado (Flechas)
+  document.addEventListener('keydown', (e) => {
+    if (modal && !modal.classList.contains('hidden')) {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === 'ArrowRight') nextAsset();
+      if (e.key === 'ArrowLeft') prevAsset();
+    }
+  });
+
+  // Swipe Gestures
+  let touchStartX = 0;
   let touchStartY = 0;
-  let touchCurrentY = 0;
 
   if (mediaContainer) {
     mediaContainer.addEventListener('touchstart', (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
-      touchCurrentY = touchStartY;
     }, { passive: true });
 
-    mediaContainer.addEventListener('touchmove', (e: TouchEvent) => {
-      touchCurrentY = e.touches[0].clientY;
-      const diffY = touchCurrentY - touchStartY;
+    mediaContainer.addEventListener('touchend', (e: TouchEvent) => {
+      const diffX = e.changedTouches[0].clientX - touchStartX;
+      const diffY = e.changedTouches[0].clientY - touchStartY;
 
-      // If pulling down, translate element and scale opacity proportionally
-      if (diffY > 0) {
-        mediaContainer.style.transform = `translateY(${diffY}px)`;
-        mediaContainer.style.opacity = `${Math.max(0.3, 1 - diffY / 300)}`;
+      // Swipe horizontal para carrusel
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (diffX < 0) nextAsset();
+        else prevAsset();
       }
-    }, { passive: true });
-
-    mediaContainer.addEventListener('touchend', () => {
-      const diffY = touchCurrentY - touchStartY;
-
-      // Close modal if pulled down past 100px threshold
-      if (diffY > 100) {
+      // Swipe vertical hacia abajo para cerrar
+      else if (diffY > 100) {
         closeModal();
-      } else {
-        // Smoothly animate back to initial position
-        mediaContainer.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-        mediaContainer.style.transform = 'translateY(0)';
-        mediaContainer.style.opacity = '1';
-        setTimeout(() => {
-          if (mediaContainer) mediaContainer.style.transition = '';
-        }, 200);
       }
-
-      touchStartY = 0;
-      touchCurrentY = 0;
     });
   }
 
-  // Standard Open/Close Event Listeners
   document.querySelectorAll('.media-card-trigger').forEach((trigger) => {
     trigger.addEventListener('click', () => {
-      const data = (trigger as HTMLElement).dataset;
-      openModal(data);
+      openModal((trigger as HTMLElement).dataset);
     });
   });
 
   closeBtn?.addEventListener('click', () => closeModal());
   modal?.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
   });
 </script>

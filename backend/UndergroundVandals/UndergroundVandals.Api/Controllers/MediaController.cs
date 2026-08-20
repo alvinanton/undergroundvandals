@@ -40,6 +40,7 @@ public class MediaController : ControllerBase
             query = query.Where(m => m.Hashtags.Contains(tag.ToLower()));
 
         var items = await query
+            .Include(m => m.MediaAssets)
             .OrderByDescending(m => m.CreatedAt)
             .Select(m => new MediaResponseDto
             {
