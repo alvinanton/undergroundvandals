@@ -68,34 +68,21 @@ try {
     id="media-modal" 
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/95 backdrop-blur-md p-2 sm:p-6"
   >
-    {/* Controles superiores (Pantalla completa y Cerrar) */}
-    <div class="absolute top-3 right-3 z-30 flex items-center gap-2">
-      <button 
-        id="modal-fullscreen" 
-        class="p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
-        aria-label="Fullscreen"
-        title="Pantalla completa"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4"/>
-        </svg>
-      </button>
-
-      <button 
-        id="modal-close" 
-        class="p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
-        aria-label="Close modal"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
+    {/* Botón Cerrar (Solo superior derecha) */}
+    <button 
+      id="modal-close" 
+      class="absolute top-3 right-3 z-30 p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+      aria-label="Close modal"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
 
     <div class="relative max-w-5xl w-full h-[92vh] sm:h-[88vh] flex flex-col justify-between overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl">
       
       {/* Carousel Container */}
-      <div id="modal-media-container" class="relative flex-1 w-full min-h-0 flex items-center justify-center bg-black overflow-hidden">
+      <div id="modal-media-container" class="relative flex-1 w-full min-h-0 flex items-center justify-center bg-black overflow-hidden select-none">
         
         {/* Carousel Prev/Next Controls */}
         <button 
@@ -125,13 +112,28 @@ try {
         <span id="modal-counter" class="hidden absolute top-3 left-3 z-10 bg-black/70 backdrop-blur-md text-xs font-mono text-zinc-300 px-2.5 py-1 rounded-full border border-zinc-700/50"></span>
       </div>
 
-      {/* Info Block */}
+      {/* Info Block (Pie de la foto) */}
       <div id="modal-info" class="shrink-0 w-full p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 max-h-[25vh] overflow-y-auto">
         <div>
           <p id="modal-description" class="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed"></p>
           <div id="modal-hashtags" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
-        <span id="modal-category" class="text-xs font-mono px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full border border-zinc-700/50 shrink-0"></span>
+        
+        {/* Contenedor derecho del pie: Categoría + Botón Pantalla Completa */}
+        <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+          <span id="modal-category" class="text-xs font-mono px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full border border-zinc-700/50"></span>
+          
+          <button 
+            id="modal-fullscreen" 
+            class="p-2 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700/80 rounded-lg border border-zinc-700/50 transition-colors cursor-pointer flex items-center justify-center"
+            aria-label="Fullscreen"
+            title="Pantalla completa (o doble tap)"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -378,27 +380,54 @@ try {
     }
   });
 
-  // Gestos táctiles
+  // Gestos táctiles (Swipe + Doble Tap)
   let touchStartX = 0;
   let touchStartY = 0;
+  let lastTapTime = 0;
 
   if (mediaContainer) {
     mediaContainer.addEventListener('touchstart', (e: TouchEvent) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
     }, { passive: true });
 
     mediaContainer.addEventListener('touchend', (e: TouchEvent) => {
+      if (e.changedTouches.length === 0) return;
+
       const diffX = e.changedTouches[0].clientX - touchStartX;
       const diffY = e.changedTouches[0].clientY - touchStartY;
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTapTime;
 
+      // Detección de Doble Tap (Poco movimiento + toque rápido menor a 300ms)
+      if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
+        if (tapLength < 300 && tapLength > 0) {
+          e.preventDefault();
+          toggleFullscreen();
+          lastTapTime = 0;
+          return;
+        }
+      }
+
+      lastTapTime = currentTime;
+
+      // Swipe horizontal para carrusel
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
         if (diffX < 0) nextAsset();
         else prevAsset();
       }
+      // Swipe vertical hacia abajo para cerrar modal
       else if (diffY > 100) {
         closeModal();
       }
+    });
+
+    // Doble Clic en Escritorio
+    mediaContainer.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      toggleFullscreen();
     });
   }
 
