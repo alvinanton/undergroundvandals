@@ -66,22 +66,36 @@ try {
   {/* GLOBAL LIGHTBOX MODAL WITH CAROUSEL */}
   <div 
     id="media-modal" 
-    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/95 backdrop-blur-md p-2 sm:p-6"
   >
-    <button 
-      id="modal-close" 
-      class="absolute top-4 right-4 z-20 p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
-      aria-label="Close modal"
-    >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
+    {/* Controles superiores (Pantalla completa y Cerrar) */}
+    <div class="absolute top-3 right-3 z-30 flex items-center gap-2">
+      <button 
+        id="modal-fullscreen" 
+        class="p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+        aria-label="Fullscreen"
+        title="Pantalla completa"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4"/>
+        </svg>
+      </button>
 
-    <div class="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl group">
+      <button 
+        id="modal-close" 
+        class="p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+        aria-label="Close modal"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="relative max-w-5xl w-full h-[92vh] sm:h-[88vh] flex flex-col justify-between overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl">
       
       {/* Carousel Container */}
-      <div id="modal-media-container" class="relative w-full flex items-center justify-center max-h-[75vh] min-h-[300px] bg-black overflow-hidden">
+      <div id="modal-media-container" class="relative flex-1 w-full min-h-0 flex items-center justify-center bg-black overflow-hidden">
         
         {/* Carousel Prev/Next Controls */}
         <button 
@@ -105,16 +119,16 @@ try {
         </button>
 
         {/* Media Viewport */}
-        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center"></div>
+        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center p-2"></div>
 
         {/* Counter Badge */}
-        <span id="modal-counter" class="hidden absolute bottom-3 left-3 z-10 bg-black/70 backdrop-blur-md text-xs font-mono text-zinc-300 px-2.5 py-1 rounded-full border border-zinc-700/50"></span>
+        <span id="modal-counter" class="hidden absolute top-3 left-3 z-10 bg-black/70 backdrop-blur-md text-xs font-mono text-zinc-300 px-2.5 py-1 rounded-full border border-zinc-700/50"></span>
       </div>
 
       {/* Info Block */}
-      <div id="modal-info" class="w-full p-4 bg-zinc-900/90 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div id="modal-info" class="shrink-0 w-full p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 max-h-[25vh] overflow-y-auto">
         <div>
-          <p id="modal-description" class="text-zinc-200 text-sm font-medium leading-relaxed"></p>
+          <p id="modal-description" class="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed"></p>
           <div id="modal-hashtags" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
         <span id="modal-category" class="text-xs font-mono px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full border border-zinc-700/50 shrink-0"></span>
@@ -126,6 +140,7 @@ try {
 <script>
   const modal = document.getElementById('media-modal');
   const closeBtn = document.getElementById('modal-close');
+  const fullscreenBtn = document.getElementById('modal-fullscreen');
   const mediaContainer = document.getElementById('modal-media-container');
   const assetWrapper = document.getElementById('modal-asset-wrapper');
   const prevBtn = document.getElementById('modal-prev');
@@ -223,12 +238,13 @@ try {
       video.src = asset.url;
       video.controls = true;
       video.autoplay = true;
-      video.className = 'max-h-[75vh] w-auto max-w-full object-contain';
+      video.playsInline = true;
+      video.className = 'max-h-full max-w-full w-auto h-auto object-contain';
       assetWrapper.appendChild(video);
     } else {
       const img = document.createElement('img');
       img.src = asset.url;
-      img.className = 'max-h-[75vh] w-auto max-w-full object-contain pointer-events-none select-none';
+      img.className = 'max-h-full max-w-full w-auto h-auto object-contain pointer-events-none select-none';
       assetWrapper.appendChild(img);
     }
 
@@ -257,6 +273,19 @@ try {
     if (currentAssets.length <= 1) return;
     currentAssetIndex = (currentAssetIndex - 1 + currentAssets.length) % currentAssets.length;
     renderCurrentAsset();
+  }
+
+  function toggleFullscreen() {
+    const mediaEl = assetWrapper?.querySelector('video, img');
+    if (!mediaEl) return;
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else if (mediaEl.requestFullscreen) {
+      mediaEl.requestFullscreen();
+    } else if ((mediaEl as any).webkitRequestFullscreen) {
+      (mediaEl as any).webkitRequestFullscreen();
+    }
   }
 
   function openModal(data: DOMStringMap) {
@@ -321,7 +350,12 @@ try {
     }
   }
 
-  // Event Listeners de carrusel
+  // Listeners de acción
+  fullscreenBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFullscreen();
+  });
+
   prevBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     prevAsset();
@@ -334,16 +368,17 @@ try {
 
   window.addEventListener('popstate', () => closeModal(true));
 
-  // Navegación por teclado (Flechas)
+  // Navegación por teclado
   document.addEventListener('keydown', (e) => {
     if (modal && !modal.classList.contains('hidden')) {
       if (e.key === 'Escape') closeModal();
       if (e.key === 'ArrowRight') nextAsset();
       if (e.key === 'ArrowLeft') prevAsset();
+      if (e.key === 'f' || e.key === 'F') toggleFullscreen();
     }
   });
 
-  // Swipe Gestures
+  // Gestos táctiles
   let touchStartX = 0;
   let touchStartY = 0;
 
@@ -357,12 +392,10 @@ try {
       const diffX = e.changedTouches[0].clientX - touchStartX;
       const diffY = e.changedTouches[0].clientY - touchStartY;
 
-      // Swipe horizontal para carrusel
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
         if (diffX < 0) nextAsset();
         else prevAsset();
       }
-      // Swipe vertical hacia abajo para cerrar
       else if (diffY > 100) {
         closeModal();
       }
