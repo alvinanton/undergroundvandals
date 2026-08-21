@@ -68,10 +68,10 @@ try {
     id="media-modal" 
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/100 sm:bg-black/95 backdrop-blur-md p-0 sm:p-6"
   >
-    {/* Close Button: Minimalist on mobile, standard on desktop */}
+    {/* Enhanced Contrast Close Button */}
     <button 
       id="modal-close" 
-      class="absolute top-4 right-4 z-30 p-2 text-zinc-300 hover:text-white bg-black/20 sm:bg-zinc-900/80 rounded-full sm:border sm:border-zinc-800 transition-colors cursor-pointer"
+      class="absolute top-4 right-4 z-[60] p-2 text-white bg-black/60 backdrop-blur-md sm:bg-zinc-900/80 rounded-full border border-white/10 sm:border-zinc-800 transition-all duration-300 cursor-pointer"
       aria-label="Close modal"
     >
       <svg class="w-6 h-6 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,16 +79,16 @@ try {
       </svg>
     </button>
 
-    {/* Main Container: No borders or radius on mobile for total immersion */}
-    <div class="relative max-w-5xl w-full h-[100dvh] sm:h-[88vh] flex flex-col justify-between overflow-hidden sm:rounded-2xl bg-zinc-950 sm:border sm:border-zinc-800 shadow-2xl">
+    {/* Main Container: Flexbox Split-View Architecture */}
+    <div class="relative max-w-5xl w-full h-[100dvh] sm:h-[88vh] flex flex-col justify-between overflow-hidden sm:rounded-2xl bg-black sm:bg-zinc-950 sm:border sm:border-zinc-800 shadow-2xl">
       
-      {/* Carousel Container */}
+      {/* 1. Media Area: flex-1 allows this to dynamically grow/shrink */}
       <div id="modal-media-container" class="relative flex-1 w-full min-h-0 flex items-center justify-center bg-black overflow-hidden select-none">
         
-        {/* Fullscreen Overlay Button: Hidden on mobile, bottom-right on desktop */}
+        {/* Fullscreen Overlay Button (Desktop only) */}
         <button 
           id="modal-fullscreen" 
-          class="hidden sm:flex absolute bottom-4 right-4 z-20 p-2.5 rounded-lg bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer items-center justify-center"
+          class="hidden sm:flex absolute bottom-4 right-4 z-40 p-2.5 rounded-lg bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer items-center justify-center"
           aria-label="Toggle Fullscreen"
           title="Fullscreen (or double click)"
         >
@@ -97,10 +97,10 @@ try {
           </svg>
         </button>
 
-        {/* Carousel Arrows: Forced hidden on mobile with max-sm:!hidden */}
+        {/* Carousel Arrows: Controlled dynamically via JavaScript state */}
         <button 
           id="modal-prev" 
-          class="hidden max-sm:!hidden absolute left-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+          class="hidden absolute left-3 z-40 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
           aria-label="Previous asset"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +110,7 @@ try {
 
         <button 
           id="modal-next" 
-          class="hidden max-sm:!hidden absolute right-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+          class="hidden absolute right-3 z-40 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
           aria-label="Next asset"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,11 +118,11 @@ try {
           </svg>
         </button>
 
-        {/* Media Viewport: Padding removed on mobile */}
-        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center p-0 sm:p-2"></div>
+        {/* Media Viewport */}
+        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center p-0 sm:p-2 transition-opacity duration-200 ease-in-out opacity-100"></div>
       </div>
 
-      {/* Info Block (Footer) */}
+      {/* 2. Footer Area: shrink-0 ensures it calculates intrinsic height at the bottom */}
       <div id="modal-info" class="shrink-0 w-full p-4 bg-zinc-900/95 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 max-h-[30vh] overflow-y-auto pb-8 sm:pb-4">
         <div>
           <p id="modal-description" class="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed"></p>
@@ -130,7 +130,6 @@ try {
         </div>
         
         <div class="flex items-center gap-3 shrink-0 self-end sm:self-center mt-2 sm:mt-0">
-          {/* Counter relocated to the footer */}
           <span id="modal-counter" class="hidden text-xs font-mono text-zinc-500"></span>
           <span id="modal-category" class="text-xs font-mono px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full border border-zinc-700/50"></span>
         </div>
@@ -168,6 +167,9 @@ try {
 
   let currentAssets: Asset[] = [];
   let currentAssetIndex = 0;
+  
+  // State flag to track if the mobile user is in the expanded view
+  let isMobileImmersive = false;
 
   // =========================================================================
   // FILTERING LOGIC
@@ -205,7 +207,6 @@ try {
     }
   }
 
-  // Delegated click handler for hashtags
   document.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest('.hashtag-btn');
     if (target) {
@@ -224,8 +225,14 @@ try {
   // CAROUSEL & MODAL LOGIC
   // =========================================================================
 
-  function renderCurrentAsset() {
+  async function renderCurrentAsset(skipAnimation = false) {
     if (!assetWrapper || currentAssets.length === 0) return;
+
+    // 1. Fade out current content visually
+    if (!skipAnimation) {
+      assetWrapper.style.opacity = '0';
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
 
     assetWrapper.innerHTML = '';
     const asset = currentAssets[currentAssetIndex];
@@ -255,12 +262,16 @@ try {
       img.className = 'max-h-full max-w-full w-auto h-auto object-contain pointer-events-none select-none';
       assetWrapper.appendChild(img);
       
-      // Clear inline display style so Tailwind classes handle visibility
       if (fullscreenBtn) fullscreenBtn.style.display = '';
     }
 
-    // Carousel controls state
-    if (currentAssets.length > 1) {
+    // 2. Fade in new content smoothly
+    setTimeout(() => {
+      assetWrapper.style.opacity = '1';
+    }, 50);
+
+    // Update carousel arrows based on asset count AND immersive state
+    if (currentAssets.length > 1 && !isMobileImmersive) {
       prevBtn?.classList.remove('hidden');
       nextBtn?.classList.remove('hidden');
       if (counterBadge) {
@@ -286,29 +297,45 @@ try {
     renderCurrentAsset();
   }
 
+  // Mobile-specific logic: Hides UI to allow the flex container to expand
+  function toggleMobileImmersiveMode() {
+    isMobileImmersive = !isMobileImmersive;
+    
+    const modalInfo = document.getElementById('modal-info');
+    const modalClose = document.getElementById('modal-close');
+
+    if (isMobileImmersive) {
+      if (modalInfo) modalInfo.classList.add('hidden');
+      if (modalClose) modalClose.classList.add('hidden');
+      prevBtn?.classList.add('hidden');
+      nextBtn?.classList.add('hidden');
+    } else {
+      if (modalInfo) modalInfo.classList.remove('hidden');
+      if (modalClose) modalClose.classList.remove('hidden');
+      if (currentAssets.length > 1) {
+        prevBtn?.classList.remove('hidden');
+        nextBtn?.classList.remove('hidden');
+      }
+    }
+  }
+
+  // Desktop-specific logic: Leverages native browser fullscreen APIs
   function toggleFullscreen() {
-    // Target the specific media wrapper instead of the entire modal
     const mediaArea = document.getElementById('modal-media-container') as any;
     const mediaEl = assetWrapper?.querySelector('video') as any;
-
-    // Prevent "possibly 'null'" error by exiting if the container doesn't exist
-    if (!mediaArea) return;
-
-    // Force document to 'any' for WebKit exit functions
     const doc = document as any;
 
+    if (!mediaArea) return;
+
     if (!doc.fullscreenElement) {
-      // Attempt fullscreen on the media area only (Desktop / Android)
       if (mediaArea.requestFullscreen) {
         mediaArea.requestFullscreen().catch((err: any) => console.warn(err));
       } else if (mediaArea.webkitRequestFullscreen) {
         mediaArea.webkitRequestFullscreen();
       } else if (mediaEl && mediaEl.webkitEnterFullscreen) {
-        // Exclusive fallback for videos to work in iOS Safari
         mediaEl.webkitEnterFullscreen();
       }
     } else {
-      // Exit fullscreen
       if (doc.exitFullscreen) {
         doc.exitFullscreen();
       } else if (doc.webkitExitFullscreen) {
@@ -326,8 +353,10 @@ try {
       currentAssets = [];
     }
     currentAssetIndex = 0;
+    isMobileImmersive = false; // Reset state on open
 
-    renderCurrentAsset();
+    // Bypasses the fade-out animation when the modal first opens
+    renderCurrentAsset(true);
 
     if (modalDesc) modalDesc.textContent = data.description || '';
 
@@ -361,6 +390,13 @@ try {
     modal.classList.add('flex');
     document.body.style.overflow = 'hidden';
 
+    // Ensure split-view UI is visible on initialization
+    const modalInfo = document.getElementById('modal-info');
+    const modalClose = document.getElementById('modal-close');
+    
+    if (modalInfo) modalInfo.classList.remove('hidden');
+    if (modalClose) modalClose.classList.remove('hidden');
+
     if (!history.state?.modalOpen) {
       history.pushState({ modalOpen: true }, '');
     }
@@ -373,6 +409,15 @@ try {
     modal.classList.remove('flex');
     if (assetWrapper) assetWrapper.innerHTML = '';
     document.body.style.overflow = '';
+    
+    isMobileImmersive = false; // Reset state on close
+
+    // Guarantee that immersive UI elements are restored to visible on close
+    const modalInfo = document.getElementById('modal-info');
+    const modalClose = document.getElementById('modal-close');
+    
+    if (modalInfo) modalInfo.classList.remove('hidden');
+    if (modalClose) modalClose.classList.remove('hidden');
 
     if (!isPopState && history.state?.modalOpen) {
       history.back();
@@ -382,12 +427,14 @@ try {
   // =========================================================================
   // AUTO-HIDE UI (IDLE TIMER)
   // =========================================================================
+  
   let idleTimer: number | undefined;
-  const IDLE_TIMEOUT = 2500; // 2.5 seconds before hiding UI
+  const IDLE_TIMEOUT = 2500;
 
   function setIdleState(isIdle: boolean) {
     const uiElements = [prevBtn, nextBtn, fullscreenBtn];
     uiElements.forEach(el => {
+      // Idle state only affects opacity, it does not conflict with the 'hidden' display property
       if (el && !el.classList.contains('hidden')) {
         if (isIdle) {
           el.classList.add('opacity-0', 'pointer-events-none');
@@ -399,22 +446,15 @@ try {
   }
 
   function resetIdleTimer() {
-    // Show elements immediately on interaction
     setIdleState(false);
-    
-    // Clear existing timer
     if (idleTimer) window.clearTimeout(idleTimer);
-    
-    // Start new countdown
     idleTimer = window.setTimeout(() => {
       setIdleState(true);
     }, IDLE_TIMEOUT);
   }
 
   if (mediaContainer) {
-    // Track mouse movement to reset timer
     mediaContainer.addEventListener('mousemove', resetIdleTimer);
-    // Hide UI immediately if mouse leaves the media container
     mediaContainer.addEventListener('mouseleave', () => {
       if (idleTimer) window.clearTimeout(idleTimer);
       setIdleState(true);
@@ -422,10 +462,9 @@ try {
   }
 
   // =========================================================================
-  // EVENT LISTENERS
+  // EVENT LISTENERS & GESTURES
   // =========================================================================
 
-  // Action Listeners
   fullscreenBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleFullscreen();
@@ -434,18 +473,17 @@ try {
   prevBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     prevAsset();
-    resetIdleTimer(); // Keep UI visible when interacting
+    resetIdleTimer();
   });
 
   nextBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     nextAsset();
-    resetIdleTimer(); // Keep UI visible when interacting
+    resetIdleTimer();
   });
 
   window.addEventListener('popstate', () => closeModal(true));
 
-  // Keyboard Navigation
   document.addEventListener('keydown', (e) => {
     if (modal && !modal.classList.contains('hidden')) {
       if (e.key === 'Escape') closeModal();
@@ -455,18 +493,20 @@ try {
     }
   });
 
-  // Touch Gestures (Swipe + Double Tap)
+  // Touch variables for mobile gestures
   let touchStartX = 0;
   let touchStartY = 0;
-  let lastTapTime = 0;
+  let touchStartTime = 0;
+  let lastTapTime = 0; // Tracks the timestamp of the previous tap
 
   if (mediaContainer) {
     mediaContainer.addEventListener('touchstart', (e: TouchEvent) => {
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
+        touchStartTime = new Date().getTime();
       }
-      resetIdleTimer(); // Wake up UI on touch
+      resetIdleTimer();
     }, { passive: true });
 
     mediaContainer.addEventListener('touchend', (e: TouchEvent) => {
@@ -475,46 +515,51 @@ try {
       const diffX = e.changedTouches[0].clientX - touchStartX;
       const diffY = e.changedTouches[0].clientY - touchStartY;
       const currentTime = new Date().getTime();
-      const tapLength = currentTime - lastTapTime;
+      const touchDuration = currentTime - touchStartTime;
+      const timeSinceLastTap = currentTime - lastTapTime;
 
-      // Double Tap Detection (Little movement + fast tap under 300ms)
-      if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
-        if (tapLength < 300 && tapLength > 0) {
-          e.preventDefault();
-          toggleFullscreen();
-          lastTapTime = 0;
+      // 1. Double Tap Detection: Fast consecutive taps under 300ms with minimal drag
+      if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && touchDuration < 250) {
+        if (timeSinceLastTap > 0 && timeSinceLastTap < 300) {
+          const isVideo = assetWrapper?.querySelector('video');
+          // Triggers expandable split-view only on images, ignoring video timeline controls
+          if (!isVideo) {
+            toggleMobileImmersiveMode();
+          }
+          lastTapTime = 0; // Reset after a successful double tap
           return;
         }
+        lastTapTime = currentTime; // Record tap time if it was just a single tap
       }
 
-      lastTapTime = currentTime;
-
-      // Horizontal swipe for carousel
+      // 2. Horizontal Swipe: Carousel Navigation
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
         if (diffX < 0) nextAsset();
         else prevAsset();
       }
-      // Vertical swipe down to close modal
+      // 3. Vertical Swipe Down: Closes the Modal
       else if (diffY > 100) {
         closeModal();
       }
     });
 
-    // Double Click on Desktop
+    // Desktop: Retains the native browser fullscreen on double click
     mediaContainer.addEventListener('dblclick', (e) => {
       e.preventDefault();
       toggleFullscreen();
     });
   }
 
+  // Attach modal triggers to gallery items
   document.querySelectorAll('.media-card-trigger').forEach((trigger) => {
     trigger.addEventListener('click', () => {
       openModal((trigger as HTMLElement).dataset);
-      resetIdleTimer(); // Ensure UI is visible when modal opens
+      resetIdleTimer();
     });
   });
 
   closeBtn?.addEventListener('click', () => closeModal());
+  
   modal?.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });

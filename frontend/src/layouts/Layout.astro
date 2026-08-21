@@ -1,9 +1,10 @@
 ---
 import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from "@vercel/speed-insights/astro";
 import "../styles/global.css";
 
 interface Props {
-	title?: string;
+    title?: string;
 }
 
 const { title = "Underground Vandals" } = Astro.props;
@@ -11,56 +12,59 @@ const { title = "Underground Vandals" } = Astro.props;
 
 <!doctype html>
 <html lang="en" class="bg-zinc-950 text-zinc-100 antialiased">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<title>{title}</title>
-	</head>
-	<body class="min-h-screen bg-zinc-950 flex flex-col font-sans">
-		<header
-			class="w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50"
-		>
-			<div
-				class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between"
-			>
-				{/* LOGO */}
-				<a href="/" class="group flex items-center gap-2">
-					<span
-						class="text-xl sm:text-2xl font-black tracking-tight text-white uppercase group-hover:text-orange-500 transition-colors"
-					>
-						Underground<span
-							class="text-orange-500 group-hover:text-white transition-colors"
-							>Vandals</span
-						>
-					</span>
-				</a>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <title>{title}</title>
+    </head>
+    <body class="min-h-screen bg-zinc-950 flex flex-col font-sans">
+        <header
+            class="w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50"
+        >
+            <div
+                class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between"
+            >
+                {/* 1. LOGO & BRANDING */}
+                <a href="/" class="group flex items-center gap-2">
+                    <span
+                        class="text-xl sm:text-2xl font-black tracking-tight text-white uppercase group-hover:text-orange-500 transition-colors"
+                    >
+                        Underground<span
+                            class="text-orange-500 group-hover:text-white transition-colors"
+                            >Vandals</span
+                        >
+                    </span>
+                </a>
 
-				{/* SUBTÍTULO / BADGE */}
-				<span
-					class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-zinc-400 hidden sm:inline-block"
-				>
-					v1.0 • Gallery
-				</span>
-			</div>
-		</header>
+                {/* 2. SUBTITLE / VERSION BADGE */}
+                <span
+                    class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-zinc-400 hidden sm:inline-block"
+                >
+                    v1.0 • Gallery
+                </span>
+            </div>
+        </header>
 
-		{/* 2. ÁREA DE CONTENIDO PRINCIPAL */}
-		<main
-			class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10"
-		>
-			<slot />
-		</main>
+        {/* 3. MAIN CONTENT AREA */}
+        <main
+            class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10"
+        >
+            <slot />
+        </main>
 
-		{/* 3. FOOTER */}
-		<footer
-			class="border-t border-zinc-900 py-6 mt-auto text-center text-xs text-zinc-500"
-		>
-			<p>
-				&copy; {new Date().getFullYear()} Underground Vandals. All rights
-				reserved.
-			</p>
-		</footer>
-		<Analytics />
-	</body>
+        {/* 4. FOOTER */}
+        <footer
+            class="border-t border-zinc-900 py-6 mt-auto text-center text-xs text-zinc-500"
+        >
+            <p>
+                &copy; {new Date().getFullYear()} Underground Vandals. All rights
+                reserved.
+            </p>
+        </footer>
+        
+        {/* 5. VERCEL ANALYTICS & PERFORMANCE TRACKING */}
+        <Analytics />
+        <SpeedInsights />
+    </body>
 </html>
