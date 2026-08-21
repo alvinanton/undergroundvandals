@@ -93,8 +93,8 @@ public class MediaController : ControllerBase
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost("upload")]
-    [RequestSizeLimit(100 * 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = 100 * 1024 * 1024)]
+    [RequestSizeLimit(800 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 800 * 1024 * 1024)]
     public async Task<ActionResult<MediaResponseDto>> Upload([FromForm] CreateMediaDto dto)
     {
         if (dto.Files == null || !dto.Files.Any())
@@ -151,8 +151,8 @@ public class MediaController : ControllerBase
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost("{id:guid}/assets")]
-    [RequestSizeLimit(100 * 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = 100 * 1024 * 1024)]
+    [RequestSizeLimit(800 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 800 * 1024 * 1024)]
     public async Task<ActionResult<MediaResponseDto>> AddAssets(Guid id, [FromForm] List<IFormFile> files)
     {
         if (files == null || !files.Any())
