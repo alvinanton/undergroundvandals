@@ -66,28 +66,41 @@ try {
   {/* GLOBAL LIGHTBOX MODAL WITH CAROUSEL */}
   <div 
     id="media-modal" 
-    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/95 backdrop-blur-md p-2 sm:p-6"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/100 sm:bg-black/95 backdrop-blur-md p-0 sm:p-6"
   >
-    {/* Botón Cerrar (Solo superior derecha) */}
+    {/* Close Button: Minimalist on mobile, standard on desktop */}
     <button 
       id="modal-close" 
-      class="absolute top-3 right-3 z-30 p-2.5 text-zinc-400 hover:text-white bg-zinc-900/80 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+      class="absolute top-4 right-4 z-30 p-2 text-zinc-300 hover:text-white bg-black/20 sm:bg-zinc-900/80 rounded-full sm:border sm:border-zinc-800 transition-colors cursor-pointer"
       aria-label="Close modal"
     >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-6 h-6 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
       </svg>
     </button>
 
-    <div class="relative max-w-5xl w-full h-[92vh] sm:h-[88vh] flex flex-col justify-between overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800 shadow-2xl">
+    {/* Main Container: No borders or radius on mobile for total immersion */}
+    <div class="relative max-w-5xl w-full h-[100dvh] sm:h-[88vh] flex flex-col justify-between overflow-hidden sm:rounded-2xl bg-zinc-950 sm:border sm:border-zinc-800 shadow-2xl">
       
       {/* Carousel Container */}
       <div id="modal-media-container" class="relative flex-1 w-full min-h-0 flex items-center justify-center bg-black overflow-hidden select-none">
         
-        {/* Carousel Prev/Next Controls */}
+        {/* Fullscreen Overlay Button: Hidden on mobile, bottom-right on desktop */}
+        <button 
+          id="modal-fullscreen" 
+          class="hidden sm:flex absolute bottom-4 right-4 z-20 p-2.5 rounded-lg bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer items-center justify-center"
+          aria-label="Toggle Fullscreen"
+          title="Fullscreen (or double click)"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4"/>
+          </svg>
+        </button>
+
+        {/* Carousel Arrows: Forced hidden on mobile with max-sm:!hidden */}
         <button 
           id="modal-prev" 
-          class="hidden absolute left-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all cursor-pointer"
+          class="hidden max-sm:!hidden absolute left-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
           aria-label="Previous asset"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +110,7 @@ try {
 
         <button 
           id="modal-next" 
-          class="hidden absolute right-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all cursor-pointer"
+          class="hidden max-sm:!hidden absolute right-3 z-10 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
           aria-label="Next asset"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,34 +118,21 @@ try {
           </svg>
         </button>
 
-        {/* Media Viewport */}
-        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center p-2"></div>
-
-        {/* Counter Badge */}
-        <span id="modal-counter" class="hidden absolute top-3 left-3 z-10 bg-black/70 backdrop-blur-md text-xs font-mono text-zinc-300 px-2.5 py-1 rounded-full border border-zinc-700/50"></span>
+        {/* Media Viewport: Padding removed on mobile */}
+        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center p-0 sm:p-2"></div>
       </div>
 
-      {/* Info Block (Pie de la foto) */}
-      <div id="modal-info" class="shrink-0 w-full p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 max-h-[25vh] overflow-y-auto">
+      {/* Info Block (Footer) */}
+      <div id="modal-info" class="shrink-0 w-full p-4 bg-zinc-900/95 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 max-h-[30vh] overflow-y-auto pb-8 sm:pb-4">
         <div>
           <p id="modal-description" class="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed"></p>
           <div id="modal-hashtags" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
         
-        {/* Contenedor derecho del pie: Categoría + Botón Pantalla Completa */}
-        <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+        <div class="flex items-center gap-3 shrink-0 self-end sm:self-center mt-2 sm:mt-0">
+          {/* Counter relocated to the footer */}
+          <span id="modal-counter" class="hidden text-xs font-mono text-zinc-500"></span>
           <span id="modal-category" class="text-xs font-mono px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full border border-zinc-700/50"></span>
-          
-          <button 
-            id="modal-fullscreen" 
-            class="p-2 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700/80 rounded-lg border border-zinc-700/50 transition-colors cursor-pointer flex items-center justify-center"
-            aria-label="Fullscreen"
-            title="Pantalla completa (o doble tap)"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4"/>
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -169,7 +169,10 @@ try {
   let currentAssets: Asset[] = [];
   let currentAssetIndex = 0;
 
-  // Filtering Logic
+  // =========================================================================
+  // FILTERING LOGIC
+  // =========================================================================
+
   function applyTagFilter(tag: string | null) {
     const cards = document.querySelectorAll('.media-card-item');
     let visibleCount = 0;
@@ -243,14 +246,20 @@ try {
       video.playsInline = true;
       video.className = 'max-h-full max-w-full w-auto h-auto object-contain';
       assetWrapper.appendChild(video);
+      
+      // Hide custom fullscreen button for videos to allow native controls
+      if (fullscreenBtn) fullscreenBtn.style.display = 'none';
     } else {
       const img = document.createElement('img');
       img.src = asset.url;
       img.className = 'max-h-full max-w-full w-auto h-auto object-contain pointer-events-none select-none';
       assetWrapper.appendChild(img);
+      
+      // Clear inline display style so Tailwind classes handle visibility
+      if (fullscreenBtn) fullscreenBtn.style.display = '';
     }
 
-    // Controles del carrusel
+    // Carousel controls state
     if (currentAssets.length > 1) {
       prevBtn?.classList.remove('hidden');
       nextBtn?.classList.remove('hidden');
@@ -278,15 +287,33 @@ try {
   }
 
   function toggleFullscreen() {
-    const mediaEl = assetWrapper?.querySelector('video, img');
-    if (!mediaEl) return;
+    // Target the specific media wrapper instead of the entire modal
+    const mediaArea = document.getElementById('modal-media-container') as any;
+    const mediaEl = assetWrapper?.querySelector('video') as any;
 
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.();
-    } else if (mediaEl.requestFullscreen) {
-      mediaEl.requestFullscreen();
-    } else if ((mediaEl as any).webkitRequestFullscreen) {
-      (mediaEl as any).webkitRequestFullscreen();
+    // Prevent "possibly 'null'" error by exiting if the container doesn't exist
+    if (!mediaArea) return;
+
+    // Force document to 'any' for WebKit exit functions
+    const doc = document as any;
+
+    if (!doc.fullscreenElement) {
+      // Attempt fullscreen on the media area only (Desktop / Android)
+      if (mediaArea.requestFullscreen) {
+        mediaArea.requestFullscreen().catch((err: any) => console.warn(err));
+      } else if (mediaArea.webkitRequestFullscreen) {
+        mediaArea.webkitRequestFullscreen();
+      } else if (mediaEl && mediaEl.webkitEnterFullscreen) {
+        // Exclusive fallback for videos to work in iOS Safari
+        mediaEl.webkitEnterFullscreen();
+      }
+    } else {
+      // Exit fullscreen
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      }
     }
   }
 
@@ -352,7 +379,53 @@ try {
     }
   }
 
-  // Listeners de acción
+  // =========================================================================
+  // AUTO-HIDE UI (IDLE TIMER)
+  // =========================================================================
+  let idleTimer: number | undefined;
+  const IDLE_TIMEOUT = 2500; // 2.5 seconds before hiding UI
+
+  function setIdleState(isIdle: boolean) {
+    const uiElements = [prevBtn, nextBtn, fullscreenBtn];
+    uiElements.forEach(el => {
+      if (el && !el.classList.contains('hidden')) {
+        if (isIdle) {
+          el.classList.add('opacity-0', 'pointer-events-none');
+        } else {
+          el.classList.remove('opacity-0', 'pointer-events-none');
+        }
+      }
+    });
+  }
+
+  function resetIdleTimer() {
+    // Show elements immediately on interaction
+    setIdleState(false);
+    
+    // Clear existing timer
+    if (idleTimer) window.clearTimeout(idleTimer);
+    
+    // Start new countdown
+    idleTimer = window.setTimeout(() => {
+      setIdleState(true);
+    }, IDLE_TIMEOUT);
+  }
+
+  if (mediaContainer) {
+    // Track mouse movement to reset timer
+    mediaContainer.addEventListener('mousemove', resetIdleTimer);
+    // Hide UI immediately if mouse leaves the media container
+    mediaContainer.addEventListener('mouseleave', () => {
+      if (idleTimer) window.clearTimeout(idleTimer);
+      setIdleState(true);
+    });
+  }
+
+  // =========================================================================
+  // EVENT LISTENERS
+  // =========================================================================
+
+  // Action Listeners
   fullscreenBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleFullscreen();
@@ -361,26 +434,28 @@ try {
   prevBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     prevAsset();
+    resetIdleTimer(); // Keep UI visible when interacting
   });
 
   nextBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     nextAsset();
+    resetIdleTimer(); // Keep UI visible when interacting
   });
 
   window.addEventListener('popstate', () => closeModal(true));
 
-  // Navegación por teclado
+  // Keyboard Navigation
   document.addEventListener('keydown', (e) => {
     if (modal && !modal.classList.contains('hidden')) {
       if (e.key === 'Escape') closeModal();
-      if (e.key === 'ArrowRight') nextAsset();
-      if (e.key === 'ArrowLeft') prevAsset();
+      if (e.key === 'ArrowRight') { nextAsset(); resetIdleTimer(); }
+      if (e.key === 'ArrowLeft') { prevAsset(); resetIdleTimer(); }
       if (e.key === 'f' || e.key === 'F') toggleFullscreen();
     }
   });
 
-  // Gestos táctiles (Swipe + Doble Tap)
+  // Touch Gestures (Swipe + Double Tap)
   let touchStartX = 0;
   let touchStartY = 0;
   let lastTapTime = 0;
@@ -391,6 +466,7 @@ try {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
       }
+      resetIdleTimer(); // Wake up UI on touch
     }, { passive: true });
 
     mediaContainer.addEventListener('touchend', (e: TouchEvent) => {
@@ -401,7 +477,7 @@ try {
       const currentTime = new Date().getTime();
       const tapLength = currentTime - lastTapTime;
 
-      // Detección de Doble Tap (Poco movimiento + toque rápido menor a 300ms)
+      // Double Tap Detection (Little movement + fast tap under 300ms)
       if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
         if (tapLength < 300 && tapLength > 0) {
           e.preventDefault();
@@ -413,18 +489,18 @@ try {
 
       lastTapTime = currentTime;
 
-      // Swipe horizontal para carrusel
+      // Horizontal swipe for carousel
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
         if (diffX < 0) nextAsset();
         else prevAsset();
       }
-      // Swipe vertical hacia abajo para cerrar modal
+      // Vertical swipe down to close modal
       else if (diffY > 100) {
         closeModal();
       }
     });
 
-    // Doble Clic en Escritorio
+    // Double Click on Desktop
     mediaContainer.addEventListener('dblclick', (e) => {
       e.preventDefault();
       toggleFullscreen();
@@ -434,6 +510,7 @@ try {
   document.querySelectorAll('.media-card-trigger').forEach((trigger) => {
     trigger.addEventListener('click', () => {
       openModal((trigger as HTMLElement).dataset);
+      resetIdleTimer(); // Ensure UI is visible when modal opens
     });
   });
 
