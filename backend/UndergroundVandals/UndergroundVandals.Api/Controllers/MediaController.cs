@@ -92,13 +92,19 @@ public class MediaController : ControllerBase
     }
 
     [Authorize(Roles = "Admin,Editor")]
-    [HttpPost("upload")]
-    [RequestSizeLimit(800 * 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = 800 * 1024 * 1024)]
-    public async Task<ActionResult<MediaResponseDto>> Upload([FromForm] CreateMediaDto dto)
+    [HttpGet("upload-signature")]
+    public IActionResult GetUploadSignature([FromQuery] string folder = "underground_vandals/photos")
     {
-        if (dto.Files == null || !dto.Files.Any())
-            return BadRequest(new { message = "At least one file is required." });
+        var uploadParams = _fileStorageService.GenerateUploadParameters(folder);
+        return Ok(uploadParams);
+    }
+
+    [Authorize(Roles = "Admin,Editor")]
+    [HttpPost("upload")]
+    public async Task<ActionResult<MediaResponseDto>> Upload([FromBody] CreateMediaDto dto)
+    {
+        if (dto.Assets == null || !dto.Assets.Any())
+            return BadRequest(new { message = "At least one asset is required." });
 
         var mediaItem = new MediaItem
         {
@@ -108,20 +114,14 @@ public class MediaController : ControllerBase
             Hashtags = dto.Hashtags ?? new List<string>()
         };
 
-        foreach (var file in dto.Files)
+        foreach (var assetDto in dto.Assets)
         {
-            var isVideo = file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
-            var uploadResult = isVideo
-                ? await _fileStorageService.UploadVideoAsync(file)
-                : await _fileStorageService.UploadImageAsync(file);
-
-            if (!uploadResult.Success)
-                return BadRequest(new { message = uploadResult.Error });
+            var isVideo = assetDto.Type.Equals("video", StringComparison.OrdinalIgnoreCase);
 
             mediaItem.MediaAssets.Add(new MediaAsset
             {
-                Url = uploadResult.Url,
-                PublicId = uploadResult.PublicId,
+                Url = assetDto.Url,
+                PublicId = assetDto.PublicId,
                 Type = isVideo ? MediaType.Video : MediaType.Photo
             });
         }
@@ -151,12 +151,10 @@ public class MediaController : ControllerBase
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost("{id:guid}/assets")]
-    [RequestSizeLimit(800 * 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = 800 * 1024 * 1024)]
-    public async Task<ActionResult<MediaResponseDto>> AddAssets(Guid id, [FromForm] List<IFormFile> files)
+    public async Task<ActionResult<MediaResponseDto>> AddAssets(Guid id, [FromBody] AddAssetsDto dto)
     {
-        if (files == null || !files.Any())
-            return BadRequest(new { message = "At least one file is required." });
+        if (dto.Assets == null || !dto.Assets.Any())
+            return BadRequest(new { message = "At least one asset is required." });
 
         var item = await _context.MediaItems
             .Include(m => m.MediaAssets)
@@ -165,20 +163,14 @@ public class MediaController : ControllerBase
         if (item == null)
             return NotFound(new { message = "Media item not found." });
 
-        foreach (var file in files)
+        foreach (var assetDto in dto.Assets)
         {
-            var isVideo = file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
-            var uploadResult = isVideo
-                ? await _fileStorageService.UploadVideoAsync(file)
-                : await _fileStorageService.UploadImageAsync(file);
-
-            if (!uploadResult.Success)
-                return BadRequest(new { message = uploadResult.Error });
+            var isVideo = assetDto.Type.Equals("video", StringComparison.OrdinalIgnoreCase);
 
             item.MediaAssets.Add(new MediaAsset
             {
-                Url = uploadResult.Url,
-                PublicId = uploadResult.PublicId,
+                Url = assetDto.Url,
+                PublicId = assetDto.PublicId,
                 Type = isVideo ? MediaType.Video : MediaType.Photo
             });
         }

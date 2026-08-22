@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -7,21 +6,12 @@ using UndergroundVandals.Api.Data;
 using UndergroundVandals.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                        ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
 // Add services to the container.
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-
-builder.Services.Configure<FormOptions>(options =>
-{
-    options.MultipartBodyLengthLimit = 800 * 1024 * 1024; // 800 MB
-});
-
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.Limits.MaxRequestBodySize = 800 * 1024 * 1024; // 800 MB
-});
 
 builder.Services.AddScoped<IFileStorageService, CloudinaryStorageService>();
 
@@ -62,9 +52,12 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
+
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapibuilder.Services.AddOpenApi();
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddOpenApi();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -78,9 +71,6 @@ else
 }
 
 app.UseCors("AllowAll");
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

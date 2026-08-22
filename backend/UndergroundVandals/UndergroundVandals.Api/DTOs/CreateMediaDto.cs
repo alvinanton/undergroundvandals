@@ -13,7 +13,19 @@ public class CreateMediaDto
     public string Category { get; set; } = "General";
     
     public List<string>? Hashtags { get; set; }
-    
+
     [Required]
-    public List<IFormFile> Files { get; set; } = null!;
+    public List<MediaAssetInputDto> Assets { get; set; } = new();
+}
+
+public class MediaAssetInputDto
+{
+    [Required]
+    public string Url { get; set; } = string.Empty;
+
+    [Required]
+    public string PublicId { get; set; } = string.Empty;
+
+    [Required]
+    public string Type { get; set; } = "image"; // "image" or "video"
 }

@@ -7,10 +7,10 @@ if (!token) {
     return Astro.redirect("/admin/login");
 }
 
-const user = Astro.locals.user;
+const user = Astro.locals.user as { role: string; email: string; name?: string; username?: string };
 const isAdmin = user?.role === "Admin";
 
-// Extraer el username o fallback desde email/nombre
+// Extract username or fallback from email/name safely
 const username =
     user?.username ||
     user?.name ||
@@ -19,7 +19,7 @@ const username =
 
 <Layout title="Admin Dashboard | Underground Vandals">
     <div class="space-y-8 max-w-5xl mx-auto pb-12">
-        {/* Header con Username */}
+        {/* Header with Username */}
         <div
             class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6"
             id="dashboard-root"
@@ -95,7 +95,7 @@ const username =
                     Upload New Media
                 </h2>
                 <p class="text-xs text-zinc-400 mt-0.5">
-                    Add photos or videos directly to Cloudinary and database (Select multiple files for galleries)
+                    Add photos or videos to the archive.
                 </p>
             </div>
 
@@ -129,7 +129,7 @@ const username =
                             type="text"
                             id="category"
                             name="category"
-                            defaultValue="General"
+                            value="General"
                             class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors text-sm"
                             placeholder="e.g. Trains, Walls, General"
                         />
@@ -203,6 +203,17 @@ const username =
                     id="status-message"
                     class="hidden text-xs font-mono text-center rounded-lg p-3"
                 >
+                </div>
+
+                {/* Live Progress Bar Container */}
+                <div id="upload-progress-container" class="hidden space-y-2 pt-2">
+                    <div class="flex justify-between text-xs font-mono">
+                        <span id="upload-status-text" class="text-orange-400">Preparing upload...</span>
+                        <span id="upload-percentage" class="text-zinc-400">0%</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-2 overflow-hidden border border-zinc-800">
+                        <div id="upload-progress-bar" class="bg-orange-500 h-full w-0 transition-all duration-150 ease-out"></div>
+                    </div>
                 </div>
 
                 <button
@@ -534,7 +545,7 @@ const username =
 
                     <div>
                         <label class="block text-[11px] font-mono text-zinc-400 mb-1.5">
-                            Add More Files to this Media Item:
+                            Add More Files to this Media Item (Direct Cloud Upload):
                         </label>
                         <div class="flex items-center gap-2">
                             <input
@@ -786,10 +797,15 @@ const username =
         }
     });
 
-    // Handle Upload Form Submit
+    // --- HANDLE UPLOAD FORM SUBMIT (DIRECT-TO-CLOUD WITH LIVE PROGRESS BAR) ---
     const uploadForm = document.getElementById("upload-form") as HTMLFormElement;
     const uploadBtn = document.getElementById("upload-btn") as HTMLButtonElement;
     const statusMsg = document.getElementById("status-message") as HTMLDivElement;
+    
+    const progressContainer = document.getElementById("upload-progress-container");
+    const progressBar = document.getElementById("upload-progress-bar");
+    const progressPercentage = document.getElementById("upload-percentage");
+    const statusText = document.getElementById("upload-status-text");
 
     uploadForm?.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -800,62 +816,142 @@ const username =
             return;
         }
 
-        uploadBtn.disabled = true;
-        uploadBtn.innerText = "Uploading Files...";
-        statusMsg.classList.add("hidden");
-
         const token = getToken();
         if (!token) {
             showStatus("Authentication token missing. Please sign in again.", "error");
-            uploadBtn.disabled = false;
-            uploadBtn.innerText = "Upload to Gallery";
             return;
         }
 
-        const formData = new FormData();
+        uploadBtn.disabled = true;
+        uploadBtn.innerText = "Processing Direct Upload...";
+        statusMsg.classList.add("hidden");
+        progressContainer?.classList.remove("hidden");
+
         const titleVal = (document.getElementById("title") as HTMLInputElement).value;
         const categoryVal = (document.getElementById("category") as HTMLInputElement).value;
         const hashtagsVal = (document.getElementById("hashtags") as HTMLInputElement).value;
         const descriptionVal = (document.getElementById("description") as HTMLInputElement).value;
 
-        formData.append("Title", titleVal);
-        formData.append("Category", categoryVal || "General");
-        formData.append("Description", descriptionVal || "");
-
-        if (hashtagsVal) {
-            hashtagsVal.split(",").forEach((tag) => {
-                const trimmed = tag.trim();
-                if (trimmed) formData.append("Hashtags", trimmed);
-            });
-        }
-
-        // Attach active files from memory array
-        selectedUploadFiles.forEach((file) => {
-            formData.append("Files", file);
-        });
+        const hashtagsArray = hashtagsVal
+            ? hashtagsVal.split(",").map((t) => t.trim()).filter(Boolean)
+            : [];
 
         try {
-            const res = await fetch(`${API_URL}/api/media/upload`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                body: formData,
-            });
+            const uploadedAssets: { url: string; publicId: string; type: string }[] = [];
+            const totalFiles = selectedUploadFiles.length;
 
-            const data = await res.json();
+            for (let i = 0; i < totalFiles; i++) {
+                const file = selectedUploadFiles[i];
+                const isVideo = file.type.startsWith("video/");
+                const folder = isVideo ? "underground_vandals/videos" : "underground_vandals/photos";
 
-            if (!res.ok) {
-                throw new Error(data.message || "Failed to upload files.");
+                if (statusText) statusText.innerText = `Authorizing file ${i + 1} of ${totalFiles}...`;
+                if (progressBar) progressBar.style.width = `${Math.round(((i) / totalFiles) * 30)}%`;
+                if (progressPercentage) progressPercentage.innerText = `${Math.round(((i) / totalFiles) * 30)}%`;
+
+                // 1. Fetch secure signature from ASP.NET Core backend
+                const sigRes = await fetch(`${API_URL}/api/media/upload-signature?folder=${folder}`, {
+                    method: "GET",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (!sigRes.ok) throw new Error("Failed to obtain upload authorization signature.");
+                const sigData = await sigRes.json();
+
+                if (statusText) statusText.innerText = `Uploading ${file.name} directly to Cloudinary...`;
+
+                // 2. Upload file directly to Cloudinary using XMLHttpRequest for real-time progress
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("api_key", sigData.apiKey);
+                formData.append("timestamp", sigData.timestamp.toString());
+                formData.append("signature", sigData.signature);
+                formData.append("folder", sigData.folder);
+
+                const resourceType = isVideo ? "video" : "image";
+                const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${resourceType}/upload`;
+
+                const cloudData: any = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("POST", cloudinaryUrl, true);
+
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const fileProgress = (event.loaded / event.total) * (70 / totalFiles);
+                            const baseProgress = (i / totalFiles) * 70;
+                            const totalProgress = Math.min(Math.round(baseProgress + fileProgress + 30), 95);
+
+                            if (progressBar) progressBar.style.width = `${totalProgress}%`;
+                            if (progressPercentage) progressPercentage.innerText = `${totalProgress}%`;
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            try {
+                                const errJson = JSON.parse(xhr.responseText);
+                                reject(new Error(errJson.error?.message || "Cloudinary upload error"));
+                            } catch {
+                                reject(new Error("Cloudinary upload failed with status " + xhr.status));
+                            }
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error("Network error during direct cloud upload."));
+                    xhr.send(formData);
+                });
+
+                uploadedAssets.push({
+                    url: cloudData.secure_url,
+                    publicId: cloudData.public_id,
+                    type: isVideo ? "video" : "image",
+                });
             }
 
-            showStatus("Files uploaded successfully!", "success");
+            if (statusText) statusText.innerText = "Registering record in database...";
+            if (progressBar) progressBar.style.width = "98%";
+            if (progressPercentage) progressPercentage.innerText = "98%";
+
+            // 3. Send lightweight JSON metadata payload back to ASP.NET Core backend
+            const finalPayload = {
+                title: titleVal,
+                description: descriptionVal || "",
+                category: categoryVal || "General",
+                hashtags: hashtagsArray,
+                assets: uploadedAssets,
+            };
+
+            const finalRes = await fetch(`${API_URL}/api/media/upload`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(finalPayload),
+            });
+
+            const responseData = await finalRes.json();
+            if (!finalRes.ok) throw new Error(responseData.message || "Failed to register media item.");
+
+            if (progressBar) progressBar.style.width = "100%";
+            if (progressPercentage) progressPercentage.innerText = "100%";
+            if (statusText) statusText.innerText = "Upload completed successfully!";
+
+            showStatus("Files uploaded and registered successfully!", "success");
             uploadForm.reset();
             selectedUploadFiles = [];
             renderPreUploadPreviews();
             await fetchMediaList();
+
+            setTimeout(() => {
+                progressContainer?.classList.add("hidden");
+            }, 2000);
+
         } catch (err: any) {
             showStatus(err.message || "An error occurred during upload.", "error");
+            progressContainer?.classList.add("hidden");
         } finally {
             uploadBtn.disabled = false;
             uploadBtn.innerText = "Upload to Gallery";
@@ -1043,7 +1139,6 @@ const username =
     editModalCloseBtn?.addEventListener("click", closeEditModal);
     editCancelBtn?.addEventListener("click", closeEditModal);
 
-    // Dynamic close when clicking outside (on backdrop)
     editModal?.addEventListener("click", (e) => {
         if (e.target === editModal) closeEditModal();
     });
@@ -1108,7 +1203,6 @@ const username =
             })
             .join("");
 
-        // Attach click event to thumbnails for full carousel preview
         editAssetsList.querySelectorAll(".edit-asset-thumb").forEach((thumb, index) => {
             thumb.addEventListener("click", (e) => {
                 const target = e.target as HTMLElement;
@@ -1119,7 +1213,6 @@ const username =
             });
         });
 
-        // Attach listeners for asset deletion
         editAssetsList.querySelectorAll(".delete-asset-btn").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
                 e.stopPropagation();
@@ -1139,7 +1232,6 @@ const username =
 
                     if (!res.ok) throw new Error("Failed to delete asset.");
 
-                    // Refresh media list and re-render modal
                     await fetchMediaList();
                     const updatedItem = allMediaItems.find((m) => m.id === itemId);
                     if (updatedItem) renderEditAssets(updatedItem);
@@ -1150,7 +1242,7 @@ const username =
         });
     }
 
-    // Add Additional Files to Existing Item Handler
+    // Add Additional Files to Existing Item Handler (Direct Cloud Upload Integration)
     addFilesBtn?.addEventListener("click", async () => {
         const editId = (document.getElementById("edit-id") as HTMLInputElement).value;
         const files = addMoreFilesInput?.files;
@@ -1161,19 +1253,63 @@ const username =
             return;
         }
 
-        const formData = new FormData();
-        for (let i = 0; i < files.length; i++) {
-            formData.append("files", files[i]);
-        }
-
         try {
+            const newAssets: { url: string; publicId: string; type: string }[] = [];
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const isVideo = file.type.startsWith("video/");
+                const folder = isVideo ? "underground_vandals/videos" : "underground_vandals/photos";
+
+                const sigRes = await fetch(`${API_URL}/api/media/upload-signature?folder=${folder}`, {
+                    method: "GET",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (!sigRes.ok) throw new Error("Failed to obtain upload signature.");
+                const sigData = await sigRes.json();
+
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("api_key", sigData.apiKey);
+                formData.append("timestamp", sigData.timestamp.toString());
+                formData.append("signature", sigData.signature);
+                formData.append("folder", sigData.folder);
+
+                const resourceType = isVideo ? "video" : "image";
+                const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${resourceType}/upload`;
+
+                const cloudData: any = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("POST", cloudinaryUrl, true);
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            reject(new Error("Cloudinary upload failed"));
+                        }
+                    };
+                    xhr.onerror = () => reject(new Error("Network error"));
+                    xhr.send(formData);
+                });
+
+                newAssets.push({
+                    url: cloudData.secure_url,
+                    publicId: cloudData.public_id,
+                    type: isVideo ? "video" : "image",
+                });
+            }
+
             const res = await fetch(`${API_URL}/api/media/${editId}/assets`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData,
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ assets: newAssets }),
             });
 
-            if (!res.ok) throw new Error("Failed to add new files.");
+            if (!res.ok) throw new Error("Failed to add new files to record.");
 
             addMoreFilesInput.value = "";
             await fetchMediaList();
@@ -1195,7 +1331,7 @@ const username =
         const updatedData = {
             title: (document.getElementById("edit-title") as HTMLInputElement).value,
             category: (document.getElementById("edit-category") as HTMLInputElement).value || "General",
-            description: (document.getElementById("edit-description") as HTMLInputElement).value,
+            description: (document.getElementById("edit-description") as HTMLTextAreaElement).value,
             hashtags: (document.getElementById("edit-hashtags") as HTMLInputElement).value
                 .split(",")
                 .map((h) => h.trim())
@@ -1252,7 +1388,6 @@ const username =
         const filterType = (document.getElementById("filter-type") as HTMLSelectElement)?.value || "ALL";
         const filterStatus = (document.getElementById("filter-status") as HTMLSelectElement)?.value || "ALL";
 
-        // 1. Filter items
         let processedItems = allMediaItems.filter((item) => {
             const assets = item.media || [];
             
@@ -1272,7 +1407,6 @@ const username =
             return true;
         });
 
-        // 2. Sort items
         processedItems.sort((a, b) => {
             let valA: any = a[currentSortColumn];
             let valB: any = b[currentSortColumn];
@@ -1364,7 +1498,6 @@ const username =
             })
             .join("");
 
-        // Attach Thumbnail Click Event for Full Post Gallery Carousel
         document.querySelectorAll(".preview-thumb").forEach((thumb) => {
             thumb.addEventListener("click", (e) => {
                 const el = e.currentTarget as HTMLElement;
@@ -1378,7 +1511,6 @@ const username =
             });
         });
 
-        // Attach Action Buttons Events
         document.querySelectorAll(".action-btn").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
                 const el = e.currentTarget as HTMLElement;
