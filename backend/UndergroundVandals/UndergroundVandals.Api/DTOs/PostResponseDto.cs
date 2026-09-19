@@ -9,7 +9,7 @@ public class MediaAssetDto
     public string Type { get; set; } = string.Empty;
 }
 
-public class MediaResponseDto
+public class PostResponseDto
 {
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
@@ -19,4 +19,5 @@ public class MediaResponseDto
     public List<MediaAssetDto> Media { get; set; } = new();
     public bool IsArchived { get; set; }
     public DateTime CreatedAt { get; set; }
+    public List<MediaAssetDto> MediaAssets { get; set; } = new();
 }

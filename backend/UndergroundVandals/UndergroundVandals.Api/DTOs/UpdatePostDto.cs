@@ -2,7 +2,7 @@
 
 namespace UndergroundVandals.Api.DTOs;
 
-public class UpdateMediaDto
+public class UpdatePostDto
 {
     [Required]
     public string Title { get; set; } = string.Empty;

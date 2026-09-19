@@ -4,7 +4,7 @@ public interface IFileStorageService
 {
     Task<FileUploadResult> UploadImageAsync(IFormFile file);
     Task<FileUploadResult> UploadVideoAsync(IFormFile file);
-    Task<bool> DeleteFileAsync(string publicId);
+    Task<bool> DeleteFileAsync(string publicId, string resourceType = "image");
 
     // Generates secure cryptographic parameters for client-side direct uploads
     Dictionary<string, object> GenerateUploadParameters(string folderName);

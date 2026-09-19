@@ -9,7 +9,7 @@ public class AppDbContext : DbContext
     {
     }
 
-    public DbSet<MediaItem> MediaItems => Set<MediaItem>();
+    public DbSet<Post> Posts => Set<Post>();
     public DbSet<User> Users => Set<User>();
     public DbSet<MediaAsset> MediaAssets { get; set; }
 

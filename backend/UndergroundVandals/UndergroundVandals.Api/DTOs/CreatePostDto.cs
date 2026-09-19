@@ -3,7 +3,7 @@ using UndergroundVandals.Api.Entities;
 
 namespace UndergroundVandals.Api.DTOs;
 
-public class CreateMediaDto
+public class CreatePostDto
 {
     [Required]
     public string Title { get; set; } = string.Empty;

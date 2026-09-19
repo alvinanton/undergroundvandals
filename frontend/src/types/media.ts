@@ -1,16 +1,13 @@
-export enum MediaType {
-  Photo = 0,
-  Video = 1
+export interface MediaAsset {
+  url: string;
+  type: 'image' | 'video';
 }
 
 export interface MediaItem {
-  id: string;
-  title: string;
-  description?: string;
-  type: MediaType;
-  url: string;
-  category: string;
-  hashtags: string[];   
-  isArchived: boolean;
-  createdAt: string;
+  id: string | number;
+  description: string;
+  category?: string;
+  hashtags: string[];
+  media: MediaAsset[]; 
+  createdAt?: string;
 }

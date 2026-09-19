@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UndergroundVandals.Api.Data;
@@ -23,12 +22,14 @@ public class MediaController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<MediaResponseDto>>> GetAll(
-        [FromQuery] string? category,
-        [FromQuery] string? tag,
-        [FromQuery] bool includeArchived = false)
+    public async Task<ActionResult<IEnumerable<PostResponseDto>>> GetAll(
+    [FromQuery] string? category,
+    [FromQuery] string? tag,
+    [FromQuery] bool includeArchived = false)
     {
-        var query = _context.MediaItems.AsQueryable();
+        var query = _context.Posts
+            .Include(p => p.MediaAssets)
+            .AsQueryable();
 
         if (!includeArchived)
             query = query.Where(m => !m.IsArchived);
@@ -39,56 +40,26 @@ public class MediaController : ControllerBase
         if (!string.IsNullOrWhiteSpace(tag))
             query = query.Where(m => m.Hashtags.Contains(tag.ToLower()));
 
-        var items = await query
-            .Include(m => m.MediaAssets)
+        var posts = await query
             .OrderByDescending(m => m.CreatedAt)
-            .Select(m => new MediaResponseDto
-            {
-                Id = m.Id,
-                Title = m.Title,
-                Description = m.Description,
-                Category = m.Category,
-                Hashtags = m.Hashtags,
-                IsArchived = m.IsArchived,
-                CreatedAt = m.CreatedAt,
-                Media = m.MediaAssets.Select(a => new MediaAssetDto
-                {
-                    Id = a.Id,
-                    Url = a.Url,
-                    Type = a.Type == MediaType.Photo ? "image" : "video"
-                }).ToList()
-            })
             .ToListAsync();
+
+        var items = posts.Select(MapToDto).ToList();
 
         return Ok(items);
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<MediaResponseDto>> GetById(Guid id)
+    public async Task<ActionResult<PostResponseDto>> GetById(Guid id)
     {
-        var item = await _context.MediaItems
+        var item = await _context.Posts
             .Include(m => m.MediaAssets)
             .FirstOrDefaultAsync(m => m.Id == id);
 
         if (item == null)
             return NotFound(new { message = "Media item not found." });
 
-        return Ok(new MediaResponseDto
-        {
-            Id = item.Id,
-            Title = item.Title,
-            Description = item.Description,
-            Category = item.Category,
-            Hashtags = item.Hashtags,
-            IsArchived = item.IsArchived,
-            CreatedAt = item.CreatedAt,
-            Media = item.MediaAssets.Select(a => new MediaAssetDto
-            {
-                Id = a.Id,
-                Url = a.Url,
-                Type = a.Type == MediaType.Photo ? "image" : "video"
-            }).ToList()
-        });
+        return Ok(MapToDto(item));
     }
 
     [Authorize(Roles = "Admin,Editor")]
@@ -101,12 +72,12 @@ public class MediaController : ControllerBase
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost("upload")]
-    public async Task<ActionResult<MediaResponseDto>> Upload([FromBody] CreateMediaDto dto)
+    public async Task<ActionResult<PostResponseDto>> Upload([FromBody] CreatePostDto dto)
     {
         if (dto.Assets == null || !dto.Assets.Any())
             return BadRequest(new { message = "At least one asset is required." });
 
-        var mediaItem = new MediaItem
+        var post = new Post
         {
             Title = dto.Title,
             Description = dto.Description,
@@ -118,7 +89,7 @@ public class MediaController : ControllerBase
         {
             var isVideo = assetDto.Type.Equals("video", StringComparison.OrdinalIgnoreCase);
 
-            mediaItem.MediaAssets.Add(new MediaAsset
+            post.MediaAssets.Add(new MediaAsset
             {
                 Url = assetDto.Url,
                 PublicId = assetDto.PublicId,
@@ -126,37 +97,20 @@ public class MediaController : ControllerBase
             });
         }
 
-        _context.MediaItems.Add(mediaItem);
+        _context.Posts.Add(post);
         await _context.SaveChangesAsync();
 
-        var response = new MediaResponseDto
-        {
-            Id = mediaItem.Id,
-            Title = mediaItem.Title,
-            Description = mediaItem.Description,
-            Category = mediaItem.Category,
-            Hashtags = mediaItem.Hashtags,
-            IsArchived = mediaItem.IsArchived,
-            CreatedAt = mediaItem.CreatedAt,
-            Media = mediaItem.MediaAssets.Select(a => new MediaAssetDto
-            {
-                Id = a.Id,
-                Url = a.Url,
-                Type = a.Type == MediaType.Photo ? "image" : "video"
-            }).ToList()
-        };
-
-        return CreatedAtAction(nameof(GetById), new { id = mediaItem.Id }, response);
+        return CreatedAtAction(nameof(GetById), new { id = post.Id }, MapToDto(post));
     }
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost("{id:guid}/assets")]
-    public async Task<ActionResult<MediaResponseDto>> AddAssets(Guid id, [FromBody] AddAssetsDto dto)
+    public async Task<ActionResult<PostResponseDto>> AddAssets(Guid id, [FromBody] AddAssetsDto dto)
     {
         if (dto.Assets == null || !dto.Assets.Any())
             return BadRequest(new { message = "At least one asset is required." });
 
-        var item = await _context.MediaItems
+        var item = await _context.Posts
             .Include(m => m.MediaAssets)
             .FirstOrDefaultAsync(m => m.Id == id);
 
@@ -177,22 +131,7 @@ public class MediaController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(new MediaResponseDto
-        {
-            Id = item.Id,
-            Title = item.Title,
-            Description = item.Description,
-            Category = item.Category,
-            Hashtags = item.Hashtags,
-            IsArchived = item.IsArchived,
-            CreatedAt = item.CreatedAt,
-            Media = item.MediaAssets.Select(a => new MediaAssetDto
-            {
-                Id = a.Id,
-                Url = a.Url,
-                Type = a.Type == MediaType.Photo ? "image" : "video"
-            }).ToList()
-        });
+        return Ok(MapToDto(item));
     }
 
     [Authorize(Roles = "Admin,Editor")]
@@ -206,7 +145,8 @@ public class MediaController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(asset.PublicId))
         {
-            await _fileStorageService.DeleteFileAsync(asset.PublicId);
+            var resourceType = asset.Type == MediaType.Video ? "video" : "image";
+            await _fileStorageService.DeleteFileAsync(asset.PublicId, resourceType);
         }
 
         _context.MediaAssets.Remove(asset);
@@ -219,7 +159,7 @@ public class MediaController : ControllerBase
     [HttpPatch("{id:guid}/archive")]
     public async Task<IActionResult> ToggleArchive(Guid id)
     {
-        var item = await _context.MediaItems.FindAsync(id);
+        var item = await _context.Posts.FindAsync(id);
 
         if (item == null)
             return NotFound(new { message = "Media item not found." });
@@ -239,7 +179,7 @@ public class MediaController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var item = await _context.MediaItems
+        var item = await _context.Posts
             .Include(m => m.MediaAssets)
             .FirstOrDefaultAsync(m => m.Id == id);
 
@@ -248,10 +188,14 @@ public class MediaController : ControllerBase
 
         foreach (var asset in item.MediaAssets)
         {
-            await _fileStorageService.DeleteFileAsync(asset.PublicId);
+            if (!string.IsNullOrWhiteSpace(asset.PublicId))
+            {
+                var resourceType = asset.Type == MediaType.Video ? "video" : "image";
+                await _fileStorageService.DeleteFileAsync(asset.PublicId, resourceType);
+            }
         }
 
-        _context.MediaItems.Remove(item);
+        _context.Posts.Remove(item);
         await _context.SaveChangesAsync();
 
         return NoContent();
@@ -259,9 +203,9 @@ public class MediaController : ControllerBase
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<MediaResponseDto>> Update(Guid id, [FromBody] UpdateMediaDto dto)
+    public async Task<ActionResult<PostResponseDto>> Update(Guid id, [FromBody] UpdatePostDto dto)
     {
-        var item = await _context.MediaItems
+        var item = await _context.Posts
             .Include(m => m.MediaAssets)
             .FirstOrDefaultAsync(m => m.Id == id);
 
@@ -275,21 +219,29 @@ public class MediaController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(new MediaResponseDto
+        return Ok(MapToDto(item));
+    }
+
+    private static PostResponseDto MapToDto(Post post)
+    {
+        var assets = post.MediaAssets.Select(a => new MediaAssetDto
         {
-            Id = item.Id,
-            Title = item.Title,
-            Description = item.Description,
-            Category = item.Category,
-            Hashtags = item.Hashtags,
-            IsArchived = item.IsArchived,
-            CreatedAt = item.CreatedAt,
-            Media = item.MediaAssets.Select(a => new MediaAssetDto
-            {
-                Id = a.Id,
-                Url = a.Url,
-                Type = a.Type == MediaType.Photo ? "image" : "video"
-            }).ToList()
-        });
+            Id = a.Id,
+            Url = a.Url,
+            Type = a.Type == MediaType.Photo ? "image" : "video"
+        }).ToList();
+
+        return new PostResponseDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Description = post.Description,
+            Category = post.Category,
+            Hashtags = post.Hashtags,
+            IsArchived = post.IsArchived,
+            CreatedAt = post.CreatedAt,
+            Media = assets,
+            MediaAssets = assets
+        };
     }
 }

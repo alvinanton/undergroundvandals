@@ -63,7 +63,18 @@ public class CloudinaryStorageService : IFileStorageService
             Folder = "underground_vandals/videos"
         };
 
-        var result = await _cloudinary.UploadLargeAsync(uploadParams);
+        // Definimos un umbral de 10 MB
+        const long tenMegaBytes = 10 * 1024 * 1024;
+        VideoUploadResult result;
+
+        if (file.Length > tenMegaBytes)
+        {
+            result = await _cloudinary.UploadLargeAsync(uploadParams);
+        }
+        else
+        {
+            result = await _cloudinary.UploadAsync(uploadParams);
+        }
 
         if (result.Error != null)
             return new FileUploadResult { Success = false, Error = result.Error.Message };
@@ -76,9 +87,20 @@ public class CloudinaryStorageService : IFileStorageService
         };
     }
 
-    public async Task<bool> DeleteFileAsync(string publicId)
+    public async Task<bool> DeleteFileAsync(string publicId, string resourceType = "image")
     {
-        var deleteParams = new DeletionParams(publicId);
+        var type = resourceType.ToLower() switch
+        {
+            "video" => ResourceType.Video,
+            "raw" => ResourceType.Raw,
+            _ => ResourceType.Image
+        };
+
+        var deleteParams = new DeletionParams(publicId)
+        {
+            ResourceType = type
+        };
+
         var result = await _cloudinary.DestroyAsync(deleteParams);
         return result.Result == "ok";
     }
