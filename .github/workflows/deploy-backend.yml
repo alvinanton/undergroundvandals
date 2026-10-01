@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - 'backend/**'
+  workflow_dispatch:
 
 env:
   AZURE_WEBAPP_NAME: 'underground-vandals-api'
