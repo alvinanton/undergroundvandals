@@ -1,6 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Net;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -11,6 +12,8 @@ namespace UndergroundVandals.Bot;
 
 public class Worker : BackgroundService
 {
+    private static readonly char[] SparkChars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+
     private readonly ILogger<Worker> _logger;
     private readonly ITelegramBotClient _botClient;
     private readonly IConfiguration _configuration;
@@ -46,7 +49,7 @@ public class Worker : BackgroundService
             receiverOptions: new ReceiverOptions
             {
                 AllowedUpdates = [UpdateType.Message],
-                DropPendingUpdates = true 
+                DropPendingUpdates = true
             },
             cancellationToken: stoppingToken);
 
@@ -63,7 +66,7 @@ public class Worker : BackgroundService
 
                 try
                 {
-                    await SendDailyReportAsync(_adminChatId, stoppingToken);
+                    await SendReportAsync(_adminChatId, ReportKind.Yesterday, stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -102,8 +105,20 @@ public class Worker : BackgroundService
             return;
 
         var command = text.Split(' ', '@')[0].ToLowerInvariant();
-        if (command is not ("/report" or "/stats"))
-            return;
+
+        ReportKind kind;
+        switch (command)
+        {
+            case "/report":
+            case "/stats":
+                kind = ReportKind.Yesterday;
+                break;
+            case "/today":
+                kind = ReportKind.Today;
+                break;
+            default:
+                return;
+        }
 
         if (!await _reportLock.WaitAsync(0, ct))
         {
@@ -113,9 +128,9 @@ public class Worker : BackgroundService
 
         try
         {
-            _logger.LogInformation("Manual report request received via Telegram.");
+            _logger.LogInformation("Manual {Kind} report requested via Telegram.", kind);
             await botClient.SendMessage(_adminChatId, "⏳ Generating report on demand...", cancellationToken: ct);
-            await SendDailyReportAsync(_adminChatId, ct);
+            await SendReportAsync(_adminChatId, kind, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -134,62 +149,120 @@ public class Worker : BackgroundService
         return Task.CompletedTask;
     }
 
-    private async Task SendDailyReportAsync(long chatId, CancellationToken ct)
+    private async Task SendReportAsync(long chatId, ReportKind kind, CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var now = DateTime.UtcNow;
-        var since = now.AddDays(-1);
+        var todayStart = now.Date;
 
-        var visits = db.WebsiteVisits.AsNoTracking().Where(v => v.CreatedAt >= since);
+        DateTime from, to, prevFrom, prevTo;
+        string title, subtitle;
 
-        var totalVisits = await visits.CountAsync(ct);
-        var uniqueVisitors = await visits.Select(v => v.UserHash).Distinct().CountAsync(ct);
+        if (kind == ReportKind.Today)
+        {
+            from = todayStart;
+            to = now;
+            prevFrom = todayStart.AddDays(-1);
+            prevTo = now.AddDays(-1);
+            title = "Today so far";
+            subtitle = $"{from:yyyy-MM-dd} 00:00 → {now:HH:mm} UTC";
+        }
+        else
+        {
+            from = todayStart.AddDays(-1);
+            to = todayStart;
+            prevFrom = todayStart.AddDays(-2);
+            prevTo = from;
+            title = "Daily Traffic Report";
+            subtitle = $"{from:yyyy-MM-dd} (UTC)";
+        }
 
-        var topCountries = await visits
+        var all = db.WebsiteVisits.AsNoTracking();
+        var current = all.Where(v => v.CreatedAt >= from && v.CreatedAt < to);
+        var previous = all.Where(v => v.CreatedAt >= prevFrom && v.CreatedAt < prevTo);
+
+        var visits = await current.CountAsync(ct);
+        var unique = await current.Select(v => v.UserHash).Distinct().CountAsync(ct);
+        var prevVisits = await previous.CountAsync(ct);
+        var prevUnique = await previous.Select(v => v.UserHash).Distinct().CountAsync(ct);
+        var allTime = await all.CountAsync(ct);
+
+        var weekStart = from.Date.AddDays(-6);
+        var weekEnd = kind == ReportKind.Today ? now : to;
+        var week = all.Where(v => v.CreatedAt >= weekStart && v.CreatedAt < weekEnd);
+
+        var weekVisits = await week.CountAsync(ct);
+        var weekUnique = await week.Select(v => v.UserHash).Distinct().CountAsync(ct);
+
+        var perDay = await week
+            .GroupBy(v => v.CreatedAt.Date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var dailyCounts = Enumerable.Range(0, 7)
+            .Select(i => weekStart.AddDays(i).Date)
+            .Select(d => perDay.FirstOrDefault(x => x.Day.Date == d)?.Count ?? 0)
+            .ToArray();
+
+        var topCountries = await current
             .GroupBy(v => v.CountryCode)
             .Select(g => new { Country = g.Key, Count = g.Count() })
             .OrderByDescending(g => g.Count).ThenBy(g => g.Country)
             .Take(5)
             .ToListAsync(ct);
 
-        var topPages = await visits
+        var topPages = await current
             .GroupBy(v => v.Path)
             .Select(g => new { Path = g.Key, Count = g.Count() })
             .OrderByDescending(g => g.Count).ThenBy(g => g.Path)
             .Take(5)
             .ToListAsync(ct);
 
-        var sb = new StringBuilder();
-        sb.AppendLine("📊 <b>Daily Traffic Report - Underground Vandals</b>");
-        sb.AppendLine($"<i>Last 24 hours ({now:yyyy-MM-dd HH:mm} UTC)</i>\n");
-        sb.AppendLine($"👁️ <b>Total Visits:</b> {totalVisits}");
-        sb.AppendLine($"👤 <b>Unique Visitors:</b> {uniqueVisitors}\n");
+        var pagesPerVisitor = unique > 0 ? (double)visits / unique : 0;
 
-        sb.AppendLine("📄 <b>Top Visited Pages:</b>");
+        var sb = new StringBuilder();
+        sb.AppendLine($"📊 <b>{title} - Underground Vandals</b>");
+        sb.AppendLine($"<i>{subtitle}</i>\n");
+
+        sb.AppendLine($"👁️ <b>Visits:</b> {visits} {Trend(visits, prevVisits)}");
+        sb.AppendLine($"👤 <b>Unique visitors:</b> {unique} {Trend(unique, prevUnique)}");
+        sb.AppendLine($"📑 <b>Pages/visitor:</b> {pagesPerVisitor:0.0}\n");
+
+        sb.AppendLine("📅 <b>Last 7 days</b>");
+        var labels = Enumerable.Range(0, 7)
+            .Select(i => weekStart.AddDays(i).ToString("ddd", CultureInfo.InvariantCulture)[0]);
+        sb.AppendLine($"<code>{Sparkline(dailyCounts)}</code>");
+        sb.AppendLine($"<code>{string.Concat(labels)}</code>  ({string.Join(" ", dailyCounts)})");
+        sb.AppendLine($" • Visits: {weekVisits}");
+        sb.AppendLine($" • Unique: {weekUnique}");
+        sb.AppendLine($" • Daily avg: {weekVisits / 7.0:0.#}");
+        sb.AppendLine($" • All time: {allTime}\n");
+
+        sb.AppendLine("📄 <b>Top pages:</b>");
         if (topPages.Count > 0)
         {
             foreach (var p in topPages)
-                sb.AppendLine($" • <code>{WebUtility.HtmlEncode(p.Path)}</code>: {p.Count} visits");
+                sb.AppendLine($" • <code>{WebUtility.HtmlEncode(p.Path)}</code>: {p.Count}");
         }
         else
         {
-            sb.AppendLine(" <i>No page data recorded in the last 24 hours.</i>");
+            sb.AppendLine(" <i>No data.</i>");
         }
 
-        sb.AppendLine("\n🌍 <b>Top Countries:</b>");
+        sb.AppendLine("\n🌍 <b>Top countries:</b>");
         if (topCountries.Count > 0)
         {
             foreach (var c in topCountries)
             {
                 var country = c.Country == "XX" ? "Unknown" : c.Country;
-                sb.AppendLine($" • <code>{WebUtility.HtmlEncode(country)}</code>: {c.Count} visits");
+                sb.AppendLine($" • <code>{WebUtility.HtmlEncode(country)}</code>: {c.Count}");
             }
         }
         else
         {
-            sb.AppendLine(" <i>No visits recorded in the last 24 hours.</i>");
+            sb.AppendLine(" <i>No data.</i>");
         }
 
         await _botClient.SendMessage(
@@ -198,6 +271,30 @@ public class Worker : BackgroundService
             parseMode: ParseMode.Html,
             cancellationToken: ct);
 
-        _logger.LogInformation("Daily traffic report sent to Telegram.");
+        _logger.LogInformation("{Kind} traffic report sent to Telegram.", kind);
+    }
+
+    private static string Trend(int current, int previous)
+    {
+        if (previous == 0) return current == 0 ? "" : "🆕";
+        var pct = (current - previous) * 100.0 / previous;
+        var icon = pct > 0 ? "📈" : pct < 0 ? "📉" : "➖";
+        return $"{icon} {pct:+0;-0;0}%";
+    }
+
+    private static string Sparkline(int[] values)
+    {
+        var max = values.Max();
+        if (max == 0) return new string(SparkChars[0], values.Length);
+
+        return new string(values
+            .Select(v => SparkChars[(int)Math.Round(v * (SparkChars.Length - 1) / (double)max)])
+            .ToArray());
+    }
+
+    private enum ReportKind
+    {
+        Yesterday,
+        Today
     }
 }
