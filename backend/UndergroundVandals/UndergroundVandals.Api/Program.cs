@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using UndergroundVandals.Api.Data;
+using UndergroundVandals.Api.Middleware;
 using UndergroundVandals.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 // Add services to the container.
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-
 builder.Services.AddScoped<IFileStorageService, CloudinaryStorageService>();
 
 builder.Services.AddCors(options =>
@@ -55,22 +55,16 @@ builder.Services.AddControllers()
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-else
+if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
 
 app.UseCors("AllowAll");
+app.UseMiddleware<VisitTrackingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 

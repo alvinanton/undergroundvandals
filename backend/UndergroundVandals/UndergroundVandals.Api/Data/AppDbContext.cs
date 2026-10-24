@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<User> Users => Set<User>();
     public DbSet<MediaAsset> MediaAssets { get; set; }
+    public DbSet<WebsiteVisit> WebsiteVisits => Set<WebsiteVisit>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,5 +21,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>()
             .Property(u => u.Role)
             .HasConversion<string>();
+
+        modelBuilder.Entity<WebsiteVisit>()
+            .HasIndex(v => v.CreatedAt);
     }
 }

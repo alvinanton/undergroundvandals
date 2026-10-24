@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="UndergroundVandals.Api/UndergroundVandals.Api.csproj" />
+  <Project Path="UndergroundVandals.Bot/UndergroundVandals.Bot.csproj" Id="e1f28224-f67b-4b9b-84ac-0ac291cb199b" />
 </Solution>
