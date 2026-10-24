@@ -63,7 +63,6 @@ public class CloudinaryStorageService : IFileStorageService
             Folder = "underground_vandals/videos"
         };
 
-        // Definimos un umbral de 10 MB
         const long tenMegaBytes = 10 * 1024 * 1024;
         VideoUploadResult result;
 
