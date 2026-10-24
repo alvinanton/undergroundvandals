@@ -1,5 +1,5 @@
 ---
-import Analytics from '@vercel/analytics/astro';
+import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import "../styles/global.css";
 
@@ -62,9 +62,44 @@ const { title = "Underground Vandals" } = Astro.props;
                 reserved.
             </p>
         </footer>
-        
+
         {/* 5. VERCEL ANALYTICS & PERFORMANCE TRACKING */}
         <Analytics />
         <SpeedInsights />
     </body>
+
+    <script>
+        const API_URL =
+            import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+
+        function sendVisitTracking() {
+            const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+            const deviceType = isMobile ? "Mobile" : "Desktop";
+
+            const payload = {
+                path: window.location.pathname,
+                deviceType: deviceType,
+                referrer: document.referrer || null,
+            };
+
+            fetch(`${API_URL}/api/visits/track`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+                keepalive: true,
+            }).catch(() => {
+                // Manejo silencioso de errores en producción
+            });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", sendVisitTracking);
+        } else {
+            sendVisitTracking();
+        }
+
+        document.addEventListener("astro:page-load", sendVisitTracking);
+    </script>
 </html>

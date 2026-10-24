@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using UndergroundVandals.Api.Data;
-using UndergroundVandals.Api.Middleware;
 using UndergroundVandals.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -64,7 +63,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
-app.UseMiddleware<VisitTrackingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
