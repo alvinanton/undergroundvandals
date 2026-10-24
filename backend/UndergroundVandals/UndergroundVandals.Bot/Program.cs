@@ -1,24 +1,24 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using UndergroundVandals.Api.Data;
 using UndergroundVandals.Bot;
 
-var builder = Host.CreateApplicationBuilder(args);
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                       ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddSingleton<ITelegramBotClient>(sp =>
-{
-    var token = builder.Configuration["TelegramBot:BotToken"]
-                ?? throw new InvalidOperationException("Missing TelegramBot:BotToken in appsettings.json");
-    return new TelegramBotClient(token);
-});
+var botToken = builder.Configuration["TelegramBot:BotToken"]
+    ?? throw new InvalidOperationException("TelegramBot:BotToken variable is missing.");
+
+builder.Services.AddHttpClient("TelegramBot")
+    .AddTypedClient<ITelegramBotClient>(client => new TelegramBotClient(botToken, client));
 
 builder.Services.AddHostedService<Worker>();
 
-var host = builder.Build();
-host.Run();
+var app = builder.Build();
+
+app.MapGet("/", () => "Underground Vandals Bot Worker is running.");
+
+app.Run();
