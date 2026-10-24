@@ -13,7 +13,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: ./backend/UndergroundVandals/UndergroundVandals.Api
+        working-directory: ./backend/UndergroundVandals/
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Build project
+    - name: Build solution
       run: dotnet build --no-restore --configuration Release
 
     - name: Run tests
