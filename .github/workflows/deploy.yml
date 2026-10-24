@@ -1,0 +1,109 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: Build & Test (CI)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/UndergroundVandals
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test --no-build --verbosity normal
+
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      bot: ${{ steps.filter.outputs.bot }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api:
+              - 'backend/UndergroundVandals/UndergroundVandals.Api/**'
+            bot:
+              - 'backend/UndergroundVandals/UndergroundVandals.Bot/**'
+
+  deploy-api:
+    name: Deploy API to Azure
+    needs: [ci, detect-changes]
+    if: ${{ always() && needs.ci.result == 'success' && (needs.detect-changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_PATH: 'backend/UndergroundVandals/UndergroundVandals.Api/UndergroundVandals.Api.csproj'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install EF Core CLI Tool
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Apply Database Migrations
+        run: dotnet ef database update --project ${{ env.PROJECT_PATH }} --connection "${{ secrets.DATABASE_CONNECTION_STRING }}"
+
+      - name: Publish API
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ./publish-api
+
+      - name: Deploy API to Azure
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'underground-vandals-api'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish-api
+
+  deploy-bot:
+    name: Deploy Bot to Azure
+    needs: [ci, detect-changes]
+    if: ${{ always() && needs.ci.result == 'success' && (needs.detect-changes.outputs.bot == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_PATH: 'backend/UndergroundVandals/UndergroundVandals.Bot/UndergroundVandals.Bot.csproj'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish Bot
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ./publish-bot
+
+      - name: Deploy Bot to Azure
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'underground-vandals-bot'
+          publish-profile: ${{ secrets.AZURE_BOT_PUBLISH_PROFILE }}
+          package: ./publish-bot
