@@ -1,15 +1,104 @@
 services:
-  postgres:
+  # 1. Base de datos PostgreSQL
+  db:
     image: postgres:16-alpine
-    container_name: underground_postgres
+    container_name: uv-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ug_user
-      POSTGRES_PASSWORD: ug_password
-      POSTGRES_DB: underground_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - uv-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Content API (.NET 10)
+  api:
+    container_name: uv-api
+    build:
+      context: ./backend/UndergroundVandals
+      dockerfile: UndergroundVandals.Api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - AzureStorageSettings__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}
+      - AzureStorageSettings__AccountName=${AZURE_STORAGE_ACCOUNT_NAME}
+      - JwtSettings__Secret=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+    ports:
+      - "5050:8080"
+    networks:
+      - uv-network
+
+  # 3. Telegram Bot Worker
+  bot:
+    container_name: uv-bot
+    build:
+      context: ./backend/UndergroundVandals
+      dockerfile: UndergroundVandals.Bot/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - TelegramBot__BotToken=${TELEGRAM_BOT_TOKEN}
+      - TelegramBot__AdminChatId=${TELEGRAM_ADMIN_CHAT_ID}
+      - TelegramBot__ReportTimeUtc=${TELEGRAM_REPORT_TIME_UTC:-03:00}
+      - ApiSettings__BaseUrl=http://api:8080
+      - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
+      - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+    networks:
+      - uv-network
+
+  # 4. Frontend Web (Astro SSR)
+  frontend:
+    container_name: uv-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        PUBLIC_API_URL: ${PUBLIC_API_URL}
+        PUBLIC_ECOMMERCE_API_URL: ${PUBLIC_ECOMMERCE_API_URL}
+        PUBLIC_BANK_TRANSFER_INFO: ${PUBLIC_BANK_TRANSFER_INFO}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "4321:4321"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=4321
+      - PUBLIC_API_URL=${PUBLIC_API_URL}
+      - PUBLIC_ECOMMERCE_API_URL=${PUBLIC_ECOMMERCE_API_URL}
+      - PUBLIC_BANK_TRANSFER_INFO=${PUBLIC_BANK_TRANSFER_INFO}
+      - ECOMMERCE_ADMIN_API_URL=${ECOMMERCE_ADMIN_API_URL}
+      - ECOMMERCE_ADMIN_API_KEY=${ECOMMERCE_ADMIN_API_KEY}
+    networks:
+      - uv-network
 
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  uv-network:
+    driver: bridge

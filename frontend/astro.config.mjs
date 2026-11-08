@@ -1,9 +1,15 @@
 // @ts-check
+
 import { defineConfig } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 
 import vercel from '@astrojs/vercel';
+
+import node from '@astrojs/node';
+
+// @ts-ignore
+const isStandalone = process.env.OUTPUT_ADAPTER === 'node';
 
 // https://astro.build/config
 export default defineConfig({
@@ -17,5 +23,7 @@ export default defineConfig({
     plugins: [tailwindcss()]
   },
 
-  adapter: vercel()
+  adapter: isStandalone
+    ? node({ mode: 'standalone' })
+    : vercel(),
 });

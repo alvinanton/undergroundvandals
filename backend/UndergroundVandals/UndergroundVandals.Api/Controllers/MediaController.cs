@@ -23,9 +23,9 @@ public class MediaController : ControllerBase
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PostResponseDto>>> GetAll(
-    [FromQuery] string? category,
-    [FromQuery] string? tag,
-    [FromQuery] bool includeArchived = false)
+        [FromQuery] string? category,
+        [FromQuery] string? tag,
+        [FromQuery] bool includeArchived = false)
     {
         var query = _context.Posts
             .Include(p => p.MediaAssets)
@@ -62,11 +62,18 @@ public class MediaController : ControllerBase
         return Ok(MapToDto(item));
     }
 
+    /// <summary>
+    /// Generates upload parameters (SAS URL) for Azure Blob Storage.
+    /// Expects explicit target path, e.g., 'archive-media/photos' or 'gallery-media/articles'.
+    /// </summary>
     [Authorize(Roles = "Admin,Editor")]
     [HttpGet("upload-signature")]
-    public IActionResult GetUploadSignature([FromQuery] string folder = "underground_vandals/photos")
+    public async Task<IActionResult> GetUploadSignature([FromQuery] string target)
     {
-        var uploadParams = _fileStorageService.GenerateUploadParameters(folder);
+        if (string.IsNullOrWhiteSpace(target))
+            return BadRequest(new { message = "Target path (e.g., 'archive-media/photos') is required." });
+
+        var uploadParams = await _fileStorageService.GenerateUploadParametersAsync(target);
         return Ok(uploadParams);
     }
 
@@ -92,8 +99,10 @@ public class MediaController : ControllerBase
             post.MediaAssets.Add(new MediaAsset
             {
                 Url = assetDto.Url,
-                PublicId = assetDto.PublicId,
-                Type = isVideo ? MediaType.Video : MediaType.Photo
+                PublicId = assetDto.PublicId, // Target relative path: e.g. "archive-media/photos/guid"
+                Type = isVideo ? MediaType.Video : MediaType.Photo,
+                IsCover = assetDto.IsCover,
+                ThumbnailUrl = assetDto.ThumbnailUrl
             });
         }
 
@@ -125,7 +134,9 @@ public class MediaController : ControllerBase
             {
                 Url = assetDto.Url,
                 PublicId = assetDto.PublicId,
-                Type = isVideo ? MediaType.Video : MediaType.Photo
+                Type = isVideo ? MediaType.Video : MediaType.Photo,
+                IsCover = assetDto.IsCover,
+                ThumbnailUrl = assetDto.ThumbnailUrl
             });
         }
 
@@ -143,10 +154,18 @@ public class MediaController : ControllerBase
         if (asset == null)
             return NotFound(new { message = "Asset not found." });
 
+        // 1. Delete primary cloud file
         if (!string.IsNullOrWhiteSpace(asset.PublicId))
         {
             var resourceType = asset.Type == MediaType.Video ? "video" : "image";
             await _fileStorageService.DeleteFileAsync(asset.PublicId, resourceType);
+        }
+
+        // 2. Delete custom thumbnail/poster if present
+        if (!string.IsNullOrWhiteSpace(asset.ThumbnailUrl))
+        {
+            var thumbPublicId = ExtractPublicIdFromUrl(asset.ThumbnailUrl);
+            await _fileStorageService.DeleteFileAsync(thumbPublicId, "image");
         }
 
         _context.MediaAssets.Remove(asset);
@@ -188,10 +207,18 @@ public class MediaController : ControllerBase
 
         foreach (var asset in item.MediaAssets)
         {
+            // 1. Delete primary file from Azure Blob Storage
             if (!string.IsNullOrWhiteSpace(asset.PublicId))
             {
                 var resourceType = asset.Type == MediaType.Video ? "video" : "image";
                 await _fileStorageService.DeleteFileAsync(asset.PublicId, resourceType);
+            }
+
+            // 2. Delete poster frame/thumbnail if present
+            if (!string.IsNullOrWhiteSpace(asset.ThumbnailUrl))
+            {
+                var thumbPublicId = ExtractPublicIdFromUrl(asset.ThumbnailUrl);
+                await _fileStorageService.DeleteFileAsync(thumbPublicId, "image");
             }
         }
 
@@ -228,7 +255,9 @@ public class MediaController : ControllerBase
         {
             Id = a.Id,
             Url = a.Url,
-            Type = a.Type == MediaType.Photo ? "image" : "video"
+            Type = a.Type == MediaType.Photo ? "image" : "video",
+            IsCover = a.IsCover,
+            ThumbnailUrl = a.ThumbnailUrl
         }).ToList();
 
         return new PostResponseDto
@@ -243,5 +272,15 @@ public class MediaController : ControllerBase
             Media = assets,
             MediaAssets = assets
         };
+    }
+
+    private static string ExtractPublicIdFromUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return uri.AbsolutePath.TrimStart('/');
+        }
+        return url;
     }
 }
