@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/platform-update-and-docker # TODO: remover cuando el flujo esté validado
   workflow_dispatch:
 
 concurrency:
