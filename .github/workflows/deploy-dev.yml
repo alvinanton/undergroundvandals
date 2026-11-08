@@ -51,6 +51,9 @@ jobs:
           dotnet tool update --global dotnet-ef --version "10.*" || dotnet tool install --global dotnet-ef --version "10.*"
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
+      - name: Restore NuGet packages
+        run: dotnet restore backend/UndergroundVandals/UndergroundVandals.Api/UndergroundVandals.Api.csproj
+
       - name: Build EF migration bundle
         run: |
           dotnet ef migrations bundle \
