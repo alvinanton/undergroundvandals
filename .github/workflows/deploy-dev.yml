@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/platform-update-and-docker
   workflow_dispatch:
 
 jobs:
@@ -16,5 +17,6 @@ jobs:
 
       - name: Deploy Containers
         run: |
+          cp ~/.env.undergroundvandals .env
           docker compose up -d --build --remove-orphans
           docker image prune -f
