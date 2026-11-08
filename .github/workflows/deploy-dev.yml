@@ -4,19 +4,77 @@ on:
   push:
     branches:
       - main
-      - feat/platform-update-and-docker
+      - feat/platform-update-and-docker # TODO: remover cuando el flujo esté validado
   workflow_dispatch:
+
+concurrency:
+  group: deploy-dev-server
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   deploy:
-    name: Deploy Stack via Docker Compose
+    name: Migrate and deploy stack
     runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy Containers
+      - name: Load environment file
+        run: cp ~/.env.undergroundvandals .env
+
+      - name: Export app settings for EF tooling
         run: |
-          cp ~/.env.undergroundvandals .env
-          docker compose up -d --build --remove-orphans
-          docker image prune -f
+          set -a; source .env; set +a
+          {
+            echo "ASPNETCORE_ENVIRONMENT=Development"
+            echo "ConnectionStrings__DefaultConnection=Host=localhost;Port=${POSTGRES_PORT:-5432};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+            echo "AzureStorageSettings__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}"
+            echo "AzureStorageSettings__AccountName=${AZURE_STORAGE_ACCOUNT_NAME}"
+            echo "JwtSettings__Secret=${JWT_SECRET}"
+            echo "JwtSettings__Issuer=${JWT_ISSUER}"
+            echo "JwtSettings__Audience=${JWT_AUDIENCE}"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install dotnet-ef
+        run: |
+          dotnet tool update --global dotnet-ef --version "10.*" || dotnet tool install --global dotnet-ef --version "10.*"
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Build EF migration bundle
+        run: |
+          dotnet ef migrations bundle \
+            --project backend/UndergroundVandals/UndergroundVandals.Api \
+            --startup-project backend/UndergroundVandals/UndergroundVandals.Api \
+            --self-contained -r linux-x64 \
+            --output ./efbundle --force
+
+      - name: Ensure PostgreSQL is running and healthy
+        run: docker compose up -d --wait db
+
+      - name: Back up database before migrating
+        run: |
+          set -a; source .env; set +a
+          mkdir -p ~/backups/undergroundvandals
+          docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" db pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" \
+            | gzip > ~/backups/undergroundvandals/pre-migration-$(date +%Y%m%d-%H%M%S).sql.gz
+          ls -1t ~/backups/undergroundvandals/*.sql.gz 2>/dev/null | tail -n +8 | xargs -r rm --
+
+      - name: Apply migrations
+        run: |
+          chmod +x ./efbundle
+          ./efbundle --connection "$ConnectionStrings__DefaultConnection"
+
+      - name: Deploy containers
+        run: docker compose up -d --build --remove-orphans
+
+      - name: Clean up unused images
+        run: docker image prune -f
