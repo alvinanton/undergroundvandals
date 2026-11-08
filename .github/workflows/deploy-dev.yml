@@ -1,0 +1,20 @@
+name: Deploy to Dev-Server (Ubuntu)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Stack via Docker Compose
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Containers
+        run: |
+          docker compose up -d --build --remove-orphans
+          docker image prune -f
