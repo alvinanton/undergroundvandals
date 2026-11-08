@@ -25,16 +25,18 @@ public class CloudinaryStorageService : IFileStorageService
         _cloudinary = new Cloudinary(acc);
     }
 
-    public async Task<FileUploadResult> UploadImageAsync(IFormFile file)
+    public async Task<FileUploadResult> UploadImageAsync(IFormFile file, string containerName, string folderName)
     {
         if (file.Length == 0)
             return new FileUploadResult { Success = false, Error = "The file is empty." };
 
         using var stream = file.OpenReadStream();
+        var destinationFolder = $"{containerName}/{folderName}".Trim('/');
+
         var uploadParams = new ImageUploadParams
         {
             File = new FileDescription(file.FileName, stream),
-            Folder = "underground_vandals/photos",
+            Folder = destinationFolder,
             Transformation = new Transformation().Quality("auto").FetchFormat("auto")
         };
 
@@ -51,16 +53,18 @@ public class CloudinaryStorageService : IFileStorageService
         };
     }
 
-    public async Task<FileUploadResult> UploadVideoAsync(IFormFile file)
+    public async Task<FileUploadResult> UploadVideoAsync(IFormFile file, string containerName, string folderName)
     {
         if (file.Length == 0)
             return new FileUploadResult { Success = false, Error = "The file is empty." };
 
         using var stream = file.OpenReadStream();
+        var destinationFolder = $"{containerName}/{folderName}".Trim('/');
+
         var uploadParams = new VideoUploadParams
         {
             File = new FileDescription(file.FileName, stream),
-            Folder = "underground_vandals/videos"
+            Folder = destinationFolder
         };
 
         const long tenMegaBytes = 10 * 1024 * 1024;
@@ -104,14 +108,14 @@ public class CloudinaryStorageService : IFileStorageService
         return result.Result == "ok";
     }
 
-    public Dictionary<string, object> GenerateUploadParameters(string folderName)
+    public async Task <Dictionary<string, object>> GenerateUploadParametersAsync(string targetPath)
     {
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         var parameters = new SortedDictionary<string, object>
         {
             { "timestamp", timestamp },
-            { "folder", folderName }
+            { "folder", targetPath }
         };
 
         var signature = _cloudinary.Api.SignParameters(parameters);
@@ -122,7 +126,7 @@ public class CloudinaryStorageService : IFileStorageService
             { "signature", signature },
             { "cloudName", _cloudName },
             { "apiKey", _apiKey },
-            { "folder", folderName }
+            { "folder", targetPath }
         };
     }
 }

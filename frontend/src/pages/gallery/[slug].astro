@@ -1,0 +1,760 @@
+---
+// src/pages/gallery/[slug].astro
+import Layout from '../../layouts/Layout.astro';
+
+interface GalleryArticle {
+  id: string;
+  title: string;
+  slug: string;
+  subtitle: string;
+  category: string;
+  heroImageUrl: string;
+  videoUrl?: string;
+  videoSource?: string;
+  contentMarkdown: string;
+  readingTimeMinutes: number;
+  subjectName?: string;
+  location?: string;
+  externalUrl?: string;
+  eventDate?: string;
+  isFeatured: boolean;
+  publishedAt: string;
+  tags: string[];
+  galleryImageUrls: string[];
+
+  // Dynamic E-Shop Integration
+  shopCollectionSlug?: string;
+  shopCollectionTitle?: string;
+}
+
+const { slug } = Astro.params;
+const origin = Astro.url.origin;
+
+let article: GalleryArticle | null = null;
+let errorMessage = '';
+
+try {
+  const response = await fetch(`${origin}/api/gallery/${slug}`);
+  if (response.ok) {
+    article = await response.json();
+  } else if (response.status === 404) {
+    errorMessage = 'The requested feature article was not found.';
+  } else {
+    errorMessage = 'An error occurred while loading the article.';
+  }
+} catch (error: any) {
+  errorMessage = error.message || 'Error connecting to backend service.';
+}
+
+const isSelfHostedVideo = 
+  article?.videoSource === 'SELF_HOSTED' || 
+  article?.videoUrl?.endsWith('.mp4') || 
+  article?.videoUrl?.endsWith('.webm');
+
+// Helper to format external URLs cleanly into label and display domain
+function parseExternalLink(url?: string) {
+  if (!url) return null;
+  let label = 'Official Website';
+  if (url.includes('instagram.com')) label = 'Instagram';
+  else if (url.includes('youtube.com') || url.includes('youtu.be')) label = 'YouTube Premiere / Channel';
+  else if (url.includes('twitter.com') || url.includes('x.com')) label = 'X / Twitter';
+
+  let displayUrl = url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+  if (displayUrl.length > 32) displayUrl = displayUrl.substring(0, 29) + '...';
+
+  return { label, displayUrl, fullUrl: url };
+}
+
+const linkInfo = parseExternalLink(article?.externalUrl);
+const hasConnectContent = Boolean(linkInfo || article?.shopCollectionSlug);
+
+// Markdown Parser with inline bold formatting
+function formatMarkdown(content: string) {
+  if (!content) return '';
+
+  return content
+    .split('\n')
+    .map((line) => {
+      let trimmed = line.trim();
+
+      // Bold formatting
+      trimmed = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
+
+      // Headings
+      if (trimmed.startsWith('# ')) {
+        return `<h2 class="text-xl sm:text-2xl font-black uppercase text-white mt-8 mb-4 tracking-tight border-b border-zinc-800 pb-2">${trimmed.replace('# ', '')}</h2>`;
+      }
+      if (trimmed.startsWith('## ')) {
+        return `<h3 class="text-sm sm:text-base font-bold uppercase text-orange-400 mt-6 mb-3 tracking-wider">${trimmed.replace('## ', '')}</h3>`;
+      }
+
+      // Blockquotes
+      if (trimmed.startsWith('> ')) {
+        return `<blockquote class="border-l-2 border-orange-500 pl-4 py-2 my-5 italic text-zinc-300 bg-zinc-900/60 rounded-r font-serif text-sm sm:text-base">${trimmed.replace('> ', '')}</blockquote>`;
+      }
+
+      // Spacer
+      if (trimmed === '') {
+        return `<div class="h-2"></div>`;
+      }
+
+      // Paragraph
+      return `<p class="mb-3 text-zinc-300 leading-relaxed text-xs sm:text-sm max-w-3xl">${trimmed}</p>`;
+    })
+    .join('');
+}
+---
+
+<Layout title={article ? `${article.title} | Vandal Gallery` : 'Article Not Found | Underground Vandals'}>
+  <div class="w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-8 relative">
+
+    <!-- Back Navigation -->
+    <div>
+      <a 
+        href="/gallery" 
+        class="inline-flex items-center gap-2 font-mono text-xs text-zinc-400 hover:text-orange-500 uppercase tracking-wider transition-colors"
+      >
+        &larr; Back to Gallery
+      </a>
+    </div>
+
+    {errorMessage || !article ? (
+      /* 404 Error State */
+      <div class="text-center py-16 border border-zinc-800 rounded-2xl bg-zinc-900/30 space-y-4">
+        <span class="text-xs font-mono text-orange-500 uppercase tracking-widest bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
+          Error 404
+        </span>
+        <h1 class="text-2xl sm:text-3xl font-black text-white uppercase">{errorMessage || 'Article Not Found'}</h1>
+        <p class="text-xs font-mono text-zinc-400 max-w-md mx-auto">
+          The editorial piece you are looking for does not exist or has been removed.
+        </p>
+        <div class="pt-2">
+          <a href="/gallery" class="px-4 py-2 bg-zinc-800 text-white font-mono text-xs uppercase tracking-wider rounded-lg hover:bg-zinc-700 transition-colors">
+            Return to Feed
+          </a>
+        </div>
+      </div>
+    ) : (
+      /* Main Editorial Article */
+      <article class="w-full space-y-8">
+        
+        <!-- Sober Header Section -->
+        <header class="w-full space-y-4 border-b border-zinc-800/80 pb-6">
+          
+          <!-- Category -> Location -> Date -> Duration -->
+          <div class="flex flex-wrap items-center gap-3 font-mono text-xs">
+            <a
+              href={`/gallery?category=${article.category}`}
+              class="bg-orange-500 hover:bg-orange-400 text-zinc-950 font-black uppercase tracking-wider px-2.5 py-0.5 rounded transition-colors"
+            >
+              {article.category}
+            </a>
+
+            {article.location && (
+              <>
+                <span class="text-zinc-600">•</span>
+                <span class="text-zinc-400 uppercase tracking-wider">
+                  {article.location}
+                </span>
+              </>
+            )}
+
+            <span class="text-zinc-600">•</span>
+            <span class="text-zinc-400">
+              {new Date(article.publishedAt).toISOString().split('T')[0]}
+            </span>
+
+            <span class="text-zinc-600">•</span>
+            <span class="text-zinc-400">{article.readingTimeMinutes} min read</span>
+          </div>
+
+          <!-- Main Title -->
+          <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tight text-white leading-tight">
+            {article.title}
+          </h1>
+
+          <!-- Subtitle / Executive Summary -->
+          <p class="text-zinc-400 text-xs sm:text-sm leading-relaxed max-w-2xl">
+            {article.subtitle}
+          </p>
+
+          <!-- Direct Interactive Tags Bar -->
+          {article.tags?.length > 0 && (
+            <div class="pt-1 flex flex-wrap items-center gap-2 font-mono text-xs">
+              {article.tags.map((tag) => (
+                <a
+                  href={`/gallery?tag=${tag}`}
+                  class="text-zinc-400 hover:text-orange-400 bg-zinc-900 border border-zinc-800 hover:border-orange-500/40 px-2 py-0.5 rounded text-[11px] transition-colors uppercase tracking-wider"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )}
+
+        </header>
+
+        <!-- Media Hero Container -->
+        <div class="w-full rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 shadow-2xl">
+          {article.videoUrl ? (
+            <div class="aspect-video w-full max-h-[460px] bg-black">
+              {isSelfHostedVideo ? (
+                <video 
+                  src={article.videoUrl} 
+                  controls 
+                  poster={article.heroImageUrl}
+                  class="w-full h-full object-cover"
+                >
+                  Your browser does not support video playback.
+                </video>
+              ) : (
+                <iframe 
+                  src={article.videoUrl} 
+                  title={article.title}
+                  class="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              )}
+            </div>
+          ) : (
+            <div class="w-full aspect-video max-h-[460px] overflow-hidden">
+              <img 
+                src={article.heroImageUrl || '/placeholder-gallery.jpg'} 
+                alt={article.title}
+                class="w-full h-full object-cover"
+              />
+            </div>
+          )}
+        </div>
+
+        <!-- Full-Width Article Text Body -->
+        <div 
+          class="w-full text-zinc-300 font-sans leading-relaxed"
+          set:html={formatMarkdown(article.contentMarkdown)}
+        />
+
+        <!-- CONNECT SECTION (Vertical Layout: Links Top, E-Shop Bottom) -->
+        {hasConnectContent && (
+          <section class="w-full pt-6 border-t border-zinc-800/80 space-y-4">
+            <h3 class="text-xs font-mono uppercase tracking-widest text-orange-500 font-bold flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+              Connect
+            </h3>
+
+            <div class="w-full bg-zinc-900/40 border border-zinc-800/90 rounded-2xl p-6 space-y-5 shadow-xl">
+              
+              <!-- 1. Official Links Module -->
+              {linkInfo && (
+                <div class="space-y-3">
+                  <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
+                    Official Links
+                  </span>
+                  
+                  <ul class="space-y-2 font-mono text-xs">
+                    <li>
+                      <a 
+                        href={linkInfo.fullUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="group flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800/80 hover:border-orange-500/40 text-zinc-300 hover:text-white transition-all"
+                      >
+                        <div class="flex items-center gap-2">
+                          <span class="text-orange-500 font-bold">•</span>
+                          <span class="font-semibold uppercase tracking-wider">{linkInfo.label}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-zinc-500 group-hover:text-orange-400">
+                          <span class="text-[11px] hidden sm:inline">{linkInfo.displayUrl}</span>
+                          <span class="text-orange-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
+                        </div>
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              <!-- 2. Official Store Module (Positioned Directly Below) -->
+              {article.shopCollectionSlug && (
+                <div class="bg-gradient-to-br from-orange-500/10 via-zinc-900 to-zinc-950 border border-orange-500/30 rounded-xl p-5 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-mono text-orange-400 uppercase tracking-wider font-bold flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                      Official Store
+                    </span>
+                  </div>
+                  
+                  <p class="text-xs text-zinc-300 leading-snug font-sans">
+                    {article.shopCollectionTitle || `Explore limited apparel and prints related to this feature.`}
+                  </p>
+
+                  <a 
+                    href={`/shop/collection/${article.shopCollectionSlug}`}
+                    class="inline-flex items-center justify-center w-full px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-zinc-950 font-mono text-xs uppercase tracking-wider font-bold rounded-lg transition-all shadow-md shadow-orange-500/10 gap-2"
+                  >
+                    <span>Shop Collection</span>
+                    <span>&rarr;</span>
+                  </a>
+                </div>
+              )}
+
+            </div>
+          </section>
+        )}
+
+        <!-- EXHIBITION DOCUMENTATION SECTION -->
+        {article.galleryImageUrls?.length > 0 && (
+          <section class="w-full space-y-4 pt-8 border-t border-zinc-800/80">
+            
+            <!-- Section Header (Title + Shot Count + Solid Grid Icon Button) -->
+            <div class="flex items-center justify-between">
+              <h2 class="text-xs font-mono uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                Exhibition Documentation ({article.galleryImageUrls.length} Shots)
+              </h2>
+
+              <button 
+                id="open-grid-btn"
+                type="button"
+                class="p-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/50 text-zinc-400 hover:text-orange-400 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                title="View Grid Mosaic"
+                aria-label="View Grid Mosaic"
+              >
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
+                  <path d="M1 1h6v6H1V1zm8 0h6v6H9V1zM1 9h6v6H1V9zm8 0h6v6H9V9z"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Carousel Strip Container (3 Horizontal Photos + Side Arrows) -->
+            <div class="relative flex items-center gap-2 sm:gap-3">
+              
+              <!-- Left Navigation Arrow -->
+              <button 
+                id="carousel-prev-btn"
+                type="button"
+                class="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-orange-400 hover:border-orange-500/50 flex items-center justify-center font-mono text-lg transition-all cursor-pointer select-none"
+                aria-label="Previous photo"
+              >
+                ‹
+              </button>
+
+              <!-- Track Window -->
+              <div class="overflow-hidden w-full rounded-2xl border border-zinc-800/80 bg-zinc-950 p-2">
+                <div 
+                  id="carousel-track" 
+                  class="flex gap-3"
+                >
+                  {article.galleryImageUrls.map((imgUrl, idx) => (
+                    <div 
+                      class="gallery-item shrink-0 w-full sm:w-[calc(50%-6px)] md:w-[calc(33.333%-8px)] aspect-square rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800/80 group relative cursor-pointer"
+                      data-index={idx}
+                      data-url={imgUrl}
+                    >
+                      <img 
+                        src={imgUrl} 
+                        alt={`${article.title} documentation ${idx + 1}`}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Right Navigation Arrow -->
+              <button 
+                id="carousel-next-btn"
+                type="button"
+                class="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-orange-400 hover:border-orange-500/50 flex items-center justify-center font-mono text-lg transition-all cursor-pointer select-none"
+                aria-label="Next photo"
+              >
+                ›
+              </button>
+            </div>
+
+            <!-- MODAL A: GRID MOSAIC VIEW -->
+            <div 
+              id="grid-modal" 
+              class="fixed inset-0 z-50 bg-zinc-950/95 backdrop-blur-md hidden flex-col p-4 sm:p-8 overflow-y-auto"
+            >
+              <div id="grid-modal-content" class="max-w-6xl w-full mx-auto space-y-6 my-auto">
+                
+                <!-- Grid Modal Header -->
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                  <div class="flex items-center gap-3">
+                    <svg class="w-4 h-4 fill-orange-500" viewBox="0 0 16 16">
+                      <path d="M1 1h6v6H1V1zm8 0h6v6H9V1zM1 9h6v6H1V9zm8 0h6v6H9V9z"/>
+                    </svg>
+                    <h3 class="text-sm font-mono uppercase tracking-widest text-white font-bold">
+                      Exhibition Mosaic — {article.galleryImageUrls.length} Shots
+                    </h3>
+                  </div>
+
+                  <button 
+                    id="close-grid-btn"
+                    type="button"
+                    class="px-3 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                  >
+                    Close ✕
+                  </button>
+                </div>
+
+                <!-- Grid Images Container -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {article.galleryImageUrls.map((imgUrl, idx) => (
+                    <div 
+                      class="grid-item aspect-square rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 group relative cursor-pointer"
+                      data-index={idx}
+                    >
+                      <img 
+                        src={imgUrl} 
+                        alt={`${article.title} documentation mosaic ${idx + 1}`}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+
+            <!-- MODAL B: LIGHTBOX FULLSCREEN VIEWER -->
+            <div 
+              id="lightbox-modal" 
+              class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md hidden flex-col items-center justify-between p-4 sm:p-6 select-none"
+            >
+              <!-- Lightbox Top Control Bar -->
+              <div class="w-full max-w-5xl flex items-center justify-between text-zinc-400 font-mono text-xs pointer-events-auto">
+                <span id="lightbox-counter" class="uppercase tracking-widest text-orange-400 font-bold">
+                  Shot 01 / 08
+                </span>
+
+                <button 
+                  id="close-lightbox-btn"
+                  type="button"
+                  class="p-2 text-zinc-400 hover:text-white text-lg transition-colors cursor-pointer"
+                  aria-label="Close Lightbox"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <!-- Main Image Box with Navigation Arrows -->
+              <div id="lightbox-wrapper" class="relative w-full max-w-5xl flex-1 flex items-center justify-between my-2">
+                <button 
+                  id="lightbox-prev-btn"
+                  type="button"
+                  class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 text-white font-mono text-xl flex items-center justify-center transition-all cursor-pointer pointer-events-auto"
+                >
+                  ‹
+                </button>
+
+                <div class="relative max-h-[75vh] max-w-[80vw] flex items-center justify-center overflow-hidden rounded-lg pointer-events-auto">
+                  <img 
+                    id="lightbox-img" 
+                    src="" 
+                    alt="Full size view"
+                    class="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl"
+                  />
+                </div>
+
+                <button 
+                  id="lightbox-next-btn"
+                  type="button"
+                  class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 text-white font-mono text-xl flex items-center justify-center transition-all cursor-pointer pointer-events-auto"
+                >
+                  ›
+                </button>
+              </div>
+
+              <!-- Lightbox Caption Footer -->
+              <div class="w-full max-w-5xl text-center pointer-events-auto">
+                <p class="font-mono text-xs text-zinc-500 uppercase tracking-wider">
+                  {article.title}
+                </p>
+              </div>
+            </div>
+
+          </section>
+        )}
+
+      </article>
+    )}
+
+    <!-- DYNAMIC FLOATING BACK TO TOP BUTTON -->
+    <button
+      id="back-to-top-btn"
+      type="button"
+      class="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-40 px-3.5 py-2.5 sm:px-4 sm:py-2.5 bg-zinc-900/85 hover:bg-zinc-800/95 border border-zinc-800 hover:border-orange-500/50 text-zinc-300 hover:text-orange-400 rounded-xl shadow-2xl backdrop-blur-md transition-opacity duration-300 opacity-0 pointer-events-none cursor-pointer flex items-center gap-2 font-mono text-xs uppercase tracking-wider group"
+      aria-label="Back to top"
+    >
+      <span class="group-hover:-translate-y-0.5 transition-transform text-orange-500 font-bold text-sm sm:text-xs">&uarr;</span>
+      <span class="hidden sm:inline font-bold">Top</span>
+    </button>
+
+  </div>
+</Layout>
+
+<!-- CLIENT-SIDE SCRIPT FOR CAROUSEL, GRID, LIGHTBOX & FOOTER-AWARE BACK TO TOP -->
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. DYNAMIC BACK TO TOP BUTTON LOGIC WITH FOOTER COLLISION AVOIDANCE
+    const backToTopBtn = document.getElementById('back-to-top-btn');
+    if (backToTopBtn) {
+      const footer = document.querySelector('footer');
+
+      function updateBackToTopState() {
+        const scrollY = window.scrollY;
+
+        // Visibility Threshold
+        if (scrollY > 350) {
+          backToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
+          backToTopBtn.classList.add('opacity-100', 'pointer-events-auto');
+        } else {
+          backToTopBtn.classList.add('opacity-0', 'pointer-events-none');
+          backToTopBtn.classList.remove('opacity-100', 'pointer-events-auto');
+        }
+
+        // Avoid overlapping the footer
+        if (footer) {
+          const footerRect = footer.getBoundingClientRect();
+          const windowHeight = window.innerHeight;
+
+          // If top of footer enters the screen, push the button up dynamically
+          if (footerRect.top < windowHeight) {
+            const overlap = windowHeight - footerRect.top;
+            backToTopBtn.style.transform = `translateY(-${overlap + 12}px)`;
+          } else {
+            backToTopBtn.style.transform = 'translateY(0px)';
+          }
+        }
+      }
+
+      window.addEventListener('scroll', updateBackToTopState, { passive: true });
+      window.addEventListener('resize', updateBackToTopState, { passive: true });
+
+      backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    // 2. SEAMLESS CAROUSEL LOGIC
+    const track = document.getElementById('carousel-track');
+    const prevBtn = document.getElementById('carousel-prev-btn');
+    const nextBtn = document.getElementById('carousel-next-btn');
+
+    const openGridBtn = document.getElementById('open-grid-btn');
+    const closeGridBtn = document.getElementById('close-grid-btn');
+    const gridModal = document.getElementById('grid-modal');
+    const gridModalContent = document.getElementById('grid-modal-content');
+
+    const lightboxModal = document.getElementById('lightbox-modal');
+    const closeLightboxBtn = document.getElementById('close-lightbox-btn');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxCounter = document.getElementById('lightbox-counter');
+    const lightboxPrevBtn = document.getElementById('lightbox-prev-btn');
+    const lightboxNextBtn = document.getElementById('lightbox-next-btn');
+    const lightboxWrapper = document.getElementById('lightbox-wrapper');
+
+    if (!track) return;
+
+    const originalItems = Array.from(track.querySelectorAll('.gallery-item'));
+    const totalItems = originalItems.length;
+    if (totalItems === 0) return;
+
+    let visibleCount = getVisibleCount();
+    let currentIndex = visibleCount;
+    let isTransitioning = false;
+
+    function getVisibleCount() {
+      if (window.innerWidth >= 768) return 3;
+      if (window.innerWidth >= 640) return 2;
+      return 1;
+    }
+
+    function setupBufferDOM() {
+      track.innerHTML = '';
+      visibleCount = getVisibleCount();
+
+      for (let i = totalItems - visibleCount; i < totalItems; i++) {
+        const cloneIdx = (i + totalItems) % totalItems;
+        const clone = originalItems[cloneIdx].cloneNode(true);
+        track.appendChild(clone);
+      }
+
+      originalItems.forEach((item) => track.appendChild(item));
+
+      for (let i = 0; i < visibleCount; i++) {
+        const clone = originalItems[i].cloneNode(true);
+        track.appendChild(clone);
+      }
+
+      currentIndex = visibleCount;
+      updatePosition(false);
+      attachItemClickEvents();
+    }
+
+    function updatePosition(animate = true) {
+      const allCards = track.querySelectorAll('.gallery-item');
+      if (!allCards.length) return;
+      
+      const itemWidth = allCards[0].getBoundingClientRect().width;
+      const gap = 12;
+      const translateX = -(currentIndex * (itemWidth + gap));
+
+      if (animate) {
+        track.style.transition = 'transform 300ms ease-out';
+      } else {
+        track.style.transition = 'none';
+      }
+
+      track.style.transform = `translateX(${translateX}px)`;
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (isTransitioning) return;
+        isTransitioning = true;
+        currentIndex++;
+        updatePosition(true);
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (isTransitioning) return;
+        isTransitioning = true;
+        currentIndex--;
+        updatePosition(true);
+      });
+    }
+
+    track.addEventListener('transitionend', () => {
+      isTransitioning = false;
+
+      if (currentIndex >= visibleCount + totalItems) {
+        currentIndex = visibleCount;
+        updatePosition(false);
+      } 
+      else if (currentIndex < visibleCount) {
+        currentIndex = visibleCount + totalItems - 1;
+        updatePosition(false);
+      }
+    });
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setupBufferDOM();
+      }, 150);
+    });
+
+    setupBufferDOM();
+
+    // 3. GRID MOSAIC MODAL & CLICK OUTSIDE TO CLOSE
+    function closeGridModal() {
+      if (!gridModal) return;
+      gridModal.classList.add('hidden');
+      gridModal.classList.remove('flex');
+      document.body.style.overflow = '';
+    }
+
+    if (openGridBtn && gridModal && closeGridBtn) {
+      openGridBtn.addEventListener('click', () => {
+        gridModal.classList.remove('hidden');
+        gridModal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+      });
+
+      closeGridBtn.addEventListener('click', closeGridModal);
+
+      gridModal.addEventListener('click', (e) => {
+        if (gridModalContent && !gridModalContent.contains(e.target)) {
+          closeGridModal();
+        }
+      });
+    }
+
+    // 4. LIGHTBOX FULLSCREEN LOGIC & CLICK OUTSIDE TO CLOSE
+    let activeLightboxIndex = 0;
+
+    function openLightbox(index) {
+      activeLightboxIndex = index;
+      const targetItem = originalItems[activeLightboxIndex];
+      if (!targetItem) return;
+
+      const imageUrl = targetItem.getAttribute('data-url');
+      lightboxImg.src = imageUrl;
+
+      const currentFormatted = String(activeLightboxIndex + 1).padStart(2, '0');
+      const totalFormatted = String(totalItems).padStart(2, '0');
+      lightboxCounter.textContent = `Shot ${currentFormatted} / ${totalFormatted}`;
+
+      lightboxModal.classList.remove('hidden');
+      lightboxModal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightboxModal.classList.add('hidden');
+      lightboxModal.classList.remove('flex');
+      if (gridModal && gridModal.classList.contains('hidden')) {
+        document.body.style.overflow = '';
+      }
+    }
+
+    function nextLightbox() {
+      activeLightboxIndex = (activeLightboxIndex + 1) % totalItems;
+      openLightbox(activeLightboxIndex);
+    }
+
+    function prevLightbox() {
+      activeLightboxIndex = (activeLightboxIndex - 1 + totalItems) % totalItems;
+      openLightbox(activeLightboxIndex);
+    }
+
+    function attachItemClickEvents() {
+      const carouselCards = track.querySelectorAll('.gallery-item');
+      carouselCards.forEach((card) => {
+        card.addEventListener('click', () => {
+          const idx = parseInt(card.getAttribute('data-index') || '0', 10);
+          openLightbox(idx);
+        });
+      });
+    }
+
+    const gridItems = document.querySelectorAll('.grid-item');
+    gridItems.forEach((gridItem) => {
+      gridItem.addEventListener('click', () => {
+        const idx = parseInt(gridItem.getAttribute('data-index') || '0', 10);
+        openLightbox(idx);
+      });
+    });
+
+    if (closeLightboxBtn) closeLightboxBtn.addEventListener('click', closeLightbox);
+    if (lightboxNextBtn) lightboxNextBtn.addEventListener('click', nextLightbox);
+    if (lightboxPrevBtn) lightboxPrevBtn.addEventListener('click', prevLightbox);
+
+    if (lightboxModal) {
+      lightboxModal.addEventListener('click', (e) => {
+        if (e.target === lightboxModal || e.target === lightboxWrapper) {
+          closeLightbox();
+        }
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (lightboxModal && !lightboxModal.classList.contains('hidden')) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowRight') nextLightbox();
+        if (e.key === 'ArrowLeft') prevLightbox();
+      } else if (gridModal && !gridModal.classList.contains('hidden')) {
+        if (e.key === 'Escape') closeGridModal();
+      }
+    });
+  });
+</script>

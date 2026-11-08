@@ -1,0 +1,76 @@
+---
+// src/pages/shop/index.astro
+import Layout from '../../layouts/Layout.astro';
+import ProductCard from '../../components/shop/ProductCard.astro';
+import { getProducts } from '../../services/ecommerce/productService';
+import { getCategories } from '../../services/ecommerce/categoryService';
+
+// ?category=<id> filters the grid. Invalid/missing values just show everything.
+const categoryParam = Astro.url.searchParams.get('category');
+const categoryId = categoryParam && !Number.isNaN(Number(categoryParam))
+  ? Number(categoryParam)
+  : undefined;
+
+const [products, categories] = await Promise.all([
+  getProducts(categoryId),
+  getCategories(),
+]);
+
+const activeCategories = categories.filter((c) => c.isActive);
+---
+
+<Layout title="Shop | Underground Vandals">
+  <div class="space-y-8">
+    <div class="border-b border-zinc-800/80 pb-6">
+      <span class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-2">
+        Shop
+      </span>
+      <h1 class="text-3xl font-black uppercase tracking-tight text-white">
+        Shop <span class="text-orange-500">Underground Vandals</span>
+      </h1>
+    </div>
+
+    {activeCategories.length > 0 && (
+      <div class="flex flex-wrap items-center gap-2">
+        <a
+          href="/shop"
+          class={`px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider rounded-full border transition-colors ${
+            !categoryId
+              ? 'bg-orange-500/10 border-orange-500/40 text-orange-400 font-bold'
+              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+          }`}
+        >
+          All
+        </a>
+        {activeCategories.map((category) => (
+          <a
+            href={`/shop?category=${category.id}`}
+            class={`px-3.5 py-1.5 font-mono text-xs uppercase tracking-wider rounded-full border transition-colors ${
+              categoryId === category.id
+                ? 'bg-orange-500/10 border-orange-500/40 text-orange-400 font-bold'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+            }`}
+          >
+            {category.name}
+          </a>
+        ))}
+      </div>
+    )}
+
+    {products.length === 0 ? (
+      <div class="py-20 text-center">
+        <p class="text-zinc-500 font-mono text-sm">
+          {categoryId
+            ? 'No products found in this category.'
+            : 'No products available yet.'}
+        </p>
+      </div>
+    ) : (
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+        {products.map((product) => (
+          <ProductCard product={product} />
+        ))}
+      </div>
+    )}
+  </div>
+</Layout>

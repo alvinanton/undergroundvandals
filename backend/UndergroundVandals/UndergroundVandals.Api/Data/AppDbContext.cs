@@ -11,8 +11,9 @@ public class AppDbContext : DbContext
 
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<User> Users => Set<User>();
-    public DbSet<MediaAsset> MediaAssets { get; set; }
+    public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
     public DbSet<WebsiteVisit> WebsiteVisits => Set<WebsiteVisit>();
+    public DbSet<GalleryArticle> GalleryArticles => Set<GalleryArticle>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,5 +25,15 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<WebsiteVisit>()
             .HasIndex(v => v.CreatedAt);
+
+        modelBuilder.Entity<GalleryArticle>()
+            .HasIndex(a => a.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<GalleryArticle>()
+            .HasIndex(a => a.Category);
+
+        modelBuilder.Entity<GalleryArticle>()
+            .HasIndex(a => a.PublishedAt);
     }
 }

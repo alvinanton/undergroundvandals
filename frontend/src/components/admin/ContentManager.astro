@@ -1,0 +1,94 @@
+---
+// src/components/admin/AdminContentManager.astro
+export type UserRole = 'SuperAdmin' | 'ArchiveAdmin' | 'GalleryAdmin';
+
+interface Props {
+  userRole?: UserRole;
+  isAdmin?: boolean;
+}
+
+const { userRole = 'SuperAdmin', isAdmin = false } = Astro.props;
+
+// Determine tab permissions
+const canAccessArchive = userRole === 'SuperAdmin' || userRole === 'ArchiveAdmin';
+const canAccessGallery = userRole === 'SuperAdmin' || userRole === 'GalleryAdmin';
+const showTabBar = userRole === 'SuperAdmin';
+---
+
+<div 
+  class="space-y-8" 
+  id="content-manager-root" 
+  data-is-admin={isAdmin ? "true" : "false"}
+  data-user-role={userRole}
+>
+  <!-- TAB NAVIGATION BAR (Visible for SuperAdmin or Multi-Role) -->
+  {showTabBar && (
+    <div class="flex items-center gap-3 border-b border-zinc-800 pb-4 select-none">
+      <button
+        id="tab-btn-archive"
+        type="button"
+        class="tab-btn active px-4 py-2.5 bg-orange-500 text-zinc-950 font-black font-mono text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-orange-500/10"
+        data-tab="archive"
+      >
+        <span>📁</span>
+        <span>Archive Media</span>
+      </button>
+
+      <button
+        id="tab-btn-gallery"
+        type="button"
+        class="tab-btn px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/40 text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-2"
+        data-tab="gallery"
+      >
+        <span>📰</span>
+        <span>Gallery Editorial</span>
+      </button>
+    </div>
+  )}
+
+  <!-- TAB 1: ARCHIVE MEDIA SECTION -->
+  {canAccessArchive && (
+    <div id="section-archive-tab" class="tab-content space-y-8">
+      <!-- Aquí vive todo el formulario y tabla actual de Archive Media -->
+    </div>
+  )}
+
+  <!-- TAB 2: GALLERY EDITORIAL SECTION -->
+  {canAccessGallery && (
+    <div id="section-gallery-tab" class={`tab-content space-y-8 ${showTabBar ? 'hidden' : ''}`}>
+      <!-- Aquí construiremos la administración de artículos editorial en el Paso 2 -->
+    </div>
+  )}
+</div>
+
+<!-- CLIENT-SIDE TAB SWITCHER LOGIC -->
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetTab = btn.getAttribute('data-tab');
+
+        // Update button active styles
+        tabBtns.forEach((b) => {
+          b.classList.remove('bg-orange-500', 'text-zinc-950', 'font-black');
+          b.classList.add('bg-zinc-900', 'border', 'border-zinc-800', 'text-zinc-400');
+        });
+
+        btn.classList.remove('bg-zinc-900', 'border', 'border-zinc-800', 'text-zinc-400');
+        btn.classList.add('bg-orange-500', 'text-zinc-950', 'font-black');
+
+        // Toggle Section Visibility
+        tabContents.forEach((content) => {
+          if (content.id === `section-${targetTab}-tab`) {
+            content.classList.remove('hidden');
+          } else {
+            content.classList.add('hidden');
+          }
+        });
+      });
+    });
+  });
+</script>

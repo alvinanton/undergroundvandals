@@ -1,0 +1,225 @@
+---
+// src/pages/gallery/index.astro
+import Layout from '../../layouts/Layout.astro';
+
+// Type definition matching the backend response structure
+interface GalleryArticle {
+  id: string;
+  title: string;
+  slug: string;
+  subtitle: string;
+  category: string;
+  heroImageUrl: string;
+  videoUrl?: string;
+  videoSource?: string;
+  readingTimeMinutes: number;
+  subjectName?: string;
+  location?: string;
+  externalUrl?: string;
+  eventDate?: string;
+  isFeatured: boolean;
+  publishedAt: string;
+  tags: string[];
+}
+
+let featuredArticle: GalleryArticle | null = null;
+let moreArticles: GalleryArticle[] = [];
+let errorMessage = '';
+
+const origin = Astro.url.origin;
+
+try {
+  // Fetch articles from the Astro API proxy endpoint
+  const response = await fetch(`${origin}/api/gallery`);
+  if (response.ok) {
+    const articles: GalleryArticle[] = await response.json();
+
+    // Extract the featured article (or fallback to the most recent published item)
+    featuredArticle = articles.find((art) => art.isFeatured) || articles[0] || null;
+
+    // Filter out the featured article from the secondary features list
+    moreArticles = articles.filter((art) => art.id !== featuredArticle?.id);
+  } else {
+    errorMessage = 'Failed to load gallery articles from server.';
+  }
+} catch (error: any) {
+  errorMessage = error.message || 'Error connecting to backend service.';
+}
+---
+
+<Layout title="Editorial Gallery | Underground Vandals">
+  <div class="space-y-10">
+    <!-- Header -->
+    <div class="border-b border-zinc-800/80 pb-6">
+      <span class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-2">
+        Editorial & Exclusives
+      </span>
+      <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tight text-white">
+        Vandal <span class="text-orange-500">Gallery</span>
+      </h1>
+      <p class="text-zinc-400 text-xs sm:text-sm mt-2 max-w-xl">
+        Curated space featuring artist spotlights, exclusive video premieres, and exhibition coverage.
+      </p>
+    </div>
+
+    <!-- API Error Notice -->
+    {errorMessage && (
+      <div class="p-4 border border-red-500/30 bg-red-500/10 text-red-400 font-mono text-xs rounded-xl">
+        {errorMessage}
+      </div>
+    )}
+
+    <!-- FEATURED / HERO ARTICLE (Redesigned Compact & Responsive Hero) -->
+    {featuredArticle && (
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-mono uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+            Latest Release
+          </h2>
+          {featuredArticle.subjectName && (
+            <span class="hidden sm:inline-block text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+              Spotlight: <span class="text-zinc-300 font-bold">{featuredArticle.subjectName}</span>
+            </span>
+          )}
+        </div>
+
+        <article class="group relative bg-zinc-900/50 border border-zinc-800/90 hover:border-orange-500/50 rounded-2xl overflow-hidden transition-all duration-300 shadow-xl shadow-black/40">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-0">
+            
+            <!-- Compact Media Container with Fixed Aspect Ratio -->
+            <div class="lg:col-span-7 relative aspect-video lg:aspect-[16/10] overflow-hidden bg-zinc-950">
+              <img
+                src={featuredArticle.heroImageUrl || '/placeholder-gallery.jpg'}
+                alt={featuredArticle.title}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+              />
+              
+              <!-- Dark Overlay for Badges readability -->
+              <div class="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-black/20 lg:bg-none"></div>
+
+              <!-- Floating Badges -->
+              <div class="absolute top-3 left-3 sm:top-4 sm:left-4 flex items-center gap-2 z-10">
+                <span class="bg-orange-500 text-zinc-950 text-[10px] font-mono font-black uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
+                  {featuredArticle.category}
+                </span>
+                {featuredArticle.location && (
+                  <span class="bg-black/70 backdrop-blur-md text-zinc-300 border border-zinc-700/50 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md hidden sm:inline-block">
+                    📍 {featuredArticle.location}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <!-- Content Container - High Curiosity & Compact Layout -->
+            <div class="lg:col-span-5 p-5 sm:p-6 lg:p-7 flex flex-col justify-between space-y-4 bg-zinc-900/30">
+              <div class="space-y-3">
+                <!-- Meta Info -->
+                <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+                  <span class="text-orange-400 font-bold">{new Date(featuredArticle.publishedAt).toISOString().split('T')[0]}</span>
+                  <span>•</span>
+                  <span>{featuredArticle.readingTimeMinutes} min read</span>
+                </div>
+                
+                <!-- Main Title -->
+                <h3 class="text-lg sm:text-xl lg:text-2xl font-black uppercase tracking-tight text-white group-hover:text-orange-400 transition-colors leading-snug">
+                  <a href={`/gallery/${featuredArticle.slug}`} class="after:absolute after:inset-0">
+                    {featuredArticle.title}
+                  </a>
+                </h3>
+
+                <!-- Subtitle / Hook -->
+                <p class="text-zinc-400 text-xs sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-3">
+                  {featuredArticle.subtitle}
+                </p>
+              </div>
+
+              <!-- Footer CTA & Tags -->
+              <div class="pt-4 border-t border-zinc-800/80 flex items-center justify-between gap-2 relative z-10">
+                <div class="flex flex-wrap gap-1.5 max-w-[60%]">
+                  {featuredArticle.tags?.slice(0, 3).map((tag) => (
+                    <span class="text-[10px] font-mono bg-zinc-950 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+
+                <a
+                  href={`/gallery/${featuredArticle.slug}`}
+                  class="text-xs font-mono text-zinc-950 bg-orange-500 hover:bg-orange-400 px-3.5 py-1.5 rounded-lg uppercase tracking-wider font-bold transition-all shadow-md shadow-orange-500/20 flex items-center gap-1 shrink-0"
+                >
+                  Read Feature &rarr;
+                </a>
+              </div>
+            </div>
+
+          </div>
+        </article>
+      </section>
+    )}
+
+    <!-- MORE FEATURES GRID -->
+    <section class="space-y-6">
+      <h2 class="text-xs font-mono uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
+        More Features
+      </h2>
+
+      {moreArticles.length > 0 ? (
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {moreArticles.map((item) => (
+            <article class="group bg-zinc-900/40 border border-zinc-800 hover:border-orange-500/40 rounded-xl overflow-hidden transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div class="relative aspect-video w-full overflow-hidden bg-zinc-950">
+                  <img
+                    src={item.heroImageUrl || '/placeholder-gallery.jpg'}
+                    alt={item.title}
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span class="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-zinc-300 border border-zinc-700/50 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full">
+                    {item.category}
+                  </span>
+                </div>
+
+                <div class="p-5 flex flex-col space-y-2">
+                  <div class="flex items-center gap-2 font-mono text-[10px] text-zinc-500">
+                    <span>{new Date(item.publishedAt).toISOString().split('T')[0]}</span>
+                    {item.location && <span>• {item.location}</span>}
+                  </div>
+                  
+                  <h3 class="text-base font-bold text-white group-hover:text-orange-400 transition-colors line-clamp-2 uppercase">
+                    <a href={`/gallery/${item.slug}`}>
+                      {item.title}
+                    </a>
+                  </h3>
+                  
+                  <p class="text-zinc-400 text-xs line-clamp-2 leading-relaxed">
+                    {item.subtitle}
+                  </p>
+                </div>
+              </div>
+
+              <div class="p-5 pt-0 mt-2">
+                <div class="pt-3 border-t border-zinc-800/80 flex items-center justify-between">
+                  <span class="text-[10px] font-mono text-zinc-500">{item.readingTimeMinutes} min read</span>
+                  <a
+                    href={`/gallery/${item.slug}`}
+                    class="text-[11px] font-mono text-orange-500 uppercase tracking-wider font-bold hover:text-orange-400 transition-colors"
+                  >
+                    View &rarr;
+                  </a>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        !featuredArticle && (
+          <div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl">
+            <p class="font-mono text-xs text-zinc-500">No gallery features found.</p>
+          </div>
+        )
+      )}
+    </section>
+  </div>
+</Layout>

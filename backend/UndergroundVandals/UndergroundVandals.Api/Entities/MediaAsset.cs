@@ -6,6 +6,8 @@ public class MediaAsset
     public string Url { get; set; } = string.Empty;
     public string PublicId { get; set; } = string.Empty;
     public MediaType Type { get; set; }
+    public bool IsCover { get; set; } = false;
+    public string? ThumbnailUrl { get; set; }
     public Guid PostId { get; set; }
     public Post Post { get; set; } = null!;
 }

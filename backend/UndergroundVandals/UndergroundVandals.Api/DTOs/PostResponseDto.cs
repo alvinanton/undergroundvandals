@@ -6,7 +6,9 @@ public class MediaAssetDto
 {
     public Guid Id { get; set; }
     public string Url { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
+    public string Type { get; set; } = "image";
+    public bool IsCover { get; set; }
+    public string? ThumbnailUrl { get; set; }
 }
 
 public class PostResponseDto
