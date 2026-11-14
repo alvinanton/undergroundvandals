@@ -30,7 +30,17 @@ El primer comando requiere la herramienta `dotnet-ef`. El servidor no aplica mig
 | .NET, Docker Compose | `http://localhost:5050` |
 | Proxies Astro, desarrollo | `http://localhost:4321` |
 
-Fuera de Development se activa redirección HTTPS. CORS de .NET permite cualquier origen, método y cabecera. No hay Swagger/OpenAPI HTTP publicado en `Program.cs`, aunque existe la dependencia del paquete.
+Fuera de Development se activa redirección HTTPS. CORS de .NET permite cualquier origen, método y cabecera.
+
+## Metadata y documento OpenAPI
+
+En **Development**, `GET /openapi/v1.json` publica el contrato generado desde los controladores; por ejemplo `http://localhost:5098/openapi/v1.json`. El documento incluye las 23 operaciones .NET, sus schemas y autenticación Bearer en las operaciones protegidas. No incluye los proxies Astro. Esta ruta técnica no forma parte de las 23 operaciones funcionales ni de la colección Bruno. No se publica fuera de Development y no se agrega una interfaz Swagger UI.
+
+Cada controlador declara `[Tags]` y cada acción `[EndpointSummary]`, `[EndpointDescription]` y `[ProducesResponseType]`. Toda la metadata debe escribirse en inglés, incluidos resúmenes, descripciones de endpoints, respuestas y seguridad, tags y la información del documento OpenAPI. Estos atributos también funcionan en APIs basadas en controladores; no requieren Minimal APIs. Las respuestas con `message` y los resultados de alternar estados usan DTOs de respuesta para mantener un esquema estable sin cambiar los campos JSON existentes. Los errores 400 que pueden proceder de validación automática o del controlador se describen como cuerpo abierto, pues pueden tener formatos distintos.
+
+La configuración central está en `UndergroundVandals.Api/OpenApi/ApiDocumentationExtensions.cs`; obtiene los requisitos de seguridad de los atributos `[Authorize]` y respeta `[AllowAnonymous]`. Los roles se documentan en la descripción de cada operación. `v1` identifica el documento, sin agregar versionado a las rutas funcionales.
+
+Al crear una acción, agregar resumen, descripción, permisos y tipos/códigos de respuesta junto a los atributos HTTP. Usar el DTO real para las respuestas con cuerpo y `typeof(void)` para las respuestas vacías. No aplicar `[Consumes]` o `[Produces]` como si fueran únicamente documentación: también pueden afectar el tratamiento de contenido en MVC. Los detalles de estos atributos están en la [documentación de ASP.NET Core](https://learn.microsoft.com/es-es/aspnet/core/fundamentals/openapi/include-metadata?view=aspnetcore-10.0).
 
 ## Convenciones del contrato
 
@@ -41,11 +51,12 @@ Fuera de Development se activa redirección HTTPS. CORS de .NET permite cualquie
 - `PUT` reemplaza los campos editables: enviar todos los valores que se desean conservar. Los valores omitidos toman los defaults del DTO. Los `PATCH` de archivado y destacado invierten el estado y repetirlos lo revierte; el `PATCH` de usuario asigna el booleano enviado.
 - No hay endpoints de registro público, refresh token, logout, cambio de contraseña, detalle de usuario ni estadísticas de visitas. `POST /api/auth/seed-admin` fue eliminado y devuelve 404.
 
-## Índice completo de .NET: 22 operaciones
+## Índice completo de .NET: 23 operaciones
 
 | Método | Ruta | Permisos | Éxito |
 | --- | --- | --- | --- |
 | POST | `/api/auth/login` | Público | 200 |
+| GET | `/api/auth/session` | Admin, Editor | 200 |
 | GET | `/api/users` | Admin | 200 |
 | POST | `/api/users` | Admin | 201 |
 | PATCH | `/api/users/{id}/status` | Admin | 200 |
@@ -68,7 +79,7 @@ Fuera de Development se activa redirección HTTPS. CORS de .NET permite cualquie
 | DELETE | `/api/gallery/{id}` | Admin | 204 |
 | POST | `/api/visits/track` | Público | 200 vacío |
 
-Las otras [5 operaciones Astro](visits-proxies.md#proxies-astro) se consumen sobre la URL del frontend.
+Las otras [7 operaciones Astro con métodos explícitos](visits-proxies.md#proxies-astro) se consumen sobre la URL del frontend. El proxy dinámico `/api/admin/content/[...path]` reenvía operaciones de contenido permitidas y no se cuenta como una operación concreta en este índice.
 
 ## Errores y validaciones comunes
 
@@ -97,4 +108,4 @@ Los textos y claves dependen del validador y la entrada. Los strings no anulable
 
 ## Mantenimiento
 
-Al agregar una operación, actualizar el índice, el contrato del recurso, sus ejemplos y el archivo `.bru` correspondiente en el mismo cambio. Mantener los defaults, permisos y códigos sincronizados con los controladores y DTOs; documentar diferencias de implementación sin prometer reglas que el servidor no aplica. Ejecutar `node bruno/validate.mjs` para comprobar cobertura y estructura de la colección.
+Al agregar una operación, actualizar el índice, el contrato del recurso, sus ejemplos y el archivo `.bru` correspondiente en el mismo cambio. Mantener los defaults, permisos y códigos sincronizados con los controladores y DTOs; documentar diferencias de implementación sin prometer reglas que el servidor no aplica. Ejecutar `node backend/bruno/validate.mjs` para comprobar cobertura y estructura de la colección.

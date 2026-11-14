@@ -1,0 +1,57 @@
+meta {
+  name: Delete article
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/gallery/{{articleId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  # Delete article
+
+  `DELETE /api/gallery/{{articleId}}`
+
+  Delete the article record.
+
+  ## Authentication
+
+  Admin; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | articleId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **204**.
+
+  Empty response body.
+
+  ## Errors
+
+  - 404: Gallery article not found.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  No body. Stored image/video files and shop collections are retained.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

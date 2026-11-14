@@ -1,0 +1,66 @@
+meta {
+  name: List users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/users
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # List users
+
+  `GET /api/users`
+
+  Return all registered users, ordered by createdAt descending.
+
+  ## Authentication
+
+  Admin; inherited Bearer token.
+
+  ## Parameters
+
+  No path or query parameters.
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "username": "Example editor",
+      "email": "editor@example.com",
+      "role": "Editor",
+      "isActive": true,
+      "createdAt": "2026-11-14T12:00:00Z",
+      "lastLoginAt": null
+    }
+  ]
+  ```
+
+  ## Errors
+
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  No pagination. Passwords and password hashes are never returned. lastLoginAt is a date or null.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

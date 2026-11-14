@@ -1,0 +1,82 @@
+meta {
+  name: Set user status
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/users/{{userId}}/status
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "isActive": false
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Set user status
+
+  `PATCH /api/users/{{userId}}/status`
+
+  Assign the supplied active status to a user.
+
+  ## Authentication
+
+  Admin; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | userId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | isActive | boolean | false if omitted; true activates, false deactivates. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "isActive": false
+  }
+  ```
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "message": "User status successfully updated to Inactive."
+  }
+  ```
+
+  ## Errors
+
+  - 400: model validation.
+  - 404: User not found.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Sets the value rather than toggling it. Existing JWTs are not revoked. No guard prevents deactivating the caller or last administrator.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

@@ -34,15 +34,27 @@ La ruta consume estas cabeceras directamente; en despliegues con proxy su integr
 
 ## Proxies Astro
 
-Estas **5 operaciones usan `baseUrl` del frontend**, por ejemplo `http://localhost:4321`. En Bruno seleccionar `Frontend` y ejecutar únicamente la carpeta `06 - Proxies Astro`. El contrato del e-commerce externo no está implementado en este repositorio; las respuestas que se retransmiten y las validaciones del upstream dependen de ese servicio.
+Estas **7 operaciones usan `baseUrl` del frontend**, por ejemplo `http://localhost:4321`. Estas rutas están fuera de la colección Bruno, que incluye exclusivamente el backend .NET. El contrato del e-commerce externo no está implementado en este repositorio; las respuestas que se retransmiten y las validaciones del upstream dependen de ese servicio.
 
 | Método | Ruta Astro | Destino del proxy | Acceso actual |
 | --- | --- | --- | --- |
 | GET | `/api/gallery` | Content API `/api/gallery` | Público |
 | GET | `/api/gallery/{slug}` | Content API `/api/gallery/slug/{slug}` | Público |
-| GET | `/api/admin/products` | E-commerce `/api/product/admin` | Sin control de rol en la ruta ni en el middleware |
+| GET | `/api/admin/products` | E-commerce `/api/product/admin` | Cookie con sesión Admin validada por middleware |
 | GET | `/api/admin/products/{id}` | E-commerce `/api/product/admin/{id}` | Cookie con rol Admin en `locals.user` |
 | PUT | `/api/admin/products/{id}` | E-commerce `/api/product/{id}` | Cookie con rol Admin en `locals.user` |
+| POST | `/api/auth/login` | Content API `/api/auth/login` y `/api/auth/session` | Público |
+| POST | `/api/auth/logout` | Elimina la cookie local | Sin requisito explícito en el handler |
+
+### Sesión del frontend
+
+POST `/api/auth/login` recibe `email` y `password` strings no vacíos (máximo 254 y 1024 caracteres respectivamente). Tras autenticar y validar la sesión con la Content API, establece `uv_auth_token` mediante `Set-Cookie`, con HttpOnly, SameSite=Lax y Secure al usar HTTPS. Devuelve 200 `{"message":"Signed in."}`; no devuelve el JWT en el JSON. El cliente HTTP debe conservar la cookie para reutilizar la sesión. Errores: 400 entrada inválida, 401 credenciales inválidas/cuenta inactiva, 502 respuesta upstream inválida o fallida, 503 excepción o timeout.
+
+POST `/api/auth/logout` no recibe body, elimina la cookie en `/` y devuelve 200 `{"message":"Signed out."}`. No revoca el JWT en la API .NET. Ambas respuestas usan `Cache-Control: no-store`.
+
+El middleware exige `Origin` igual al origen del sitio en escrituras de `/api/auth/*` y `/api/admin/*`, y rechaza `Sec-Fetch-Site: cross-site` con 403. El cliente HTTP debe enviar el origen del sitio en la cabecera `Origin`. Las rutas `/api/admin/*` requieren una sesión validada por `/api/auth/session`; las rutas de productos requieren Admin. Sesión ausente/inválida: 401; rol insuficiente: 403; validación de sesión no disponible: 503.
+
+Existe además un proxy dinámico `ALL /api/admin/content/[...path]` con lista permitida de rutas y métodos para operaciones de contenido. No se cuenta entre las siete rutas con métodos explícitos. La colección Bruno representa los contratos de contenido directamente contra la Content API en las carpetas Media, Gallery y Users.
 
 ### Galería
 
@@ -56,7 +68,7 @@ El proxy agrega `X-Api-Key` desde `ECOMMERCE_ADMIN_API_KEY` en el servidor; el c
 
 El listado reenvía la query sin validarla. Un ejemplo de consumo del frontend es `?pageNumber=1&pageSize=25`; el contrato efectivo de filtros/paginación depende del e-commerce. En éxito devuelve el JSON upstream; si upstream responde vacío usa `{"items":[],"pageNumber":1,"pageSize":25,"totalItems":0,"totalPages":1}`. Si falla upstream conserva su estado y devuelve ese envoltorio con `error: "Backend HTTP ..."`. Excepciones de red/JSON producen 500 con ese envoltorio y `error`.
 
-Detalle y PUT requieren `id` entero positivo; inválido: 400 `{"message":"Invalid product id."}`. Requieren rol Admin o devuelven 403 `{"message":"Forbidden: admin role required."}`. La autenticación de estas rutas usa la cookie `uv_auth_token`, no la cabecera Bearer. El middleware Astro decodifica los claims del JWT sin verificar firma ni vencimiento; esta es la conducta actual y no equivale a la validación JWT del backend. Sin API key configurada: 500 `{"message":"Server misconfigured: missing admin API key."}`. Excepciones de conexión: 502 `{"message":"Could not reach the e-commerce API."}`. En otros casos retransmiten estado y texto del upstream con Content-Type JSON.
+Detalle y PUT requieren `id` entero positivo; inválido: 400 `{"message":"Invalid product id."}`. Requieren rol Admin o devuelven 403 `{"message":"Forbidden: admin role required."}` si el handler recibe un rol insuficiente. La autenticación de estas rutas usa la cookie `uv_auth_token`, no la cabecera Bearer. El middleware Astro valida la sesión consultando la API .NET antes de ejecutar el handler. Sin API key configurada: 500 `{"message":"Server misconfigured: missing admin API key."}`. Excepciones de conexión: 502 `{"message":"Could not reach the e-commerce API."}`. En otros casos retransmiten estado y texto del upstream con Content-Type JSON.
 
 PUT reenvía el body de texto sin validación local. Ejemplo ilustrativo basado en el formulario `ProductsManager.astro` (el esquema obligatorio y las reglas finales deben consultarse en el e-commerce):
 

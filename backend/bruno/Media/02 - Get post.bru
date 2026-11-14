@@ -1,0 +1,85 @@
+meta {
+  name: Get post
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/media/{{postId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Get post
+
+  `GET /api/media/{{postId}}`
+
+  Return one post and its media assets by GUID, including archived posts.
+
+  ## Authentication
+
+  Public.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | postId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "title": "City mural",
+    "description": "Session documentation",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti"
+    ],
+    "media": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ],
+    "isArchived": false,
+    "createdAt": "2026-11-14T12:00:00Z",
+    "mediaAssets": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+  ```
+
+  ## Errors
+
+  - 404: Media item not found.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  media and mediaAssets contain the same array for compatibility. Assets do not expose publicId; asset ordering is not explicitly defined.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

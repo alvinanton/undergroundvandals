@@ -1,0 +1,98 @@
+meta {
+  name: List articles
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/gallery?category={{galleryCategory}}&tag={{tag}}&includeUnpublished={{includeUnpublished}}
+  body: none
+  auth: none
+}
+
+params:query {
+  category: {{galleryCategory}}
+  tag: {{tag}}
+  includeUnpublished: {{includeUnpublished}}
+  ~isFeatured: {{isFeatured}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # List articles
+
+  `GET /api/gallery`
+
+  Return articles ordered by publishedAt descending.
+
+  ## Authentication
+
+  Public.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | category | Query | Example: `{{galleryCategory}}`. |
+  | tag | Query | Example: `{{tag}}`. |
+  | includeUnpublished | Query | Example: `{{includeUnpublished}}`. |
+  | isFeatured | Query | Disabled initially; enable in Params. Example: `{{isFeatured}}`. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  [
+    {
+      "title": "Escena urbana de Guatemala",
+      "slug": "urban-scene",
+      "subtitle": "Artistas y espacios de la ciudad",
+      "category": "EDITORIAL",
+      "heroImageUrl": "https://example.com/portada.webp",
+      "videoUrl": null,
+      "videoSource": "NONE",
+      "contentMarkdown": "## La escena\nTexto del artículo.",
+      "readingTimeMinutes": 5,
+      "subjectName": "Colectivo UV",
+      "location": "Ciudad de Guatemala",
+      "externalUrl": "https://example.com/artista",
+      "eventDate": "2026-12-01T18:00:00Z",
+      "isFeatured": false,
+      "isPublished": true,
+      "shopCollectionSlug": "urban-art",
+      "shopCollectionTitle": "Urban Art",
+      "tags": [
+        "graffiti",
+        "guatemala"
+      ],
+      "galleryImageUrls": [
+        "https://example.com/detalle.webp"
+      ],
+      "id": "44444444-4444-4444-8444-444444444444",
+      "publishedAt": "2026-11-14T12:00:00Z",
+      "createdAt": "2026-11-14T12:00:00Z",
+      "updatedAt": null
+    }
+  ]
+  ```
+
+  ## Errors
+
+  - 400: invalid boolean query value.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Filters use AND. category is case-insensitive and tag uses lowercase exact membership. includeUnpublished defaults to false but true is publicly accessible. Omit isFeatured to include both states. No pagination.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

@@ -1,0 +1,156 @@
+meta {
+  name: Create post with assets
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/media/upload
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Mural en la ciudad",
+    "description": "Registro de la sesión",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "assets": [
+      {
+        "url": "https://example.com/mural.webp",
+        "publicId": "archive-media/photos/uuid",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status >= 200 && res.status < 300 && res.body?.id) {
+    bru.setVar("postId", res.body.id);
+  }
+  if (res.status === 201 && res.body?.mediaAssets?.[0]?.id) {
+    bru.setVar("assetId", res.body.mediaAssets[0].id);
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  # Create post with assets
+
+  `POST /api/media/upload`
+
+  Register JSON metadata for files already uploaded to storage.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  No path or query parameters.
+
+  ## Request body
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | title | string | Required and nonempty. |
+  | description | string or null | Optional. |
+  | category | string | General if omitted or blank. |
+  | hashtags | string[] or null | Defaults to []; send lowercase tags for reliable filtering. |
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | assets | object[] | At least one asset required. |
+  | assets[].url | string | Required; URL of a previously uploaded file. |
+  | assets[].publicId | string | Required; container/blob path returned by Azure authorization. |
+  | assets[].type | string | Defaults to image; video (case-insensitive) creates a video, other nonempty values create an image. |
+  | assets[].isCover | boolean | false; no unique-cover constraint. |
+  | assets[].thumbnailUrl | string or null | Optional thumbnail or video poster URL. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "title": "Mural en la ciudad",
+    "description": "Registro de la sesión",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "assets": [
+      {
+        "url": "https://example.com/mural.webp",
+        "publicId": "archive-media/photos/uuid",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+  ```
+
+  ## Response
+
+  HTTP **201**.
+
+  ```json
+  {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "title": "City mural",
+    "description": "Session documentation",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti"
+    ],
+    "media": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ],
+    "isArchived": false,
+    "createdAt": "2026-11-14T12:00:00Z",
+    "mediaAssets": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+  ```
+
+  ## Errors
+
+  - 400: At least one asset is required. or model validation.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Does not upload file bytes or verify that URLs exist. Replace sample asset URLs/publicIds with actual upload results. Captures postId and the first assetId. Returns a Location header for the created post.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

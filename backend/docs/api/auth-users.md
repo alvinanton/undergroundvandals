@@ -36,6 +36,22 @@ Actualiza `lastLoginAt`. JWT firmado con HS256, vencimiento de 8 horas y claims 
 
 Errores 401: `{"message":"Invalid credentials."}` o `{"message":"Account is deactivated. Please contact an administrator."}`.
 
+## GET /api/auth/session
+
+Admin o Editor, con Bearer JWT válido. No recibe body ni parámetros. Devuelve 200 con los claims de la sesión:
+
+```json
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "username": "Admin",
+  "email": "admin@example.com",
+  "role": "Admin",
+  "expiresAt": 1794700800
+}
+```
+
+`expiresAt` es un timestamp Unix en segundos. Lee los claims del token sin volver a consultar al usuario en base de datos. No permite almacenar la respuesta en caché. Devuelve 401 ante JWT inválido/vencido o claim `exp` ausente/no interpretable; 403 si el rol no está permitido.
+
 ## GET /api/users
 
 Solo Admin. Sin parámetros. Devuelve 200 con `UserResponse[]`, ordenado por `createdAt` descendente. El hash y contraseña nunca se incluyen.

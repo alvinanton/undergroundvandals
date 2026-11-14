@@ -1,0 +1,121 @@
+meta {
+  name: Update post
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/media/{{postId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Mural actualizado",
+    "description": "Descripción actualizada",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti"
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Update post
+
+  `PUT /api/media/{{postId}}`
+
+  Replace the editable post metadata.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | postId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | title | string | Required and nonempty. |
+  | description | string or null | Optional. |
+  | category | string | General if omitted or blank. |
+  | hashtags | string[] or null | Defaults to []; send lowercase tags for reliable filtering. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "title": "Mural actualizado",
+    "description": "Descripción actualizada",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti"
+    ]
+  }
+  ```
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "title": "City mural",
+    "description": "Session documentation",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti"
+    ],
+    "media": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ],
+    "isArchived": false,
+    "createdAt": "2026-11-14T12:00:00Z",
+    "mediaAssets": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+  ```
+
+  ## Errors
+
+  - 400: model validation.
+  - 404: Media item not found.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Send every editable field to retain its value. Omitted fields take DTO defaults. Does not modify assets or isArchived.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

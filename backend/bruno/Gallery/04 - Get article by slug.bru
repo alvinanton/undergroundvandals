@@ -1,0 +1,86 @@
+meta {
+  name: Get article by slug
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/gallery/slug/{{articleSlug}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Get article by slug
+
+  `GET /api/gallery/slug/{{articleSlug}}`
+
+  Look up an article using a case-insensitive slug comparison.
+
+  ## Authentication
+
+  Public.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | articleSlug | Path | Article slug string; replace the example with a real resource. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "title": "Escena urbana de Guatemala",
+    "slug": "urban-scene",
+    "subtitle": "Artistas y espacios de la ciudad",
+    "category": "EDITORIAL",
+    "heroImageUrl": "https://example.com/portada.webp",
+    "videoUrl": null,
+    "videoSource": "NONE",
+    "contentMarkdown": "## La escena\nTexto del artículo.",
+    "readingTimeMinutes": 5,
+    "subjectName": "Colectivo UV",
+    "location": "Ciudad de Guatemala",
+    "externalUrl": "https://example.com/artista",
+    "eventDate": "2026-12-01T18:00:00Z",
+    "isFeatured": false,
+    "isPublished": true,
+    "shopCollectionSlug": "urban-art",
+    "shopCollectionTitle": "Urban Art",
+    "tags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "galleryImageUrls": [
+      "https://example.com/detalle.webp"
+    ],
+    "id": "44444444-4444-4444-8444-444444444444",
+    "publishedAt": "2026-11-14T12:00:00Z",
+    "createdAt": "2026-11-14T12:00:00Z",
+    "updatedAt": null
+  }
+  ```
+
+  ## Errors
+
+  - 404: Gallery article not found.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Also returns unpublished articles. URL-encode slugs containing reserved characters.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}
