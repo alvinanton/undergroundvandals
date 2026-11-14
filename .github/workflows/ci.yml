@@ -24,10 +24,51 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
-              - '.github/workflows/ci.yml'
+              - 'docker-compose.yml'
+              - '.env.example'
+              - '.github/workflows/**'
+              - '.github/scripts/**'
             frontend:
               - 'frontend/**'
-              - '.github/workflows/ci.yml'
+              - 'docker-compose.yml'
+              - '.env.example'
+              - '.github/workflows/**'
+              - '.github/scripts/**'
+
+  infrastructure:
+    name: Infrastructure
+    runs-on: self-hosted
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Compose with example settings
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" \
+            docker compose --env-file .env.example --file docker-compose.yml config --quiet
+
+      - name: Validate GitHub Actions workflows
+        run: |
+          shopt -s nullglob
+          workflows=(.github/workflows/*.yml .github/workflows/*.yaml)
+          docker run --rm --network none \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/.github,target=/work/.github,readonly" \
+            --workdir /work \
+            rhysd/actionlint:1.7.12 -color "${workflows[@]}"
+
+      - name: Validate deployment shell scripts
+        run: |
+          shopt -s nullglob
+          scripts=(.github/scripts/*.sh)
+          if (( ${#scripts[@]} > 0 )); then
+            docker run --rm --network none \
+              --mount "type=bind,source=$GITHUB_WORKSPACE/.github,target=/work/.github,readonly" \
+              --workdir /work --entrypoint shellcheck \
+              rhysd/actionlint:1.7.12 "${scripts[@]}"
+          fi
 
   backend:
     name: Backend (.NET)
