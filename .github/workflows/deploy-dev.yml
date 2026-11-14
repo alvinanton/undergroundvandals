@@ -25,6 +25,21 @@ jobs:
       - name: Load environment file
         run: cp ~/.env.undergroundvandals .env
 
+      - name: Validate deployment configuration
+        run: |
+          set -a; source .env; set +a
+          for name in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB JWT_SECRET JWT_ISSUER JWT_AUDIENCE AZURE_STORAGE_CONNECTION_STRING PUBLIC_API_URL SITE_ORIGIN; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Required setting is missing: $name" >&2
+              exit 1
+            fi
+          done
+          if [[ ! "$SITE_ORIGIN" =~ ^https?://[^/]+/?$ ]]; then
+            echo "SITE_ORIGIN must be the browser-facing origin without a path." >&2
+            exit 1
+          fi
+          docker compose config --quiet
+
       - name: Export app settings for EF tooling
         run: |
           set -a; source .env; set +a
@@ -45,24 +60,27 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Install dotnet-ef
-        run: |
-          dotnet tool update --global dotnet-ef --version "10.*" || dotnet tool install --global dotnet-ef --version "10.*"
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+      - name: Restore pinned EF tooling
+        working-directory: backend/UndergroundVandals
+        run: dotnet tool restore
 
       - name: Restore NuGet packages
         run: dotnet restore backend/UndergroundVandals/UndergroundVandals.Api/UndergroundVandals.Api.csproj
 
       - name: Build EF migration bundle
+        working-directory: backend/UndergroundVandals
         run: |
-          dotnet ef migrations bundle \
-            --project backend/UndergroundVandals/UndergroundVandals.Api \
-            --startup-project backend/UndergroundVandals/UndergroundVandals.Api \
+          dotnet tool run dotnet-ef migrations bundle \
+            --project UndergroundVandals.Api \
+            --startup-project UndergroundVandals.Api \
             --self-contained -r linux-x64 \
-            --output ./efbundle --force
+            --output ../../efbundle --force
+
+      - name: Build application images before migrating
+        run: docker compose build api bot frontend
 
       - name: Ensure PostgreSQL is running and healthy
-        run: docker compose up -d --wait db
+        run: docker compose up -d --wait --wait-timeout 120 db
 
       - name: Back up database before migrating
         run: |
@@ -78,7 +96,12 @@ jobs:
           ./efbundle --connection "$ConnectionStrings__DefaultConnection"
 
       - name: Deploy containers
-        run: docker compose up -d --build --remove-orphans
+        run: docker compose up -d --no-build --wait --wait-timeout 120 --remove-orphans
+
+      - name: Verify API and frontend readiness
+        run: |
+          curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-all-errors --connect-timeout 3 --max-time 10 http://127.0.0.1:5050/healthz
+          curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-all-errors --connect-timeout 3 --max-time 10 http://127.0.0.1:4321/healthz
 
       - name: Clean up unused images
         run: docker image prune -f

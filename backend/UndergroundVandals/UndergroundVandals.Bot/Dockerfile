@@ -10,15 +10,14 @@ WORKDIR /src
 
 COPY ["UndergroundVandals.Api/UndergroundVandals.Api.csproj", "UndergroundVandals.Api/"]
 COPY ["UndergroundVandals.Bot/UndergroundVandals.Bot.csproj", "UndergroundVandals.Bot/"]
-RUN dotnet restore "./UndergroundVandals.Bot/UndergroundVandals.Bot.csproj"
+RUN --mount=type=cache,id=uv-nuget,target=/root/.nuget/packages,sharing=locked dotnet restore "./UndergroundVandals.Bot/UndergroundVandals.Bot.csproj"
 
 COPY . .
 WORKDIR "/src/UndergroundVandals.Bot"
-RUN dotnet build "./UndergroundVandals.Bot.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./UndergroundVandals.Bot.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN --mount=type=cache,id=uv-nuget,target=/root/.nuget/packages,sharing=locked dotnet publish "./UndergroundVandals.Bot.csproj" --no-restore -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

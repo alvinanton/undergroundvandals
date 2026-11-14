@@ -13,15 +13,14 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["UndergroundVandals.Api/UndergroundVandals.Api.csproj", "UndergroundVandals.Api/"]
-RUN dotnet restore "./UndergroundVandals.Api/UndergroundVandals.Api.csproj"
+RUN --mount=type=cache,id=uv-nuget,target=/root/.nuget/packages,sharing=locked dotnet restore "./UndergroundVandals.Api/UndergroundVandals.Api.csproj"
 COPY . .
 WORKDIR "/src/UndergroundVandals.Api"
-RUN dotnet build "./UndergroundVandals.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./UndergroundVandals.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN --mount=type=cache,id=uv-nuget,target=/root/.nuget/packages,sharing=locked dotnet publish "./UndergroundVandals.Api.csproj" --no-restore -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
