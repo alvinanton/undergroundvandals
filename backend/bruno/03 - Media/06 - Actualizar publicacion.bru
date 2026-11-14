@@ -1,0 +1,36 @@
+meta {
+  name: Actualizar publicacion
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/media/{{postId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Mural actualizado",
+    "description": "Descripción actualizada",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti"
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  PUT /api/media/{{postId}}
+  Admin/Editor. Reemplaza metadatos; title requerido. No modifica assets. 404 si no existe.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

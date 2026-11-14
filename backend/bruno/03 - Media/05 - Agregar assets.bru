@@ -1,0 +1,39 @@
+meta {
+  name: Agregar assets
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/media/{{postId}}/assets
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "assets": [
+      {
+        "url": "https://example.com/mural.webp",
+        "publicId": "archive-media/photos/uuid",
+        "type": "image",
+        "isCover": false,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  POST /api/media/{{postId}}/assets
+  Admin/Editor. Agrega assets cargados previamente. 400 lista vacía, 404 publicación inexistente.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

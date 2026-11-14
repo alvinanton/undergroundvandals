@@ -1,0 +1,25 @@
+meta {
+  name: Listar galeria via Astro
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/gallery?includeUnpublished={{includeUnpublished}}
+  body: none
+  auth: none
+}
+
+params:query {
+  includeUnpublished: {{includeUnpublished}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  GET /api/gallery
+  Seleccionar Frontend. Público. Reenvía query y JSON/estado del Content API. Excepción: 500.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

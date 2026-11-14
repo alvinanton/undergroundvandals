@@ -1,0 +1,21 @@
+meta {
+  name: Consultar publicacion
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/media/{{postId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  GET /api/media/{{postId}}
+  Público, incluso archivados. PostResponse. 404 si no existe.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

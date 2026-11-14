@@ -1,0 +1,21 @@
+meta {
+  name: Eliminar asset
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/media/assets/{{assetId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  DELETE /api/media/assets/{{assetId}}
+  Admin/Editor. Elimina archivo, thumbnail y registro. Puede dejar publicación sin assets. 404 si no existe.
+  Aserción del escenario exitoso de ejemplo: 204.
+}

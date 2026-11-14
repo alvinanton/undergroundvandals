@@ -1,0 +1,33 @@
+meta {
+  name: Registrar visita
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/visits/track
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "path": "/gallery/escena-urbana-guatemala",
+    "deviceType": "Desktop",
+    "referrer": "https://example.com/"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  POST /api/visits/track
+  Público. 200 vacío. Todos los campos opcionales. Ver docs/api/visits-proxies.md.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

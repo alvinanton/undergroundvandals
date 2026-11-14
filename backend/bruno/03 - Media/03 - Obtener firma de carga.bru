@@ -1,0 +1,33 @@
+meta {
+  name: Obtener firma de carga
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/media/upload-signature?target={{target}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  target: {{target}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    for (const key of ["uploadUrl", "fileUrl", "publicId"]) {
+      if (res.body?.[key]) bru.setVar(key, res.body[key]);
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  GET /api/media/upload-signature
+  Admin/Editor. target requerido contenedor/carpeta. SAS de 15 minutos. Captura uploadUrl, fileUrl, publicId. Ver docs/api/media.md para cargar bytes a Azure antes de registrar metadatos.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

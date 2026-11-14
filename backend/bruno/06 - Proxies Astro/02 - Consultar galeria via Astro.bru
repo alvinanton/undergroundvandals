@@ -1,0 +1,21 @@
+meta {
+  name: Consultar galeria via Astro
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/gallery/{{articleSlug}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  GET /api/gallery/{{articleSlug}}
+  Seleccionar Frontend. Público. Slug, no GUID. Error upstream: mismo estado y error Article not found; excepción: 500.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

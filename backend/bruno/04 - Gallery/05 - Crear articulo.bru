@@ -1,0 +1,63 @@
+meta {
+  name: Crear articulo
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/gallery
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Escena urbana de Guatemala",
+    "slug": "{{articleSlug}}",
+    "subtitle": "Artistas y espacios de la ciudad",
+    "category": "EDITORIAL",
+    "heroImageUrl": "https://example.com/portada.webp",
+    "videoUrl": null,
+    "videoSource": "NONE",
+    "contentMarkdown": "## La escena\nTexto del artículo.",
+    "readingTimeMinutes": 5,
+    "subjectName": "Colectivo UV",
+    "location": "Ciudad de Guatemala",
+    "externalUrl": "https://example.com/artista",
+    "eventDate": "2026-12-01T18:00:00Z",
+    "isFeatured": false,
+    "isPublished": true,
+    "shopCollectionSlug": "urban-art",
+    "shopCollectionTitle": "Urban Art",
+    "tags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "galleryImageUrls": [
+      "https://example.com/detalle.webp"
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status >= 200 && res.status < 300 && res.body?.id) {
+    bru.setVar("articleId", res.body.id);
+  }
+  if (res.status >= 200 && res.status < 300 && res.body?.slug) {
+    bru.setVar("articleSlug", res.body.slug);
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  POST /api/gallery
+  Admin/Editor. title requerido y slug único. Captura articleId y articleSlug. 400 título vacío o slug duplicado. Ver docs/api/gallery.md.
+  Aserción del escenario exitoso de ejemplo: 201.
+}

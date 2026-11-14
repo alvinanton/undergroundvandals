@@ -1,0 +1,55 @@
+meta {
+  name: Crear publicacion
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/media/upload
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Mural en la ciudad",
+    "description": "Registro de la sesión",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "assets": [
+      {
+        "url": "https://example.com/mural.webp",
+        "publicId": "archive-media/photos/uuid",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status >= 200 && res.status < 300 && res.body?.id) {
+    bru.setVar("postId", res.body.id);
+  }
+  if (res.status === 201 && res.body?.mediaAssets?.[0]?.id) {
+    bru.setVar("assetId", res.body.mediaAssets[0].id);
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  POST /api/media/upload
+  Admin/Editor. Metadatos JSON; cargar bytes antes. Sustituir url/publicId del ejemplo por los reales. title requerido, assets no vacíos. 400 validación. Captura postId y assetId. Ver docs/api/media.md.
+  Aserción del escenario exitoso de ejemplo: 201.
+}

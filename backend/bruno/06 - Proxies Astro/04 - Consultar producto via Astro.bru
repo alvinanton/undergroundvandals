@@ -1,0 +1,25 @@
+meta {
+  name: Consultar producto via Astro
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/admin/products/{{productId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: uv_auth_token={{token}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  GET /api/admin/products/{{productId}}
+  Seleccionar Frontend. Cookie Admin; id entero positivo. 400 id, 403 rol, 500 configuración, 502 conexión; otros estados upstream.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

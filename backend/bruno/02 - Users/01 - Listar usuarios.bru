@@ -1,0 +1,21 @@
+meta {
+  name: Listar usuarios
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/users
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  GET /api/users
+  Admin. UserResponse[] por createdAt descendente. Sin paginación.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

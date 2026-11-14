@@ -1,0 +1,21 @@
+meta {
+  name: Alternar archivo
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/api/media/{{postId}}/archive
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  PATCH /api/media/{{postId}}/archive
+  Admin/Editor. Sin body. Invierte isArchived cada vez. 404 si no existe.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

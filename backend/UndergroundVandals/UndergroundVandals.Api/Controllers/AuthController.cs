@@ -52,33 +52,6 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Temporary endpoint to seed the initial admin user into the database.
-    /// </summary>
-    [HttpPost("seed-admin")]
-    public async Task<IActionResult> SeedAdmin([FromBody] LoginDto dto)
-    {
-        if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
-        {
-            return BadRequest(new { message = "User already exists." });
-        }
-
-        var adminUser = new User
-        {
-            Username = "Admin",
-            Email = dto.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-            Role = UserRole.Admin,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.Users.Add(adminUser);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Admin user successfully created." });
-    }
-
-    /// <summary>
     /// Generates a JWT token containing user identity claims and assigned role.
     /// </summary>
     private string GenerateJwtToken(User user)

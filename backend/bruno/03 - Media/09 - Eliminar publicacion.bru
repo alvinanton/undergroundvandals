@@ -1,0 +1,21 @@
+meta {
+  name: Eliminar publicacion
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/api/media/{{postId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  DELETE /api/media/{{postId}}
+  Admin. Elimina publicación y archivos asociados. 404 si no existe.
+  Aserción del escenario exitoso de ejemplo: 204.
+}

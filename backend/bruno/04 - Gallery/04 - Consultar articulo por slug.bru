@@ -1,0 +1,21 @@
+meta {
+  name: Consultar articulo por slug
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/gallery/slug/{{articleSlug}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  GET /api/gallery/slug/{{articleSlug}}
+  Público, incluso no publicados. Slug sin distinción de mayúsculas. 404 si no existe.
+  Aserción del escenario exitoso de ejemplo: 200.
+}

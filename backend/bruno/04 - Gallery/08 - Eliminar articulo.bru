@@ -1,0 +1,21 @@
+meta {
+  name: Eliminar articulo
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/gallery/{{articleId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  DELETE /api/gallery/{{articleId}}
+  Admin. Elimina solo registro; conserva archivos. 404 inexistente.
+  Aserción del escenario exitoso de ejemplo: 204.
+}
