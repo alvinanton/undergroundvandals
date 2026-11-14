@@ -78,4 +78,20 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapGet("/healthz", async (AppDbContext context, CancellationToken cancellationToken) =>
+{
+    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    timeout.CancelAfter(TimeSpan.FromSeconds(5));
+    try
+    {
+        return await context.Database.CanConnectAsync(timeout.Token)
+            ? Results.Ok(new { status = "healthy" })
+            : Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (Exception)
+    {
+        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
+}).AllowAnonymous();
+
 app.Run();
