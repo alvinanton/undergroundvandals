@@ -1,0 +1,791 @@
+---
+// src/components/admin/AdminGalleryManager.astro
+export type UserRole = 'SuperAdmin' | 'ArchiveAdmin' | 'GalleryAdmin';
+
+interface Props {
+  userRole?: UserRole;
+  isAdmin?: boolean;
+}
+
+const { userRole = 'SuperAdmin', isAdmin = false } = Astro.props;
+const isSuperAdmin = userRole === 'SuperAdmin';
+---
+
+<div class="space-y-8" id="gallery-manager-root" data-is-admin={isAdmin ? "true" : "false"} data-user-role={userRole}>
+
+  {/* SECTION 1: EDITORIAL ARTICLE CREATION FORM (ACCORDION) */}
+  <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl backdrop-blur-md shadow-xl overflow-hidden transition-all">
+    
+    {/* Accordion Toggle Header */}
+    <button
+      id="gallery-accordion-toggle-btn"
+      type="button"
+      class="w-full p-6 sm:p-7 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors cursor-pointer select-none"
+    >
+      <div>
+        <span class="text-xs font-mono text-orange-500 uppercase tracking-widest block mb-1">
+          Editorial Action
+        </span>
+        <h2 class="text-lg font-bold text-white uppercase tracking-wide flex items-center gap-2">
+          📰 Create New Feature Article
+        </h2>
+        <p class="text-xs text-zinc-400 mt-0.5">
+          Publish essays, interviews, or exhibition documentation with e-shop integration
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span
+          id="gallery-accordion-badge"
+          class="text-xs font-mono bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-lg text-zinc-300 transition-colors"
+        >
+          + Expand Form
+        </span>
+      </div>
+    </button>
+
+    {/* Accordion Content Body */}
+    <div
+      id="gallery-accordion-content"
+      class="hidden border-t border-zinc-800/80 p-6 sm:p-8 space-y-6 bg-zinc-950/40"
+    >
+      <form id="gallery-create-form" class="space-y-6">
+
+        {/* Block 1: Basic Information */}
+        <div class="space-y-4">
+          <h3 class="text-xs font-mono uppercase tracking-widest text-orange-400 font-bold border-b border-zinc-800/80 pb-2">
+            1. Article Information
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="sm:col-span-2">
+              <label for="gallery-title" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Title *
+              </label>
+              <input
+                type="text"
+                id="gallery-title"
+                required
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors text-sm font-mono"
+                placeholder="e.g. STEEL & SHADOWS: 20 YEARS OF NIGHT ACTIONS"
+              />
+            </div>
+
+            <div>
+              <label for="gallery-slug" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Slug (Auto-generated) *
+              </label>
+              <input
+                type="text"
+                id="gallery-slug"
+                required
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-400 focus:outline-none focus:border-orange-500 transition-colors text-xs font-mono"
+                placeholder="steel-and-shadows-20-years"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="gallery-subtitle" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+              Subtitle / Executive Summary
+            </label>
+            <textarea
+              id="gallery-subtitle"
+              rows="2"
+              class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors text-xs font-mono resize-none custom-scrollbar"
+              placeholder="A retrospective look into two decades of clandestine train writing across European metropolises."
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="gallery-category" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Category *
+              </label>
+              <select
+                id="gallery-category"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="INTERVIEW">INTERVIEW</option>
+                <option value="DOCUMENTARY">DOCUMENTARY</option>
+                <option value="ESSAY">ESSAY</option>
+                <option value="EVENT">EVENT</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="gallery-reading-time" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Reading Time (Minutes) *
+              </label>
+              <input
+                type="number"
+                id="gallery-reading-time"
+                value="5"
+                min="1"
+                required
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Block 2: Hero & Main Video */}
+        <div class="space-y-4 pt-2">
+          <h3 class="text-xs font-mono uppercase tracking-widest text-orange-400 font-bold border-b border-zinc-800/80 pb-2">
+            2. Primary Media (Hero Image & Video)
+          </h3>
+
+          <div class="space-y-3">
+            <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300">
+              Hero Cover Image *
+            </label>
+            <div class="flex items-center gap-3">
+              <input
+                type="text"
+                id="gallery-hero-url"
+                required
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-xs font-mono"
+                placeholder="https://res.cloudinary.com/... or upload image"
+              />
+              <input type="file" id="hero-file-input" accept="image/*" class="hidden" />
+              <button
+                type="button"
+                id="upload-hero-btn"
+                class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-mono text-xs rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                📷 Upload Hero
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label for="gallery-video-source" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Video Source
+              </label>
+              <select
+                id="gallery-video-source"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500 cursor-pointer"
+              >
+                <option value="NONE">None</option>
+                <option value="YOUTUBE">YouTube</option>
+                <option value="VIMEO">Vimeo</option>
+                <option value="SELF_HOSTED">Self Hosted / Cloud</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="gallery-video-url" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Video Embed URL
+              </label>
+              <input
+                type="text"
+                id="gallery-video-url"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-xs font-mono"
+                placeholder="https://www.youtube.com/embed/..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Block 3: Markdown Narrative */}
+        <div class="space-y-4 pt-2">
+          <h3 class="text-xs font-mono uppercase tracking-widest text-orange-400 font-bold border-b border-zinc-800/80 pb-2">
+            3. Article Content (Markdown Format)
+          </h3>
+          <div>
+            <textarea
+              id="gallery-content-markdown"
+              rows="10"
+              required
+              class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors text-xs font-mono resize-y custom-scrollbar"
+              placeholder="# Introduction&#10;Write main content here...&#10;&#10;## Subheading&#10;Use **bold text**, > blockquotes, etc."
+            ></textarea>
+          </div>
+        </div>
+
+        {/* Block 4: Metadata & E-Shop */}
+        <div class="space-y-4 pt-2">
+          <h3 class="text-xs font-mono uppercase tracking-widest text-orange-400 font-bold border-b border-zinc-800/80 pb-2">
+            4. Metadata & Store Integration
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label for="gallery-subject" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Subject / Crew / Artist
+              </label>
+              <input
+                type="text"
+                id="gallery-subject"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
+                placeholder="e.g. METRO-GHOST"
+              />
+            </div>
+
+            <div>
+              <label for="gallery-location" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Location
+              </label>
+              <input
+                type="text"
+                id="gallery-location"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
+                placeholder="e.g. BERLIN / PARIS"
+              />
+            </div>
+
+            <div>
+              <label for="gallery-external-url" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                Official External Link
+              </label>
+              <input
+                type="url"
+                id="gallery-external-url"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
+                placeholder="https://instagram.com/..."
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="gallery-shop-slug" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                E-Shop Collection Slug
+              </label>
+              <input
+                type="text"
+                id="gallery-shop-slug"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
+                placeholder="e.g. metro-ghost-capsule"
+              />
+            </div>
+
+            <div>
+              <label for="gallery-shop-title" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                E-Shop CTA Title
+              </label>
+              <input
+                type="text"
+                id="gallery-shop-title"
+                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
+                placeholder="e.g. Explore limited apparel & prints"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="gallery-tags" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+              Tags (Comma-separated)
+            </label>
+            <input
+              type="text"
+              id="gallery-tags"
+              class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
+              placeholder="interview, berlin, metro, trains"
+            />
+          </div>
+        </div>
+
+        {/* Block 5: Exhibition Documentation Shots */}
+        <div class="space-y-4 pt-2">
+          <h3 class="text-xs font-mono uppercase tracking-widest text-orange-400 font-bold border-b border-zinc-800/80 pb-2">
+            5. Exhibition Documentation Shots
+          </h3>
+
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <input type="file" id="shots-file-input" accept="image/*" multiple class="hidden" />
+              <button
+                type="button"
+                id="upload-shots-btn"
+                class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-mono text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                🖼 Upload Exhibition Photos
+              </button>
+              <span id="shots-count-label" class="text-xs font-mono text-zinc-400">
+                0 photos attached
+              </span>
+            </div>
+
+            {/* Shots Preview Container */}
+            <div id="shots-preview-list" class="flex flex-wrap gap-3 empty:hidden custom-scrollbar max-h-48 overflow-y-auto p-2 bg-zinc-950/60 rounded-xl border border-zinc-800"></div>
+          </div>
+
+          {/* Publishing Flags */}
+          <div class="flex flex-wrap items-center gap-6 pt-4 border-t border-zinc-800/80">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="gallery-is-published" checked class="w-4 h-4 accent-orange-500 rounded bg-zinc-950 border-zinc-800 cursor-pointer" />
+              <span class="text-xs font-mono uppercase tracking-wider text-zinc-200">Publish Immediately</span>
+            </label>
+
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="gallery-is-featured" class="w-4 h-4 accent-orange-500 rounded bg-zinc-950 border-zinc-800 cursor-pointer" />
+              <span class="text-xs font-mono uppercase tracking-wider text-zinc-200">Feature on Hero</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Status & Action Button */}
+        <div id="gallery-create-status" class="hidden text-xs font-mono text-center rounded-lg p-3"></div>
+
+        <button
+          type="submit"
+          id="gallery-submit-btn"
+          class="w-full py-3.5 px-4 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black uppercase tracking-wider text-xs rounded-lg shadow-lg transition-all cursor-pointer font-mono"
+        >
+          Publish Article
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {/* SECTION 2: EDITORIAL ARTICLES MANAGEMENT TABLE */}
+  <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
+    <div class="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+      <div>
+        <h2 class="text-lg font-bold text-white uppercase tracking-wide">
+          Manage Editorial Features
+        </h2>
+        <p class="text-xs text-zinc-400 mt-0.5">
+          View, edit, toggle status or remove gallery articles
+        </p>
+      </div>
+      <button
+        id="gallery-refresh-btn"
+        class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+      >
+        ↻ Refresh
+      </button>
+    </div>
+
+    {/* Table Filters */}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60">
+      <div class="sm:col-span-2">
+        <input
+          type="text"
+          id="gallery-search-input"
+          placeholder="Search article title, category, subject, tag..."
+          class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 text-xs focus:outline-none focus:border-orange-500 font-mono"
+        />
+      </div>
+      <div>
+        <select
+          id="gallery-filter-status"
+          class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
+        >
+          <option value="ALL">All Statuses</option>
+          <option value="PUBLISHED">Published Only</option>
+          <option value="DRAFT">Drafts Only</option>
+          <option value="FEATURED">Featured Only</option>
+        </select>
+      </div>
+    </div>
+
+    {/* Table Container */}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400 select-none">
+            <th class="py-3 px-4">Hero Cover</th>
+            <th class="py-3 px-4">Title & Details</th>
+            <th class="py-3 px-4">Shots</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4">Date</th>
+            <th class="py-3 px-4 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="gallery-table-body" class="divide-y divide-zinc-800/50 text-xs">
+          <tr>
+            <td colspan="6" class="py-8 text-center text-zinc-500 font-mono">Loading editorial articles...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {/* EDIT ARTICLE MODAL */}
+  <div id="edit-gallery-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-2xl w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <div class="flex justify-between items-center border-b border-zinc-800/80 pb-4">
+        <div>
+          <h3 class="text-base font-bold text-white uppercase tracking-wide">Edit Editorial Article</h3>
+          <p class="text-xs text-zinc-400">Update article content, exhibition photos, or publication status</p>
+        </div>
+        <button id="edit-gallery-modal-close" class="text-zinc-400 hover:text-orange-500 font-mono text-sm cursor-pointer">✕</button>
+      </div>
+
+      <form id="edit-gallery-form" class="space-y-4">
+        <input type="hidden" id="edit-gallery-id" />
+
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1">Title *</label>
+          <input type="text" id="edit-gallery-title" required class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1">Subtitle</label>
+          <textarea id="edit-gallery-subtitle" rows="2" class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500 resize-none custom-scrollbar"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1">Content Markdown *</label>
+          <textarea id="edit-gallery-markdown" rows="8" required class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500 resize-y custom-scrollbar"></textarea>
+        </div>
+
+        <div class="flex items-center gap-4 pt-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="edit-gallery-is-published" class="w-4 h-4 accent-orange-500 rounded bg-zinc-950" />
+            <span class="text-xs font-mono text-zinc-300">Published</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="edit-gallery-is-featured" class="w-4 h-4 accent-orange-500 rounded bg-zinc-950" />
+            <span class="text-xs font-mono text-zinc-300">Featured</span>
+          </label>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+          <button type="button" id="edit-gallery-cancel-btn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase rounded-lg">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black font-mono text-xs uppercase rounded-lg">Save Article</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- CLIENT-SIDE SCRIPT FOR GALLERY EDITORIAL MANAGER -->
+<script>
+  const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+
+  const rootEl = document.getElementById("gallery-manager-root");
+  const userRole = rootEl?.dataset.userRole || "SuperAdmin";
+  const isSuperAdmin = userRole === "SuperAdmin";
+
+  let allArticles: any[] = [];
+  let attachedExhibitionUrls: string[] = [];
+
+  function getToken(): string | undefined {
+    return document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("uv_auth_token="))
+      ?.split("=")[1];
+  }
+
+  // ACCORDION TOGGLE
+  const accordionBtn = document.getElementById("gallery-accordion-toggle-btn");
+  const accordionContent = document.getElementById("gallery-accordion-content");
+  const accordionBadge = document.getElementById("gallery-accordion-badge");
+
+  accordionBtn?.addEventListener("click", () => {
+    const isHidden = accordionContent?.classList.contains("hidden");
+    if (isHidden) {
+      accordionContent?.classList.remove("hidden");
+      if (accordionBadge) accordionBadge.innerText = "- Collapse Form";
+    } else {
+      accordionContent?.classList.add("hidden");
+      if (accordionBadge) accordionBadge.innerText = "+ Expand Form";
+    }
+  });
+
+  // AUTO-GENERATE SLUG FROM TITLE
+  const titleInput = document.getElementById("gallery-title") as HTMLInputElement;
+  const slugInput = document.getElementById("gallery-slug") as HTMLInputElement;
+
+  titleInput?.addEventListener("input", () => {
+    if (!slugInput) return;
+    slugInput.value = titleInput.value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9 -]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+  });
+
+  // UPLOAD HERO IMAGE TO CLOUDINARY
+  const heroUrlInput = document.getElementById("gallery-hero-url") as HTMLInputElement;
+  const heroFileInput = document.getElementById("hero-file-input") as HTMLInputElement;
+  const uploadHeroBtn = document.getElementById("upload-hero-btn");
+
+  uploadHeroBtn?.addEventListener("click", () => heroFileInput?.click());
+
+  heroFileInput?.addEventListener("change", async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    const token = getToken();
+    if (!file || !token) return;
+
+    try {
+      if (uploadHeroBtn) uploadHeroBtn.innerText = "Uploading...";
+      const sigRes = await fetch(`${API_URL}/api/media/upload-signature?folder=underground_vandals/gallery_heroes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const sigData = await sigRes.json();
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", sigData.apiKey);
+      formData.append("timestamp", sigData.timestamp.toString());
+      formData.append("signature", sigData.signature);
+      formData.append("folder", sigData.folder);
+
+      const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`, {
+        method: "POST",
+        body: formData
+      });
+      const cloudData = await cloudRes.json();
+      if (heroUrlInput) heroUrlInput.value = cloudData.secure_url;
+    } catch (err: any) {
+      alert("Error uploading Hero image: " + err.message);
+    } finally {
+      if (uploadHeroBtn) uploadHeroBtn.innerText = "📷 Upload Hero";
+    }
+  });
+
+  // UPLOAD EXHIBITION SHOTS TO CLOUDINARY
+  const shotsFileInput = document.getElementById("shots-file-input") as HTMLInputElement;
+  const uploadShotsBtn = document.getElementById("upload-shots-btn");
+  const shotsCountLabel = document.getElementById("shots-count-label");
+  const shotsPreviewList = document.getElementById("shots-preview-list");
+
+  uploadShotsBtn?.addEventListener("click", () => shotsFileInput?.click());
+
+  shotsFileInput?.addEventListener("change", async (e) => {
+    const files = Array.from((e.target as HTMLInputElement).files || []);
+    const token = getToken();
+    if (files.length === 0 || !token) return;
+
+    try {
+      if (uploadShotsBtn) uploadShotsBtn.innerText = "Uploading...";
+      for (const file of files) {
+        const sigRes = await fetch(`${API_URL}/api/media/upload-signature?folder=underground_vandals/gallery_exhibitions`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const sigData = await sigRes.json();
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", sigData.apiKey);
+        formData.append("timestamp", sigData.timestamp.toString());
+        formData.append("signature", sigData.signature);
+        formData.append("folder", sigData.folder);
+
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`, {
+          method: "POST",
+          body: formData
+        });
+        const cloudData = await cloudRes.json();
+        attachedExhibitionUrls.push(cloudData.secure_url);
+      }
+      renderShotsPreview();
+    } catch (err: any) {
+      alert("Error uploading exhibition photos: " + err.message);
+    } finally {
+      if (uploadShotsBtn) uploadShotsBtn.innerText = "🖼 Upload Exhibition Photos";
+    }
+  });
+
+  function renderShotsPreview() {
+    if (!shotsPreviewList || !shotsCountLabel) return;
+    shotsCountLabel.innerText = `${attachedExhibitionUrls.length} photos attached`;
+
+    shotsPreviewList.innerHTML = attachedExhibitionUrls.map((url, idx) => `
+      <div class="relative group w-16 h-16 rounded-lg overflow-hidden border border-zinc-800 bg-black shrink-0">
+        <img src="${url}" class="w-full h-full object-cover" />
+        <button type="button" data-remove-shot="${idx}" class="remove-shot-btn absolute top-0.5 right-0.5 bg-zinc-950/80 text-zinc-400 hover:text-orange-500 rounded p-0.5 text-[9px] font-mono">✕</button>
+      </div>
+    `).join("");
+
+    shotsPreviewList.querySelectorAll(".remove-shot-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const idx = parseInt((e.currentTarget as HTMLElement).dataset.removeShot || "-1", 10);
+        if (idx > -1) {
+          attachedExhibitionUrls.splice(idx, 1);
+          renderShotsPreview();
+        }
+      });
+    });
+  }
+
+  // CREATE ARTICLE SUBMIT
+  const createForm = document.getElementById("gallery-create-form") as HTMLFormElement;
+  const submitBtn = document.getElementById("gallery-submit-btn") as HTMLButtonElement;
+  const createStatus = document.getElementById("gallery-create-status");
+
+  createForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    if (submitBtn) submitBtn.disabled = true;
+
+    const payload = {
+      title: titleInput.value,
+      slug: slugInput.value,
+      subtitle: (document.getElementById("gallery-subtitle") as HTMLTextAreaElement).value,
+      category: (document.getElementById("gallery-category") as HTMLSelectElement).value,
+      readingTimeMinutes: parseInt((document.getElementById("gallery-reading-time") as HTMLInputElement).value || "5", 10),
+      heroImageUrl: heroUrlInput.value,
+      videoSource: (document.getElementById("gallery-video-source") as HTMLSelectElement).value,
+      videoUrl: (document.getElementById("gallery-video-url") as HTMLInputElement).value || undefined,
+      contentMarkdown: (document.getElementById("gallery-content-markdown") as HTMLTextAreaElement).value,
+      subjectName: (document.getElementById("gallery-subject") as HTMLInputElement).value || undefined,
+      location: (document.getElementById("gallery-location") as HTMLInputElement).value || undefined,
+      externalUrl: (document.getElementById("gallery-external-url") as HTMLInputElement).value || undefined,
+      shopCollectionSlug: (document.getElementById("gallery-shop-slug") as HTMLInputElement).value || undefined,
+      shopCollectionTitle: (document.getElementById("gallery-shop-title") as HTMLInputElement).value || undefined,
+      tags: (document.getElementById("gallery-tags") as HTMLInputElement).value.split(",").map(t => t.trim()).filter(Boolean),
+      galleryImageUrls: attachedExhibitionUrls,
+      isPublished: (document.getElementById("gallery-is-published") as HTMLInputElement).checked,
+      isFeatured: (document.getElementById("gallery-is-featured") as HTMLInputElement).checked,
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/api/gallery`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to create article.");
+
+      if (createStatus) {
+        createStatus.innerText = "Article published successfully!";
+        createStatus.className = "text-xs font-mono text-center rounded-lg p-3 bg-emerald-950/80 text-emerald-400 border border-emerald-800 block";
+      }
+
+      createForm.reset();
+      attachedExhibitionUrls = [];
+      renderShotsPreview();
+      await fetchArticles();
+
+      setTimeout(() => {
+        createStatus?.classList.add("hidden");
+        accordionContent?.classList.add("hidden");
+        if (accordionBadge) accordionBadge.innerText = "+ Expand Form";
+      }, 1500);
+
+    } catch (err: any) {
+      if (createStatus) {
+        createStatus.innerText = err.message || "Error creating article.";
+        createStatus.className = "text-xs font-mono text-center rounded-lg p-3 bg-red-950/80 text-red-400 border border-red-800 block";
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
+
+  // FETCH & RENDER ARTICLES
+  async function fetchArticles() {
+    const tableBody = document.getElementById("gallery-table-body");
+    if (!tableBody) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/gallery?includeUnpublished=true`);
+      if (!response.ok) throw new Error("Failed to load articles.");
+
+      allArticles = await response.json();
+      renderArticlesTable();
+    } catch (err) {
+      tableBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-400 font-mono">Error loading articles. Check API status.</td></tr>`;
+    }
+  }
+
+  function renderArticlesTable() {
+    const tableBody = document.getElementById("gallery-table-body");
+    if (!tableBody) return;
+
+    const query = (document.getElementById("gallery-search-input") as HTMLInputElement)?.value.toLowerCase().trim() || "";
+    const filterStatus = (document.getElementById("gallery-filter-status") as HTMLSelectElement)?.value || "ALL";
+
+    const filtered = allArticles.filter((item) => {
+      if (filterStatus === "PUBLISHED" && !item.isPublished) return false;
+      if (filterStatus === "DRAFT" && item.isPublished) return false;
+      if (filterStatus === "FEATURED" && !item.isFeatured) return false;
+
+      if (query) {
+        const matchTitle = item.title?.toLowerCase().includes(query);
+        const matchCategory = item.category?.toLowerCase().includes(query);
+        const matchSubject = item.subjectName?.toLowerCase().includes(query);
+        if (!matchTitle && !matchCategory && !matchSubject) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-zinc-500 font-mono">No articles found.</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = filtered.map((item) => {
+      const shotsCount = item.galleryImageUrls?.length || 0;
+      const statusBadge = item.isPublished
+        ? `<span class="px-2 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-900/80 rounded-full">Published</span>`
+        : `<span class="px-2 py-0.5 text-[10px] font-mono bg-amber-950/60 text-amber-400 border border-amber-900/80 rounded-full">Draft</span>`;
+      
+      const featuredBadge = item.isFeatured
+        ? `<span class="px-2 py-0.5 text-[10px] font-mono bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full ml-1">Featured</span>`
+        : "";
+
+      const shopBadge = item.shopCollectionSlug
+        ? `<span class="text-[10px] font-mono text-orange-400 block mt-0.5">🛒 ${item.shopCollectionSlug}</span>`
+        : "";
+
+      return `
+        <tr class="hover:bg-zinc-800/30 transition-colors">
+          <td class="py-3 px-4">
+            <img src="${item.heroImageUrl || '/placeholder-gallery.jpg'}" class="w-12 h-12 object-cover rounded-md border border-zinc-800" />
+          </td>
+          <td class="py-3 px-4">
+            <div class="font-bold text-white">${item.title}</div>
+            <div class="text-[11px] text-zinc-400 font-mono">${item.category} • ${item.readingTimeMinutes} min read ${shopBadge}</div>
+          </td>
+          <td class="py-3 px-4 font-mono text-zinc-300 text-xs">${shotsCount} shots</td>
+          <td class="py-3 px-4">${statusBadge} ${featuredBadge}</td>
+          <td class="py-3 px-4 font-mono text-zinc-400 text-xs">${new Date(item.publishedAt).toLocaleDateString()}</td>
+          <td class="py-3 px-4 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <button data-action="toggle-featured" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[11px] rounded">${item.isFeatured ? "★ Unfeature" : "☆ Feature"}</button>
+              <button data-action="edit" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded">Edit</button>
+              ${isSuperAdmin ? `<button data-action="delete" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded">Delete</button>` : ""}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // ATTACH ACTION LISTENERS
+    tableBody.querySelectorAll(".action-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const el = e.currentTarget as HTMLElement;
+        const action = el.dataset.action;
+        const id = el.dataset.id;
+        const token = getToken();
+        if (!id || !action || !token) return;
+
+        if (action === "toggle-featured") {
+          await fetch(`${API_URL}/api/gallery/${id}/featured`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          await fetchArticles();
+        } else if (action === "delete") {
+          if (!confirm("Are you sure you want to delete this feature article?")) return;
+          await fetch(`${API_URL}/api/gallery/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          await fetchArticles();
+        }
+      });
+    });
+  }
+
+  // REFRESH & SEARCH
+  document.getElementById("gallery-refresh-btn")?.addEventListener("click", fetchArticles);
+  document.getElementById("gallery-search-input")?.addEventListener("input", renderArticlesTable);
+  document.getElementById("gallery-filter-status")?.addEventListener("change", renderArticlesTable);
+
+  fetchArticles();
+</script>

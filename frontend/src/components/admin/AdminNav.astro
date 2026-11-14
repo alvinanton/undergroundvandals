@@ -1,0 +1,79 @@
+---
+interface Props {
+    activeTab: "content" | "products" | "users";
+    isAdmin?: boolean;
+}
+
+const { activeTab, isAdmin = false } = Astro.props;
+---
+
+<div
+    class="flex flex-wrap items-center justify-between gap-3 bg-zinc-900/80 border border-zinc-800/80 p-2.5 rounded-xl backdrop-blur-md shadow-lg"
+>
+    <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+        {/* 1. Public Gallery */}
+        <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="px-3.5 py-2 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors flex items-center gap-2 shrink-0"
+        >
+            🌐 Go to Site <span class="text-[10px] text-zinc-500">↗</span>
+        </a>
+
+        {/* 2. Content Management */}
+        <a
+            href="/admin"
+            class={`px-3.5 py-2 border font-mono text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 shrink-0 ${
+                activeTab === "content"
+                    ? "bg-orange-500/10 border-orange-500/40 text-orange-400 font-bold"
+                    : "bg-zinc-950 hover:bg-zinc-800 border-zinc-800 hover:border-orange-500/30 text-zinc-300 hover:text-orange-400 transition-colors"
+            }`}
+        >
+            📁 Content Management
+        </a>
+
+        {/* 3. Products Management */}
+        <a
+            href="/admin/products"
+            class={`px-3.5 py-2 border font-mono text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 shrink-0 ${
+                activeTab === "products"
+                    ? "bg-orange-500/10 border-orange-500/40 text-orange-400 font-bold"
+                    : "bg-zinc-950 hover:bg-zinc-800 border-zinc-800 hover:border-orange-500/30 text-zinc-300 hover:text-orange-400 transition-colors"
+            }`}
+        >
+            🛍️ Products Management
+        </a>
+
+        {/* 4. Users Management (Admin Only) */}
+        {
+            isAdmin && (
+                <a
+                    href="/admin/users"
+                    class={`px-3.5 py-2 border font-mono text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 shrink-0 ${
+                        activeTab === "users"
+                            ? "bg-orange-500/10 border-orange-500/40 text-orange-400 font-bold"
+                            : "bg-zinc-950 hover:bg-zinc-800 border-zinc-800 hover:border-orange-500/30 text-zinc-300 hover:text-orange-400 transition-colors"
+                    }`}
+                >
+                    👥 Users Management
+                </a>
+            )
+        }
+    </div>
+
+    {/* Logout Button */}
+    <button
+        id="logout-btn"
+        class="px-4 py-2 bg-zinc-950 hover:bg-red-950/50 border border-zinc-800 hover:border-red-900/60 text-zinc-400 hover:text-red-400 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer ml-auto"
+    >
+        Sign Out
+    </button>
+</div>
+
+<script>
+    document.getElementById("logout-btn")?.addEventListener("click", () => {
+        document.cookie = "uv_auth_token=; path=/; max-age=0;";
+        window.location.href = "/admin/login";
+    });
+</script>

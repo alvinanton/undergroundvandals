@@ -1,0 +1,157 @@
+---
+// src/pages/shop/[id].astro
+import Layout from '../../layouts/Layout.astro';
+import { getProductById } from '../../services/ecommerce/productService';
+import { getCategories } from '../../services/ecommerce/categoryService';
+
+const idParam = Astro.params.id;
+const productId = idParam && !Number.isNaN(Number(idParam)) ? Number(idParam) : null;
+
+if (productId === null) {
+  return Astro.rewrite('/404');
+}
+
+const [product, categories] = await Promise.all([
+  getProductById(productId),
+  getCategories(),
+]);
+
+if (!product) {
+  return Astro.rewrite('/404');
+}
+
+const category = categories.find((c) => c.id === product.categoryId);
+const formattedPrice = `Q${product.price.toFixed(2)}`;
+---
+
+<Layout title={`${product.name} | Underground Vandals`}>
+  <div class="space-y-8">
+    <nav class="text-xs font-mono text-zinc-500 flex items-center gap-2">
+      <a href="/shop" class="hover:text-orange-400 transition-colors">Shop</a>
+      <span>/</span>
+      {category && (
+        <>
+          <a href={`/shop?category=${category.id}`} class="hover:text-orange-400 transition-colors">
+            {category.name}
+          </a>
+          <span>/</span>
+        </>
+      )}
+      <span class="text-zinc-300">{product.name}</span>
+    </nav>
+
+    <div class="grid md:grid-cols-2 gap-8 lg:gap-12">
+      <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800">
+        {product.thumbnailUrl ? (
+          <>
+            <img
+              src={product.thumbnailUrl}
+              alt={product.name}
+              class="product-detail-img w-full h-full object-cover"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            />
+            <div class="hidden w-full h-full flex-col items-center justify-center bg-zinc-950 p-4 text-center absolute inset-0">
+              <span class="text-zinc-600 text-xs font-mono">[ IMAGE UNAVAILABLE ]</span>
+            </div>
+          </>
+        ) : (
+          <div class="w-full h-full flex flex-col items-center justify-center bg-zinc-950 p-4 text-center">
+            <span class="text-zinc-600 text-xs font-mono">[ NO IMAGE ]</span>
+          </div>
+        )}
+
+        <span class="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-[10px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-full text-zinc-300 border border-zinc-700/50">
+          {product.isDigital ? 'Digital' : 'Physical'}
+        </span>
+      </div>
+
+      <div class="flex flex-col">
+        {category && (
+          <span class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-3 self-start">
+            {category.name}
+          </span>
+        )}
+
+        <h1 class="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+          {product.name}
+        </h1>
+
+        {product.shortDescription && (
+          <p class="text-zinc-400 text-sm mt-2">{product.shortDescription}</p>
+        )}
+
+        <div class="text-orange-500 font-black text-3xl font-mono mt-6">
+          {formattedPrice}
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-zinc-800/80">
+          <h2 class="text-xs font-mono uppercase tracking-wider text-zinc-300 mb-3">
+            Description
+          </h2>
+          <p class="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">
+            {product.description}
+          </p>
+        </div>
+
+        <div class="mt-8">
+          <div class="flex items-center gap-3">
+            <label for="quantity-input" class="text-xs font-mono uppercase tracking-wider text-zinc-400">
+              Quantity
+            </label>
+            <input
+              type="number"
+              id="quantity-input"
+              min="1"
+              max="99"
+              value="1"
+              class="w-20 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-sm focus:outline-none focus:border-orange-500"
+            />
+          </div>
+
+          <button
+            type="button"
+            id="add-to-cart-btn"
+            data-product-id={product.id}
+            class="w-full mt-4 py-3.5 px-4 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black uppercase tracking-wider text-xs rounded-lg shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { addToCart } from '../../lib/cart';
+
+  const button = document.getElementById('add-to-cart-btn') as HTMLButtonElement | null;
+  const quantityInput = document.getElementById('quantity-input') as HTMLInputElement | null;
+
+  let feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  button?.addEventListener('click', () => {
+    const productId = Number(button.dataset.productId);
+    if (!productId) return;
+
+    const rawQuantity = Number(quantityInput?.value);
+    const quantity = Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1;
+
+    addToCart(productId, quantity);
+
+    if (feedbackTimeout) clearTimeout(feedbackTimeout);
+    
+    const originalText = 'Add to Cart';
+    const addedText = 'Added! ✓';
+
+    button.textContent = addedText;
+    button.classList.add('bg-emerald-500', 'hover:bg-emerald-500');
+    button.classList.remove('bg-orange-500', 'hover:bg-orange-600');
+
+    feedbackTimeout = setTimeout(() => {
+      button.textContent = originalText;
+      button.classList.remove('bg-emerald-500', 'hover:bg-emerald-500');
+      button.classList.add('bg-orange-500', 'hover:bg-orange-600');
+    }, 1500);
+  });
+</script>

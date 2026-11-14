@@ -13,3 +13,4 @@ dist/
 # Archivos de entorno / secretos
 .env
 .env.*
+!.env.example

@@ -6,13 +6,31 @@ export const onRequest = defineMiddleware((context, next) => {
 
   if (token) {
     try {
-      const payloadBase64 = token.split('.')[1];
-      const decodedJson = Buffer.from(payloadBase64, 'base64').toString('utf-8');
-      const payload = JSON.parse(decodedJson);
-      const role = payload.role || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 'Editor';
-      const email = payload.email || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || '';
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        // Safe Base64URL decode for Edge/Vercel runtime
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
 
-      context.locals.user = { role, email };
+        const payload = JSON.parse(jsonPayload);
+        const role =
+          payload.role ||
+          payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+          'Editor';
+        const email =
+          payload.email ||
+          payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
+          '';
+
+        context.locals.user = { role, email };
+      } else {
+        context.locals.user = null;
+      }
     } catch {
       context.locals.user = null;
     }

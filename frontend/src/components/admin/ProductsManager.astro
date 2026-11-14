@@ -1,0 +1,1794 @@
+---
+interface Props {
+    isAdmin?: boolean;
+}
+
+const { isAdmin = false } = Astro.props;
+
+// Read environment variables on the Astro server side
+const apiUrl =
+    import.meta.env.ECOMMERCE_ADMIN_API_URL ||
+    import.meta.env.PUBLIC_ECOMMERCE_ADMIN_API_URL ||
+    "http://localhost:5114";
+
+const apiKey =
+    import.meta.env.ECOMMERCE_ADMIN_API_KEY ||
+    import.meta.env.PUBLIC_ECOMMERCE_ADMIN_API_KEY ||
+    "";
+---
+
+<div
+    class="space-y-6"
+    id="products-manager-root"
+    data-is-admin={isAdmin ? "true" : "false"}
+    data-api-url={apiUrl}
+    data-api-key={apiKey}
+>
+    {/* Section: Products Management List */}
+    <div
+        class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6"
+    >
+        <div
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4"
+        >
+            <div>
+                <h2
+                    class="text-lg font-bold text-white uppercase tracking-wide"
+                >
+                    Store Catalog Management
+                </h2>
+                <p class="text-xs text-zinc-400 mt-0.5">
+                    View, create, update prices, inventory, and status of shop items
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button
+                    id="open-create-modal-btn"
+                    class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black uppercase text-xs rounded-lg shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer font-mono"
+                >
+                    + New Product
+                </button>
+                <button
+                    id="refresh-btn"
+                    class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                    ↻ Refresh
+                </button>
+            </div>
+        </div>
+
+        {/* Search & Server-side Filters Bar */}
+        <div class="space-y-3">
+            <div
+                class="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60 items-center"
+            >
+                <div class="sm:col-span-4">
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Search by ID, product name, or description..."
+                        class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 text-xs focus:outline-none focus:border-orange-500 font-mono"
+                    />
+                </div>
+                <div class="sm:col-span-2">
+                    <select
+                        id="filter-type"
+                        class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
+                    >
+                        <option value="ALL">All Types</option>
+                        <option value="DIGITAL">Digital Downloads</option>
+                        <option value="PHYSICAL">Physical Items</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <select
+                        id="filter-status"
+                        class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
+                    >
+                        <option value="ALL">All Statuses</option>
+                        <option value="ACTIVE">Active Only</option>
+                        <option value="INACTIVE">Inactive Only</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <select
+                        id="filter-stock"
+                        class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
+                    >
+                        <option value="ALL">All Stock Levels</option>
+                        <option value="IN_STOCK">In Stock (&gt;10)</option>
+                        <option value="LOW_STOCK">Low Stock (1-10)</option>
+                        <option value="OUT_OF_STOCK">Out of Stock (0)</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-2 flex justify-end">
+                    <button
+                        id="clear-filters-btn"
+                        class="w-full py-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer border border-zinc-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        ✕ Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {/* Products Table */}
+        <div class="overflow-x-auto custom-scrollbar">
+            <table
+                class="w-full text-left border-collapse table-fixed min-w-[750px]"
+            >
+                <thead>
+                    <tr
+                        class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400 select-none"
+                    >
+                        <th class="py-3 px-3 w-16 text-center">Media</th>
+                        <th
+                            class="py-3 px-3 cursor-pointer hover:text-white transition-colors sort-header min-w-0"
+                            data-sort="name"
+                        >
+                            Product Info <span
+                                class="sort-icon inline-block ml-1 opacity-40"
+                                >↕</span
+                            >
+                        </th>
+                        <th
+                            class="py-3 px-3 w-24 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap"
+                            data-sort="price"
+                        >
+                            Price <span
+                                class="sort-icon inline-block ml-1 opacity-40"
+                                >↕</span
+                            >
+                        </th>
+                        <th
+                            class="py-3 px-3 w-28 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap"
+                            data-sort="stockQuantity"
+                        >
+                            Stock <span
+                                class="sort-icon inline-block ml-1 opacity-40"
+                                >↕</span
+                            >
+                        </th>
+                        <th
+                            class="py-3 px-3 w-32 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap text-orange-500"
+                            data-sort="createdAt"
+                        >
+                            Created <span
+                                class="sort-icon inline-block ml-1 opacity-100"
+                                >↓</span
+                            >
+                        </th>
+                        <th
+                            class="py-3 px-3 w-24 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap text-center"
+                            data-sort="isActive"
+                        >
+                            Status <span
+                                class="sort-icon inline-block ml-1 opacity-40"
+                                >↕</span
+                            >
+                        </th>
+                        <th class="py-3 px-3 w-20 text-right whitespace-nowrap"
+                            >Actions</th
+                        >
+                    </tr>
+                </thead>
+                <tbody
+                    id="products-table-body"
+                    class="divide-y divide-zinc-800/50 text-xs"
+                >
+                    <tr>
+                        <td
+                            colspan="7"
+                            class="py-8 text-center text-zinc-500 font-mono"
+                            >Loading products catalog...</td
+                        >
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        {/* Server-Side Pagination Bar */}
+        <div
+            class="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-800/80 pt-4 font-mono text-xs text-zinc-400"
+        >
+            <div class="flex items-center gap-3">
+                <span id="pagination-info">Showing 0-0 of 0 products</span>
+                <div
+                    class="flex items-center gap-1.5 border-l border-zinc-800 pl-3"
+                >
+                    <label
+                        for="page-size-select"
+                        class="text-zinc-500 text-[11px] uppercase"
+                        >Per page:</label
+                    >
+                    <select
+                        id="page-size-select"
+                        class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-zinc-200 focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button
+                    id="prev-page-btn"
+                    class="px-3 py-1.5 bg-zinc-950 border border-zinc-800 hover:bg-zinc-800 hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled
+                >
+                    ◀ Prev
+                </button>
+                <span
+                    id="page-counter-badge"
+                    class="px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-orange-400 font-bold"
+                >
+                    Page 1 of 1
+                </span>
+                <button
+                    id="next-page-btn"
+                    class="px-3 py-1.5 bg-zinc-950 border border-zinc-800 hover:bg-zinc-800 hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled
+                >
+                    Next ▶
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {/* Lightbox / Image Gallery Modal Viewer */}
+    <div
+        id="product-image-lightbox"
+        class="fixed inset-0 bg-black/95 backdrop-blur-xl z-[70] hidden flex flex-col items-center justify-between p-4 sm:p-6 select-none overflow-hidden"
+    >
+        <div
+            class="w-full max-w-6xl flex items-center justify-between border-b border-zinc-800/60 pb-3 shrink-0"
+        >
+            <div class="flex items-center gap-3">
+                <span
+                    id="lightbox-title"
+                    class="text-zinc-200 font-mono text-xs uppercase tracking-wider font-bold truncate max-w-md"
+                ></span>
+                <span
+                    id="lightbox-counter"
+                    class="text-orange-400 font-mono text-[11px] bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 rounded-md hidden"
+                ></span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button
+                    id="lightbox-fullscreen-btn"
+                    class="text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 font-mono text-xs"
+                    title="Toggle Fullscreen"
+                >
+                    <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        ><path
+                            d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+                        ></path></svg
+                    >
+                    <span>Full</span>
+                </button>
+                <button
+                    id="lightbox-close-btn"
+                    class="text-zinc-400 hover:text-orange-500 font-mono text-xs uppercase bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                >
+                    ✕ Close
+                </button>
+            </div>
+        </div>
+
+        <div
+            class="w-full max-w-6xl flex-1 flex items-center justify-between gap-3 sm:gap-6 my-auto min-h-0 py-4"
+        >
+            <button
+                id="lightbox-prev-btn"
+                class="shrink-0 p-3 rounded-xl bg-zinc-900/60 hover:bg-zinc-800/90 border border-zinc-800/80 hover:border-orange-500/40 text-zinc-400 hover:text-orange-400 transition-all cursor-pointer backdrop-blur-md hidden shadow-xl"
+                title="Previous Image (Left Arrow)"
+            >
+                <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"></path></svg
+                >
+            </button>
+
+            <div
+                class="flex-1 flex items-center justify-center h-full min-w-0 min-h-0"
+            >
+                <img
+                    id="lightbox-img"
+                    src=""
+                    alt="Product Preview"
+                    class="max-w-full max-h-[75vh] object-contain rounded-xl border border-zinc-800/80 shadow-2xl bg-zinc-950 transition-all duration-200"
+                />
+            </div>
+
+            <button
+                id="lightbox-next-btn"
+                class="shrink-0 p-3 rounded-xl bg-zinc-900/60 hover:bg-zinc-800/90 border border-zinc-800/80 hover:border-orange-500/40 text-zinc-400 hover:text-orange-400 transition-all cursor-pointer backdrop-blur-md hidden shadow-xl"
+                title="Next Image (Right Arrow)"
+            >
+                <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg
+                >
+            </button>
+        </div>
+
+        <div
+            id="lightbox-thumbnails-strip"
+            class="flex items-center gap-2 overflow-x-auto max-w-xl py-2 custom-scrollbar border-t border-zinc-800/40 w-full justify-center shrink-0"
+        >
+        </div>
+    </div>
+
+    {/* Unified Product Form Modal */}
+    <div
+        id="product-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4"
+    >
+        <div
+            class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
+        >
+            <div
+                class="flex justify-between items-center border-b border-zinc-800/80 pb-4"
+            >
+                <div>
+                    <h3
+                        id="modal-header-title"
+                        class="text-base font-bold text-white uppercase tracking-wide"
+                    >
+                        Add New Product
+                    </h3>
+                    <p id="modal-header-subtitle" class="text-xs text-zinc-400">
+                        Create a digital or physical store product
+                    </p>
+                </div>
+                <button
+                    id="product-modal-close"
+                    class="text-zinc-400 hover:text-orange-500 font-mono text-sm cursor-pointer transition-colors"
+                    >✕</button
+                >
+            </div>
+
+            <form id="product-form" class="space-y-4">
+                <input type="hidden" id="prod-id" value="" />
+
+                <div>
+                    <label
+                        for="prod-name"
+                        class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5"
+                    >
+                        Product Name *
+                    </label>
+                    <input
+                        type="text"
+                        id="prod-name"
+                        required
+                        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                        placeholder="e.g. Underground Zine Vol. 1"
+                    />
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label
+                            for="prod-price"
+                            class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5"
+                        >
+                            Price ($) *
+                        </label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            id="prod-price"
+                            required
+                            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                            placeholder="19.99"
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            for="prod-category"
+                            class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5"
+                        >
+                            Category ID *
+                        </label>
+                        <input
+                            type="number"
+                            id="prod-category"
+                            value="1"
+                            required
+                            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                        />
+                    </div>
+
+                    <div id="stock-input-container">
+                        <label
+                            for="prod-stock"
+                            class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5"
+                        >
+                            Stock Qty *
+                        </label>
+                        <div
+                            class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden focus-within:border-orange-500 transition-colors"
+                        >
+                            <button
+                                type="button"
+                                id="stock-btn-minus"
+                                class="px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-mono text-xs font-bold transition-colors cursor-pointer select-none border-r border-zinc-800"
+                            >
+                                −
+                            </button>
+                            <input
+                                type="number"
+                                id="prod-stock"
+                                min="0"
+                                class="w-full px-2 py-2 bg-transparent text-center text-zinc-100 font-mono text-xs focus:outline-none"
+                                placeholder="50"
+                            />
+                            <button
+                                type="button"
+                                id="stock-btn-plus"
+                                class="px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-mono text-xs font-bold transition-colors cursor-pointer select-none border-l border-zinc-800"
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label
+                        for="prod-short-desc"
+                        class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5"
+                    >
+                        Short Description
+                    </label>
+                    <input
+                        type="text"
+                        id="prod-short-desc"
+                        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                        placeholder="Brief summary"
+                    />
+                </div>
+
+                <div>
+                    <label
+                        for="prod-desc"
+                        class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5"
+                    >
+                        Full Description
+                    </label>
+                    <textarea
+                        id="prod-desc"
+                        rows="3"
+                        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500 resize-none custom-scrollbar"
+                        placeholder="Detailed product specification..."
+                    ></textarea>
+                </div>
+
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-zinc-800/80 pt-3"
+                >
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="prod-is-digital"
+                            class="w-4 h-4 accent-orange-500 rounded cursor-pointer"
+                        />
+                        <label
+                            for="prod-is-digital"
+                            class="text-xs font-mono text-zinc-300 cursor-pointer"
+                        >
+                            Is Digital Product?
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="prod-is-active"
+                            checked
+                            class="w-4 h-4 accent-orange-500 rounded cursor-pointer"
+                        />
+                        <label
+                            for="prod-is-active"
+                            class="text-xs font-mono text-zinc-300 cursor-pointer"
+                        >
+                            Is Active?
+                        </label>
+                    </div>
+                </div>
+
+                {/* Digital Download File Section */}
+                <div
+                    id="file-url-container"
+                    class="hidden space-y-3 bg-zinc-950/60 p-3 rounded-lg border border-zinc-800"
+                >
+                    <div>
+                        <label
+                            class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1"
+                        >
+                            Digital Download File (Private Asset) *
+                        </label>
+
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="file"
+                                id="prod-digital-file-input"
+                                class="block w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-mono file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700 cursor-pointer bg-zinc-900 rounded-lg border border-zinc-800 p-1"
+                            />
+                            <button
+                                type="button"
+                                id="upload-digital-btn"
+                                class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold uppercase rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                            >
+                                Upload
+                            </button>
+                        </div>
+
+                        <div id="digital-upload-progress" class="hidden mt-2">
+                            <div
+                                class="flex justify-between text-[10px] font-mono text-zinc-400 mb-1"
+                            >
+                                <span id="digital-upload-status"
+                                    >Uploading to secure storage...</span
+                                >
+                                <span id="digital-upload-pct">0%</span>
+                            </div>
+                            <div
+                                class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden"
+                            >
+                                <div
+                                    id="digital-upload-bar"
+                                    class="bg-blue-500 h-1.5 transition-all duration-150"
+                                    style="width: 0%"
+                                >
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="prod-file-url" value="" />
+                        <input type="hidden" id="prod-file-size" value="" />
+                        <p
+                            id="prod-file-name-preview"
+                            class="text-[11px] font-mono text-emerald-400 mt-1.5 hidden"
+                        >
+                        </p>
+                    </div>
+                </div>
+
+                {/* Product Gallery Section */}
+                <div class="space-y-3 border-t border-zinc-800/80 pt-3">
+                    <label
+                        class="block text-xs font-mono uppercase tracking-wider text-zinc-300"
+                    >
+                        Product Gallery Images (Public Storefront)
+                    </label>
+
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="file"
+                            id="gallery-file-input"
+                            accept="image/*"
+                            multiple
+                            class="block w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-mono file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700 cursor-pointer bg-zinc-950 rounded-lg border border-zinc-800 p-1"
+                        />
+                        <button
+                            type="button"
+                            id="upload-images-btn"
+                            class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-orange-400 font-mono text-xs font-bold uppercase rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                        >
+                            + Upload
+                        </button>
+                    </div>
+
+                    <div id="images-upload-progress" class="hidden">
+                        <div
+                            class="flex justify-between text-[10px] font-mono text-zinc-400 mb-1"
+                        >
+                            <span id="images-upload-status"
+                                >Compressing & Uploading...</span
+                            >
+                            <span id="images-upload-pct">0%</span>
+                        </div>
+                        <div
+                            class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden"
+                        >
+                            <div
+                                id="images-upload-bar"
+                                class="bg-orange-500 h-1.5 transition-all duration-150"
+                                style="width: 0%"
+                            >
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        id="gallery-items-list"
+                        class="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pt-1"
+                    >
+                    </div>
+                </div>
+
+                <div
+                    id="modal-audit-info"
+                    class="hidden text-[11px] font-mono text-zinc-500 border-t border-zinc-800/60 pt-2"
+                >
+                </div>
+
+                <div
+                    id="product-status-msg"
+                    class="hidden text-xs font-mono text-center rounded-lg p-2.5"
+                >
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button
+                        type="button"
+                        id="product-modal-cancel"
+                        class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer"
+                        >Cancel</button
+                    >
+                    <button
+                        type="submit"
+                        id="product-submit-btn"
+                        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer"
+                        >Create Product</button
+                    >
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+<script>
+    import { uploadEcommerceMedia } from "../../lib/ecommerceStorage";
+
+    interface GalleryImage {
+        id?: number;
+        mediaUrl: string;
+        storageKey: string;
+        mimeType?: string;
+        fileSize?: number;
+        isMain: boolean;
+        displayOrder: number;
+    }
+
+    // Context & Base Configuration from dataset
+    const rootEl = document.getElementById("products-manager-root");
+    const isAdmin = rootEl?.dataset.isAdmin === "true";
+    const API_URL = rootEl?.dataset.apiUrl || "http://localhost:5114";
+    const API_KEY = rootEl?.dataset.apiKey || "";
+
+    // State Management for Server-Side Queries
+    let currentPage: number = 1;
+    let currentPageSize: number = 25;
+    let totalItemsCount: number = 0;
+    let totalPagesCount: number = 1;
+
+    let currentSortColumn: string = "createdAt";
+    let sortDirection: "asc" | "desc" = "desc";
+
+    let fetchedProductsList: any[] = [];
+    let currentFormImages: GalleryImage[] = [];
+
+    // Lightbox state
+    let lightboxGallery: GalleryImage[] = [];
+    let lightboxCurrentIndex: number = 0;
+
+    // Modal Elements
+    const productModal = document.getElementById("product-modal");
+    const modalHeaderTitle = document.getElementById("modal-header-title");
+    const modalHeaderSubtitle = document.getElementById("modal-header-subtitle");
+    const modalAuditInfo = document.getElementById("modal-audit-info");
+    const submitBtn = document.getElementById("product-submit-btn") as HTMLButtonElement;
+
+    const openCreateModalBtn = document.getElementById("open-create-modal-btn");
+    const closeModalBtn = document.getElementById("product-modal-close");
+    const cancelModalBtn = document.getElementById("product-modal-cancel");
+
+    const productForm = document.getElementById("product-form") as HTMLFormElement;
+    const prodIdInput = document.getElementById("prod-id") as HTMLInputElement;
+    const isDigitalCheckbox = document.getElementById("prod-is-digital") as HTMLInputElement;
+    const stockInputContainer = document.getElementById("stock-input-container");
+    const stockInput = document.getElementById("prod-stock") as HTMLInputElement;
+    const stockBtnMinus = document.getElementById("stock-btn-minus");
+    const stockBtnPlus = document.getElementById("stock-btn-plus");
+    const fileUrlContainer = document.getElementById("file-url-container");
+    const statusMsg = document.getElementById("product-status-msg");
+
+    // Media & Gallery Form Elements
+    const galleryFileInput = document.getElementById("gallery-file-input") as HTMLInputElement;
+    const uploadImagesBtn = document.getElementById("upload-images-btn") as HTMLButtonElement;
+    const imagesProgress = document.getElementById("images-upload-progress");
+    const imagesProgressBar = document.getElementById("images-upload-bar") as HTMLDivElement;
+    const imagesProgressPct = document.getElementById("images-upload-pct") as HTMLSpanElement;
+    const galleryItemsList = document.getElementById("gallery-items-list");
+
+    // Digital File Form Elements
+    const digitalFileInput = document.getElementById("prod-digital-file-input") as HTMLInputElement;
+    const uploadDigitalBtn = document.getElementById("upload-digital-btn") as HTMLButtonElement;
+    const digitalProgress = document.getElementById("digital-upload-progress");
+    const digitalProgressBar = document.getElementById("digital-upload-bar") as HTMLDivElement;
+    const digitalProgressPct = document.getElementById("digital-upload-pct") as HTMLSpanElement;
+    const prodFileUrl = document.getElementById("prod-file-url") as HTMLInputElement;
+    const prodFileSize = document.getElementById("prod-file-size") as HTMLInputElement;
+    const prodFileNamePreview = document.getElementById("prod-file-name-preview");
+
+    // Filter & Search Controls
+    const searchInput = document.getElementById("search-input") as HTMLInputElement;
+    const filterType = document.getElementById("filter-type") as HTMLSelectElement;
+    const filterStatus = document.getElementById("filter-status") as HTMLSelectElement;
+    const filterStock = document.getElementById("filter-stock") as HTMLSelectElement;
+    const clearFiltersBtn = document.getElementById("clear-filters-btn") as HTMLButtonElement;
+
+    // Pagination Controls
+    const pageSizeSelect = document.getElementById("page-size-select") as HTMLSelectElement;
+    const prevPageBtn = document.getElementById("prev-page-btn") as HTMLButtonElement;
+    const nextPageBtn = document.getElementById("next-page-btn") as HTMLButtonElement;
+    const paginationInfo = document.getElementById("pagination-info");
+    const pageCounterBadge = document.getElementById("page-counter-badge");
+
+    // Lightbox Elements
+    const lightboxModal = document.getElementById("product-image-lightbox");
+    const lightboxImg = document.getElementById("lightbox-img") as HTMLImageElement;
+    const lightboxTitle = document.getElementById("lightbox-title");
+    const lightboxCounter = document.getElementById("lightbox-counter");
+    const lightboxCloseBtn = document.getElementById("lightbox-close-btn");
+    const lightboxFullscreenBtn = document.getElementById("lightbox-fullscreen-btn");
+    const lightboxPrevBtn = document.getElementById("lightbox-prev-btn");
+    const lightboxNextBtn = document.getElementById("lightbox-next-btn");
+    const lightboxThumbnailsStrip = document.getElementById("lightbox-thumbnails-strip");
+
+    const PHYSICAL_ICON_SVG = `<svg class="w-5 h-5 text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
+    const DIGITAL_ICON_SVG = `<svg class="w-5 h-5 text-blue-400/80" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
+
+    stockBtnMinus?.addEventListener("click", () => {
+        if (!stockInput) return;
+        const currentVal = parseInt(stockInput.value, 10) || 0;
+        if (currentVal > 0) stockInput.value = (currentVal - 1).toString();
+    });
+
+    stockBtnPlus?.addEventListener("click", () => {
+        if (!stockInput) return;
+        const currentVal = parseInt(stockInput.value, 10) || 0;
+        stockInput.value = (currentVal + 1).toString();
+    });
+
+    // Upload Public Gallery Images to Azure Blob Storage
+    uploadImagesBtn?.addEventListener("click", async () => {
+        const files = galleryFileInput?.files;
+        if (!files || files.length === 0) return;
+
+        uploadImagesBtn.disabled = true;
+        imagesProgress?.classList.remove("hidden");
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const isFirst = currentFormImages.length === 0;
+
+                const res = await uploadEcommerceMedia(
+                    file,
+                    "products", // Public products folder
+                    false,      // Public container
+                    API_KEY,
+                    API_URL,
+                    (pct) => {
+                        if (imagesProgressBar && imagesProgressPct) {
+                            imagesProgressBar.style.width = `${pct}%`;
+                            imagesProgressPct.innerText = `${pct}%`;
+                        }
+                    },
+                );
+
+                currentFormImages.push({
+                    mediaUrl: res.fileUrl,
+                    storageKey: res.storageKey,
+                    mimeType: "image/webp",
+                    fileSize: file.size,
+                    isMain: isFirst,
+                    displayOrder: currentFormImages.length + 1,
+                });
+
+                renderFormGallery();
+            }
+
+            if (galleryFileInput) galleryFileInput.value = "";
+        } catch (err: any) {
+            alert("Error uploading images: " + err.message);
+        } finally {
+            uploadImagesBtn.disabled = false;
+            imagesProgress?.classList.add("hidden");
+        }
+    });
+
+    // Upload Private Digital File to Azure Blob Storage
+    uploadDigitalBtn?.addEventListener("click", async () => {
+        const file = digitalFileInput?.files?.[0];
+        if (!file) return;
+
+        uploadDigitalBtn.disabled = true;
+        digitalProgress?.classList.remove("hidden");
+
+        try {
+            const res = await uploadEcommerceMedia(
+                file,
+                "digital", // Private digital folder
+                true,      // Private container
+                API_KEY,
+                API_URL,
+                (pct) => {
+                    if (digitalProgressBar && digitalProgressPct) {
+                        digitalProgressBar.style.width = `${pct}%`;
+                        digitalProgressPct.innerText = `${pct}%`;
+                    }
+                },
+            );
+
+            if (prodFileUrl) prodFileUrl.value = res.storageKey;
+            if (prodFileSize) prodFileSize.value = file.size.toString();
+
+            if (prodFileNamePreview) {
+                prodFileNamePreview.innerText = `✓ Uploaded: ${file.name} (${formatBytes(file.size)})`;
+                prodFileNamePreview.classList.remove("hidden");
+            }
+        } catch (err: any) {
+            alert("Error uploading digital asset: " + err.message);
+        } finally {
+            uploadDigitalBtn.disabled = false;
+            digitalProgress?.classList.add("hidden");
+        }
+    });
+
+    function renderFormGallery() {
+        if (!galleryItemsList) return;
+
+        if (currentFormImages.length === 0) {
+            galleryItemsList.innerHTML = `<p class="text-zinc-500 font-mono text-[11px] italic">No images added to gallery yet.</p>`;
+            return;
+        }
+
+        galleryItemsList.innerHTML = currentFormImages
+            .map(
+                (img, idx) => `
+            <div class="flex items-center justify-between gap-2 bg-zinc-950 p-2 rounded-lg border border-zinc-800/80 text-xs font-mono">
+                <div class="flex items-center gap-2 truncate">
+                    <img src="${img.mediaUrl}" alt="Preview" class="w-8 h-8 object-cover rounded bg-zinc-900 border border-zinc-800 shrink-0" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' fill=\\'none\\' stroke=\\'%2371717a\\' viewBox=\\'0 0 24 24\\'><rect width=\\'18\\' height=\\'18\\' x=\\'3\\' y=\\'3\\' rx=\\'2\\'/></svg>'" />
+                    <span class="text-zinc-300 truncate max-w-[200px]" title="${img.mediaUrl}">${img.storageKey || img.mediaUrl}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" data-main-idx="${idx}" class="set-main-btn px-2 py-0.5 rounded text-[10px] uppercase font-mono transition-colors ${img.isMain ? "bg-orange-500/20 text-orange-400 border border-orange-500/40 font-bold" : "bg-zinc-800 hover:bg-zinc-700 text-zinc-400"}">
+                        ${img.isMain ? "★ Main" : "Set Main"}
+                    </button>
+                    <button type="button" data-remove-idx="${idx}" class="remove-img-btn text-zinc-500 hover:text-red-400 px-1 py-0.5 transition-colors">
+                        ✕
+                    </button>
+                </div>
+            </div>
+        `,
+            )
+            .join("");
+
+        galleryItemsList.querySelectorAll(".set-main-btn").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                const idx = parseInt(
+                    (e.currentTarget as HTMLElement).dataset.mainIdx || "0",
+                    10,
+                );
+                currentFormImages.forEach(
+                    (item, i) => (item.isMain = i === idx),
+                );
+                renderFormGallery();
+            });
+        });
+
+        galleryItemsList.querySelectorAll(".remove-img-btn").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                const idx = parseInt(
+                    (e.currentTarget as HTMLElement).dataset.removeIdx || "0",
+                    10,
+                );
+                const wasMain = currentFormImages[idx].isMain;
+                currentFormImages.splice(idx, 1);
+
+                if (wasMain && currentFormImages.length > 0) {
+                    currentFormImages[0].isMain = true;
+                }
+
+                currentFormImages.forEach(
+                    (img, i) => (img.displayOrder = i + 1),
+                );
+                renderFormGallery();
+            });
+        });
+    }
+
+    function formatBytes(bytes?: number): string {
+        if (!bytes || bytes <= 0) return "";
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+    }
+
+    function openLightbox(
+        gallery: GalleryImage[],
+        title: string,
+        startIndex: number = 0,
+    ) {
+        if (!lightboxModal || !lightboxImg || gallery.length === 0) return;
+
+        lightboxGallery = gallery;
+        lightboxCurrentIndex = startIndex;
+
+        if (lightboxTitle) lightboxTitle.innerText = title;
+        updateLightboxView();
+
+        lightboxModal.classList.remove("hidden");
+    }
+
+    function updateLightboxView() {
+        if (lightboxGallery.length === 0) return;
+
+        const current = lightboxGallery[lightboxCurrentIndex];
+        if (lightboxImg) lightboxImg.src = current.mediaUrl;
+
+        if (lightboxGallery.length > 1) {
+            lightboxPrevBtn?.classList.remove("hidden");
+            lightboxNextBtn?.classList.remove("hidden");
+            if (lightboxCounter) {
+                lightboxCounter.innerText = `${lightboxCurrentIndex + 1} / ${lightboxGallery.length}`;
+                lightboxCounter.classList.remove("hidden");
+            }
+        } else {
+            lightboxPrevBtn?.classList.add("hidden");
+            lightboxNextBtn?.classList.add("hidden");
+            lightboxCounter?.classList.add("hidden");
+        }
+
+        if (lightboxThumbnailsStrip) {
+            if (lightboxGallery.length > 1) {
+                lightboxThumbnailsStrip.innerHTML = lightboxGallery
+                    .map(
+                        (img, idx) => `
+                    <button type="button" data-lightbox-thumb-idx="${idx}" class="lightbox-thumb-btn w-10 h-10 rounded-md border overflow-hidden shrink-0 transition-all cursor-pointer ${idx === lightboxCurrentIndex ? "border-orange-500 scale-105 shadow-md shadow-orange-500/20" : "border-zinc-800 opacity-50 hover:opacity-100"}">
+                        <img src="${img.mediaUrl}" alt="Thumb" class="w-full h-full object-cover bg-zinc-950" />
+                    </button>
+                `,
+                    )
+                    .join("");
+
+                lightboxThumbnailsStrip
+                    .querySelectorAll(".lightbox-thumb-btn")
+                    .forEach((btn) => {
+                        btn.addEventListener("click", (e) => {
+                            const idx = parseInt(
+                                (e.currentTarget as HTMLElement).dataset
+                                    .lightboxThumbIdx || "0",
+                                10,
+                            );
+                            lightboxCurrentIndex = idx;
+                            updateLightboxView();
+                        });
+                    });
+                lightboxThumbnailsStrip.classList.remove("hidden");
+            } else {
+                lightboxThumbnailsStrip.classList.add("hidden");
+            }
+        }
+    }
+
+    function closeLightbox() {
+        if (lightboxModal) lightboxModal.classList.add("hidden");
+        if (lightboxImg) lightboxImg.src = "";
+        lightboxGallery = [];
+        lightboxCurrentIndex = 0;
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+        }
+    }
+
+    lightboxFullscreenBtn?.addEventListener("click", () => {
+        if (!document.fullscreenElement) {
+            lightboxModal
+                ?.requestFullscreen()
+                .catch((err) => console.error(err));
+        } else {
+            document.exitFullscreen().catch((err) => console.error(err));
+        }
+    });
+
+    lightboxPrevBtn?.addEventListener("click", () => {
+        lightboxCurrentIndex =
+            (lightboxCurrentIndex - 1 + lightboxGallery.length) %
+            lightboxGallery.length;
+        updateLightboxView();
+    });
+
+    lightboxNextBtn?.addEventListener("click", () => {
+        lightboxCurrentIndex =
+            (lightboxCurrentIndex + 1) % lightboxGallery.length;
+        updateLightboxView();
+    });
+
+    lightboxCloseBtn?.addEventListener("click", closeLightbox);
+    lightboxModal?.addEventListener("click", (e) => {
+        if (e.target === lightboxModal) closeLightbox();
+    });
+
+    isDigitalCheckbox?.addEventListener("change", () => {
+        if (isDigitalCheckbox.checked) {
+            fileUrlContainer?.classList.remove("hidden");
+            stockInputContainer?.classList.add("hidden");
+            if (stockInput) stockInput.required = false;
+        } else {
+            fileUrlContainer?.classList.add("hidden");
+            stockInputContainer?.classList.remove("hidden");
+            if (stockInput) stockInput.required = true;
+        }
+    });
+
+    function openCreateModal() {
+        productForm.reset();
+        prodIdInput.value = "";
+        currentFormImages = [];
+        renderFormGallery();
+
+        if (modalHeaderTitle) modalHeaderTitle.innerText = "Add New Product";
+        if (modalHeaderSubtitle)
+            modalHeaderSubtitle.innerText =
+                "Create a digital or physical store product";
+        if (modalAuditInfo) modalAuditInfo.classList.add("hidden");
+        if (submitBtn) submitBtn.innerText = "Create Product";
+
+        fileUrlContainer?.classList.add("hidden");
+        stockInputContainer?.classList.remove("hidden");
+        if (stockInput) stockInput.required = true;
+
+        if (prodFileUrl) prodFileUrl.value = "";
+        if (prodFileSize) prodFileSize.value = "";
+        if (prodFileNamePreview) {
+            prodFileNamePreview.innerText = "";
+            prodFileNamePreview.classList.add("hidden");
+        }
+
+        if (statusMsg)
+            statusMsg.className =
+                "hidden text-xs font-mono text-center rounded-lg p-2.5";
+        productModal?.classList.remove("hidden");
+    }
+
+    function openEditModal(product: any) {
+        productForm.reset();
+        prodIdInput.value = product.id;
+
+        (document.getElementById("prod-name") as HTMLInputElement).value =
+            product.name || "";
+        (document.getElementById("prod-price") as HTMLInputElement).value =
+            product.price || "0";
+        (document.getElementById("prod-category") as HTMLInputElement).value =
+            product.categoryId || 1;
+        (document.getElementById("prod-stock") as HTMLInputElement).value =
+            product.stockQuantity ?? "";
+        (document.getElementById("prod-short-desc") as HTMLInputElement).value =
+            product.shortDescription || "";
+        (document.getElementById("prod-desc") as HTMLTextAreaElement).value =
+            product.description || "";
+        (
+            document.getElementById("prod-is-digital") as HTMLInputElement
+        ).checked = !!product.isDigital;
+        (
+            document.getElementById("prod-is-active") as HTMLInputElement
+        ).checked = !!product.isActive;
+
+        if (prodFileUrl) prodFileUrl.value = product.fileUrl || "";
+        if (prodFileSize)
+            prodFileSize.value = product.fileSize?.toString() || "";
+
+        if (prodFileNamePreview) {
+            if (product.fileUrl) {
+                prodFileNamePreview.innerText = `Current File: ${product.fileUrl}`;
+                prodFileNamePreview.classList.remove("hidden");
+            } else {
+                prodFileNamePreview.classList.add("hidden");
+            }
+        }
+
+        if (product.media && product.media.length > 0) {
+            currentFormImages = product.media.map((img: any) => ({
+                id: img.id,
+                mediaUrl: img.mediaUrl,
+                storageKey: img.storageKey,
+                mimeType: img.mimeType,
+                fileSize: img.fileSize,
+                isMain: img.isMain,
+                displayOrder: img.displayOrder,
+            }));
+        } else if (product.thumbnailUrl) {
+            currentFormImages = [
+                {
+                    mediaUrl: product.thumbnailUrl,
+                    storageKey: "",
+                    isMain: true,
+                    displayOrder: 1,
+                },
+            ];
+        } else {
+            currentFormImages = [];
+        }
+        renderFormGallery();
+
+        if (product.isDigital) {
+            fileUrlContainer?.classList.remove("hidden");
+            stockInputContainer?.classList.add("hidden");
+            if (stockInput) stockInput.required = false;
+        } else {
+            fileUrlContainer?.classList.add("hidden");
+            stockInputContainer?.classList.remove("hidden");
+            if (stockInput) stockInput.required = true;
+        }
+
+        if (modalHeaderTitle) modalHeaderTitle.innerText = "Edit Product";
+        if (modalHeaderSubtitle)
+            modalHeaderSubtitle.innerText = `Update specs for #${product.id} - ${product.name}`;
+
+        if (modalAuditInfo) {
+            const createdStr = product.createdAt
+                ? new Date(product.createdAt).toLocaleString("en-US")
+                : "N/A";
+            const updatedStr = product.updatedAt
+                ? new Date(product.updatedAt).toLocaleString("en-US")
+                : "Never";
+            modalAuditInfo.innerText = `Created: ${createdStr} | Last Updated: ${updatedStr}`;
+            modalAuditInfo.classList.remove("hidden");
+        }
+
+        if (submitBtn) submitBtn.innerText = "Save Changes";
+
+        if (statusMsg)
+            statusMsg.className =
+                "hidden text-xs font-mono text-center rounded-lg p-2.5";
+        productModal?.classList.remove("hidden");
+    }
+
+    function closeModal() {
+        productModal?.classList.add("hidden");
+    }
+
+    openCreateModalBtn?.addEventListener("click", openCreateModal);
+    closeModalBtn?.addEventListener("click", closeModal);
+    cancelModalBtn?.addEventListener("click", closeModal);
+    productModal?.addEventListener("click", (e) => {
+        if (e.target === productModal) closeModal();
+    });
+
+    window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            closeModal();
+            closeLightbox();
+        } else if (
+            lightboxModal &&
+            !lightboxModal.classList.contains("hidden")
+        ) {
+            if (e.key === "ArrowLeft") lightboxPrevBtn?.click();
+            if (e.key === "ArrowRight") lightboxNextBtn?.click();
+        }
+    });
+
+    const refreshBtn = document.getElementById(
+        "refresh-btn",
+    ) as HTMLButtonElement;
+    refreshBtn?.addEventListener("click", async () => {
+        refreshBtn.disabled = true;
+        refreshBtn.innerText = "↻ Refreshing...";
+        await fetchProducts();
+        refreshBtn.innerText = "↻ Refresh";
+        refreshBtn.disabled = false;
+    });
+
+    function checkActiveFilters() {
+        const hasSearch = Boolean(searchInput?.value.trim());
+        const hasType = filterType?.value !== "ALL";
+        const hasStatus = filterStatus?.value !== "ALL";
+        const hasStock = filterStock?.value !== "ALL";
+
+        if (clearFiltersBtn) {
+            clearFiltersBtn.disabled = !(
+                hasSearch ||
+                hasType ||
+                hasStatus ||
+                hasStock
+            );
+        }
+    }
+
+    let searchTimeout: any;
+    searchInput?.addEventListener("input", () => {
+        checkActiveFilters();
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            currentPage = 1;
+            fetchProducts();
+        }, 300);
+    });
+
+    filterType?.addEventListener("change", () => {
+        checkActiveFilters();
+        currentPage = 1;
+        fetchProducts();
+    });
+
+    filterStatus?.addEventListener("change", () => {
+        checkActiveFilters();
+        currentPage = 1;
+        fetchProducts();
+    });
+
+    filterStock?.addEventListener("change", () => {
+        checkActiveFilters();
+        currentPage = 1;
+        fetchProducts();
+    });
+
+    clearFiltersBtn?.addEventListener("click", () => {
+        if (searchInput) searchInput.value = "";
+        if (filterType) filterType.value = "ALL";
+        if (filterStatus) filterStatus.value = "ALL";
+        if (filterStock) filterStock.value = "ALL";
+
+        checkActiveFilters();
+        currentPage = 1;
+        fetchProducts();
+    });
+
+    pageSizeSelect?.addEventListener("change", () => {
+        currentPageSize = parseInt(pageSizeSelect.value, 10) || 25;
+        currentPage = 1;
+        fetchProducts();
+    });
+
+    prevPageBtn?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchProducts();
+        }
+    });
+
+    nextPageBtn?.addEventListener("click", () => {
+        if (currentPage < totalPagesCount) {
+            currentPage++;
+            fetchProducts();
+        }
+    });
+
+    document.querySelectorAll(".sort-header").forEach((header) => {
+        header.addEventListener("click", (e) => {
+            const target = e.currentTarget as HTMLElement;
+            const column = target.getAttribute("data-sort");
+            if (!column) return;
+
+            if (currentSortColumn === column) {
+                sortDirection = sortDirection === "asc" ? "desc" : "asc";
+            } else {
+                currentSortColumn = column;
+                sortDirection =
+                    column === "createdAt" ||
+                    column === "price" ||
+                    column === "stockQuantity"
+                        ? "desc"
+                        : "asc";
+            }
+
+            updateSortHeadersUI();
+            currentPage = 1;
+            fetchProducts();
+        });
+    });
+
+    function updateSortHeadersUI() {
+        document.querySelectorAll(".sort-header").forEach((header) => {
+            const el = header as HTMLElement;
+            const column = el.getAttribute("data-sort");
+            const iconSpan = el.querySelector(".sort-icon") as HTMLElement;
+
+            if (column === currentSortColumn) {
+                el.classList.add("text-orange-500");
+                el.classList.remove("text-zinc-400");
+                if (iconSpan) {
+                    iconSpan.innerText = sortDirection === "asc" ? "↑" : "↓";
+                    iconSpan.classList.add("opacity-100");
+                    iconSpan.classList.remove("opacity-40");
+                }
+            } else {
+                el.classList.remove("text-orange-500");
+                el.classList.add("text-zinc-400");
+                if (iconSpan) {
+                    iconSpan.innerText = "↕";
+                    iconSpan.classList.add("opacity-40");
+                    iconSpan.classList.remove("opacity-100");
+                }
+            }
+        });
+    }
+
+    // Submit handler - Creates CreateProductDto payload for backend
+    productForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (submitBtn) submitBtn.disabled = true;
+
+        const prodId = prodIdInput.value;
+        const isEditMode = Boolean(prodId);
+        const isDigital = isDigitalCheckbox.checked;
+        const stockVal = stockInput.value;
+
+        const mainImageObj =
+            currentFormImages.find((img) => img.isMain) || currentFormImages[0];
+        const primaryThumbUrl = mainImageObj ? mainImageObj.mediaUrl : null;
+
+        const payload = {
+            id: isEditMode
+                ? isNaN(Number(prodId))
+                    ? prodId
+                    : Number(prodId)
+                : undefined,
+            name: (document.getElementById("prod-name") as HTMLInputElement).value,
+            description: (document.getElementById("prod-desc") as HTMLTextAreaElement).value,
+            shortDescription: (document.getElementById("prod-short-desc") as HTMLInputElement).value,
+            price: parseFloat((document.getElementById("prod-price") as HTMLInputElement).value),
+            categoryId: parseInt((document.getElementById("prod-category") as HTMLInputElement).value, 10),
+            isDigital: isDigital,
+            stockQuantity: isDigital
+                ? null
+                : stockVal !== ""
+                  ? parseInt(stockVal, 10)
+                  : 0,
+            fileUrl: isDigital ? prodFileUrl.value : null,
+            fileSize:
+                isDigital && prodFileSize.value
+                    ? parseInt(prodFileSize.value, 10)
+                    : null,
+            thumbnailUrl: primaryThumbUrl,
+            isActive: (document.getElementById("prod-is-active") as HTMLInputElement).checked,
+            media: currentFormImages.map((img) => ({
+                mediaUrl: img.mediaUrl,
+                storageKey: img.storageKey,
+                mediaType: 1, // MediaType.Image
+                mimeType: img.mimeType || "image/webp",
+                fileSize: img.fileSize || 0,
+                isMain: img.isMain,
+                displayOrder: img.displayOrder,
+            })),
+        };
+
+        const targetUrl = isEditMode
+            ? `${API_URL}/api/product/${prodId}`
+            : `${API_URL}/api/product`;
+        const targetMethod = isEditMode ? "PUT" : "POST";
+
+        try {
+            const headers: Record<string, string> = {
+                "Content-Type": "application/json",
+            };
+            if (API_KEY) headers["X-Api-Key"] = API_KEY;
+
+            const res = await fetch(targetUrl, {
+                method: targetMethod,
+                headers,
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(
+                    errData.message ||
+                        `Failed to ${isEditMode ? "update" : "create"} product.`,
+                );
+            }
+
+            closeModal();
+            await fetchProducts();
+        } catch (err: any) {
+            if (statusMsg) {
+                statusMsg.innerText = err.message || "An error occurred.";
+                statusMsg.className =
+                    "text-xs font-mono text-center rounded-lg p-2.5 bg-red-950/80 text-red-400 border border-red-800 block";
+            }
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    });
+
+    // Main API Fetch Function
+    async function fetchProducts() {
+        const tableBody = document.getElementById("products-table-body");
+        if (!tableBody) return;
+
+        const params = new URLSearchParams();
+        params.append("pageNumber", currentPage.toString());
+        params.append("pageSize", currentPageSize.toString());
+        params.append("sortBy", currentSortColumn);
+        params.append("sortOrder", sortDirection);
+
+        const searchVal = searchInput?.value.trim();
+        if (searchVal) params.append("searchTerm", searchVal);
+
+        if (filterType?.value === "DIGITAL") params.append("isDigital", "true");
+        if (filterType?.value === "PHYSICAL")
+            params.append("isDigital", "false");
+
+        if (filterStatus?.value === "ACTIVE") params.append("isActive", "true");
+        if (filterStatus?.value === "INACTIVE")
+            params.append("isActive", "false");
+
+        if (filterStock?.value && filterStock.value !== "ALL") {
+            params.append("stockStatus", filterStock.value);
+        }
+
+        try {
+            const headers: Record<string, string> = {};
+            if (API_KEY) headers["X-Api-Key"] = API_KEY;
+
+            const response = await fetch(
+                `${API_URL}/api/product/admin?${params.toString()}`,
+                { headers },
+            );
+
+            const pagedResult = await response.json();
+
+            if (!response.ok || pagedResult.error) {
+                throw new Error(
+                    pagedResult.error || `HTTP Error ${response.status}`,
+                );
+            }
+
+            fetchedProductsList = pagedResult.items || [];
+            currentPage = pagedResult.pageNumber || 1;
+            currentPageSize = pagedResult.pageSize || 25;
+            totalItemsCount = pagedResult.totalItems || 0;
+            totalPagesCount = pagedResult.totalPages || 1;
+
+            updatePaginationUI(pagedResult);
+            renderProductsTable();
+        } catch (err: any) {
+            console.error("Fetch error details:", err);
+            tableBody.innerHTML = `
+            <tr>
+              <td colspan="7" class="py-8 text-center text-red-400 font-mono">
+                ${err.message || "Error loading products catalog."}
+              </td>
+            </tr>`;
+        }
+    }
+
+    function updatePaginationUI(pagedResult: any) {
+        if (paginationInfo) {
+            const startItem =
+                totalItemsCount === 0
+                    ? 0
+                    : (currentPage - 1) * currentPageSize + 1;
+            const endItem = Math.min(
+                currentPage * currentPageSize,
+                totalItemsCount,
+            );
+            paginationInfo.innerText = `Showing ${startItem}-${endItem} of ${totalItemsCount} products`;
+        }
+
+        if (pageCounterBadge) {
+            pageCounterBadge.innerText = `Page ${currentPage} of ${totalPagesCount || 1}`;
+        }
+
+        if (prevPageBtn) {
+            prevPageBtn.disabled = !pagedResult.hasPreviousPage;
+        }
+
+        if (nextPageBtn) {
+            nextPageBtn.disabled = !pagedResult.hasNextPage;
+        }
+    }
+
+    function renderProductsTable() {
+        const tableBody = document.getElementById("products-table-body");
+        if (!tableBody) return;
+
+        if (!fetchedProductsList || fetchedProductsList.length === 0) {
+            tableBody.innerHTML = `
+            <tr>
+              <td colspan="7" class="py-8 text-center text-zinc-500 font-mono">No matching products found.</td>
+            </tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = fetchedProductsList
+            .map((item: any) => {
+                const priceFormatted = `$${Number(item.price).toFixed(2)}`;
+                const formattedSize = item.fileSize
+                    ? formatBytes(item.fileSize)
+                    : null;
+
+                const typeBadge = item.isDigital
+                    ? `<button type="button" data-filter-type="DIGITAL" class="filter-type-badge no-row-click inline-flex items-center px-2 py-0.5 text-[10px] font-mono bg-blue-950/60 hover:bg-blue-900/80 text-blue-400 border border-blue-900/80 rounded-md transition-colors cursor-pointer" title="Click to filter by Digital">Digital</button>`
+                    : `<button type="button" data-filter-type="PHYSICAL" class="filter-type-badge no-row-click inline-flex items-center px-2 py-0.5 text-[10px] font-mono bg-purple-950/60 hover:bg-purple-900/80 text-purple-400 border border-purple-900/80 rounded-md transition-colors cursor-pointer" title="Click to filter by Physical">Physical</button>`;
+
+                const sizeBadge =
+                    item.isDigital && formattedSize
+                        ? `<span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 bg-zinc-950 border border-zinc-800 rounded-md shrink-0" title="File size">${formattedSize}</span>`
+                        : "";
+
+                const testLinkBtn =
+                    item.isDigital && item.fileUrl
+                        ? `<a href="${item.fileUrl}" target="_blank" rel="noopener noreferrer" class="no-row-click inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono text-orange-400/90 hover:text-orange-300 bg-orange-950/30 hover:bg-orange-950/60 border border-orange-900/50 rounded-md transition-colors shrink-0" title="Test File Download">📥 Test File</a>`
+                        : "";
+
+                const statusBadge = item.isActive
+                    ? `<button type="button" data-status-id="${item.id}" class="quick-status-btn no-row-click px-2.5 py-1 text-[10px] font-mono bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-900/80 rounded-full transition-colors cursor-pointer" title="Click to disable">Active</button>`
+                    : `<button type="button" data-status-id="${item.id}" class="quick-status-btn no-row-click px-2.5 py-1 text-[10px] font-mono bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 rounded-full transition-colors cursor-pointer" title="Click to activate">Inactive</button>`;
+
+                let stockBadge = `<span class="text-zinc-500 font-mono text-xs">∞ Digital</span>`;
+                if (!item.isDigital) {
+                    const qty = item.stockQuantity ?? 0;
+                    if (qty > 10) {
+                        stockBadge = `<span class="px-2 py-0.5 text-[10px] font-mono bg-emerald-950/40 text-emerald-400 border border-emerald-900/60 rounded whitespace-nowrap">${qty} in stock</span>`;
+                    } else if (qty > 0) {
+                        stockBadge = `<span class="px-2 py-0.5 text-[10px] font-mono bg-amber-950/40 text-amber-400 border border-amber-900/60 rounded whitespace-nowrap">${qty} low stock</span>`;
+                    } else {
+                        stockBadge = `<span class="px-2 py-0.5 text-[10px] font-mono bg-red-950/40 text-red-400 border border-red-900/60 rounded whitespace-nowrap">Out of stock</span>`;
+                    }
+                }
+
+                const dateObj = item.createdAt
+                    ? new Date(item.createdAt)
+                    : null;
+                const createdDate = dateObj
+                    ? dateObj.toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                      })
+                    : "N/A";
+                const createdTime = dateObj
+                    ? dateObj.toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                      })
+                    : "";
+
+                const fallbackSvg = item.isDigital
+                    ? DIGITAL_ICON_SVG
+                    : PHYSICAL_ICON_SVG;
+                const imagesCount = item.media
+                    ? item.media.length
+                    : item.thumbnailUrl
+                      ? 1
+                      : 0;
+                const hasValidThumb =
+                    item.thumbnailUrl && item.thumbnailUrl.trim() !== "";
+
+                const thumb = `
+                <div class="w-10 h-10 rounded-lg border border-zinc-800/80 overflow-hidden bg-zinc-950 flex items-center justify-center shrink-0 group-hover/media:border-orange-500/80 transition-colors">
+                    ${
+                        hasValidThumb
+                            ? `
+                        <img src="${item.thumbnailUrl}" alt="${item.name}" class="w-full h-full object-cover group-hover/media:scale-110 transition-transform duration-300" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');" />
+                        <div class="hidden w-full h-full flex items-center justify-center bg-zinc-950">${fallbackSvg}</div>
+                    `
+                            : `
+                        <div class="w-full h-full flex items-center justify-center bg-zinc-950">${fallbackSvg}</div>
+                    `
+                    }
+                </div>`;
+
+                const photoBadgeBelow =
+                    imagesCount > 1
+                        ? `<span class="text-[10px] font-mono text-zinc-400 leading-none mt-1 select-none" title="${imagesCount} images in gallery">${imagesCount} photos</span>`
+                        : "";
+
+                return `
+                <tr data-product-id="${item.id}" class="product-row hover:bg-zinc-800/40 transition-colors cursor-pointer group">
+                  <td class="media-cell py-3 px-3 align-middle text-center w-16 cursor-pointer no-row-click group/media" data-product-id="${item.id}" title="Click to open gallery viewer">
+                    <div class="flex flex-col items-center justify-center">
+                        ${thumb}
+                        ${photoBadgeBelow}
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 align-middle min-w-0">
+                    <div class="space-y-0.5 min-w-0">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-[10px] font-mono bg-zinc-950 border border-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded shrink-0">#${item.id}</span>
+                            <span class="font-bold text-white group-hover:text-orange-400 transition-colors truncate min-w-0">${item.name}</span>
+                        </div>
+                        <div class="text-[11px] text-zinc-400 font-mono truncate min-w-0">${item.shortDescription || item.description || ""}</div>
+                        <div class="pt-0.5 flex flex-wrap items-center gap-1.5 min-w-0">${typeBadge} ${sizeBadge} ${testLinkBtn}</div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 font-mono font-bold text-orange-400 text-sm whitespace-nowrap align-middle w-24">${priceFormatted}</td>
+                  <td class="py-3 px-3 whitespace-nowrap align-middle w-28">${stockBadge}</td>
+                  <td class="py-3 px-3 text-zinc-400 font-mono text-xs whitespace-nowrap align-middle w-32">
+                    <div class="space-y-0.5 font-mono text-[11px]">
+                        <div class="text-zinc-400">${createdDate}</div>
+                        ${createdTime ? `<div class="text-[10px] text-zinc-500">${createdTime}</div>` : ""}
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 whitespace-nowrap align-middle text-center w-24">${statusBadge}</td>
+                  <td class="py-3 px-3 text-right whitespace-nowrap align-middle w-20">
+                    <div class="flex flex-col items-end gap-1.5">
+                        <button data-action="edit" data-id="${item.id}" class="prod-action-btn no-row-click px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded transition-colors cursor-pointer w-16 text-center">Edit</button>
+                        ${isAdmin ? `<button data-action="delete" data-id="${item.id}" class="prod-action-btn no-row-click px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer w-16 text-center">Delete</button>` : ""}
+                    </div>
+                  </td>
+                </tr>`;
+            })
+            .join("");
+
+        tableBody.querySelectorAll(".filter-type-badge").forEach((badge) => {
+            badge.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const targetType = (e.currentTarget as HTMLElement).dataset
+                    .filterType;
+                if (filterType && targetType) {
+                    filterType.value = targetType;
+                    checkActiveFilters();
+                    currentPage = 1;
+                    fetchProducts();
+                }
+            });
+        });
+
+        tableBody.querySelectorAll(".media-cell").forEach((cell) => {
+            cell.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const el = e.currentTarget as HTMLElement;
+                const prodId = el.dataset.productId;
+                const product = fetchedProductsList.find(
+                    (p) => String(p.id) === String(prodId),
+                );
+                if (!product) return;
+
+                let galleryToView: GalleryImage[] = [];
+                if (product.media && product.media.length > 0) {
+                    galleryToView = product.media;
+                } else if (product.thumbnailUrl) {
+                    galleryToView = [
+                        {
+                            mediaUrl: product.thumbnailUrl,
+                            storageKey: "",
+                            isMain: true,
+                            displayOrder: 1,
+                        },
+                    ];
+                }
+
+                if (galleryToView.length > 0) {
+                    openLightbox(galleryToView, product.name);
+                }
+            });
+        });
+
+        tableBody.querySelectorAll(".product-row").forEach((row) => {
+            row.addEventListener("click", (e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest(".no-row-click")) return;
+
+                const id = (row as HTMLElement).dataset.productId;
+                const product = fetchedProductsList.find(
+                    (p) => String(p.id) === String(id),
+                );
+                if (product) openEditModal(product);
+            });
+        });
+
+        tableBody.querySelectorAll(".quick-status-btn").forEach((btn) => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const targetBtn = e.currentTarget as HTMLButtonElement;
+                const id = targetBtn.dataset.statusId;
+                const product = fetchedProductsList.find(
+                    (p) => String(p.id) === String(id),
+                );
+                if (!product) return;
+
+                targetBtn.disabled = true;
+                targetBtn.innerText = "...";
+
+                const updatedPayload = {
+                    ...product,
+                    isActive: !product.isActive,
+                };
+
+                try {
+                    const headers: Record<string, string> = {
+                        "Content-Type": "application/json",
+                    };
+                    if (API_KEY) headers["X-Api-Key"] = API_KEY;
+
+                    const res = await fetch(
+                        `${API_URL}/api/product/${id}`,
+                        {
+                            method: "PUT",
+                            headers,
+                            body: JSON.stringify(updatedPayload),
+                        },
+                    );
+
+                    if (!res.ok) throw new Error("Failed to change status.");
+                    await fetchProducts();
+                } catch (err: any) {
+                    alert(err.message || "Error changing status.");
+                }
+            });
+        });
+
+        tableBody.querySelectorAll(".prod-action-btn").forEach((btn) => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const el = e.currentTarget as HTMLElement;
+                const action = el.dataset.action;
+                const id = el.dataset.id;
+                if (!id || !action) return;
+
+                const product = fetchedProductsList.find(
+                    (p) => String(p.id) === String(id),
+                );
+                if (!product) return;
+
+                if (action === "edit") {
+                    openEditModal(product);
+                } else if (action === "delete") {
+                    if (
+                        !confirm(
+                            `Are you sure you want to permanently delete "${product.name}"?`,
+                        )
+                    )
+                        return;
+                    try {
+                        const headers: Record<string, string> = {};
+                        if (API_KEY) headers["X-Api-Key"] = API_KEY;
+
+                        const res = await fetch(
+                            `${API_URL}/api/product/${id}`,
+                            {
+                                method: "DELETE",
+                                headers,
+                            },
+                        );
+                        if (!res.ok)
+                            throw new Error("Failed to delete product.");
+                        await fetchProducts();
+                    } catch (err: any) {
+                        alert(err.message || "Error deleting product.");
+                    }
+                }
+            });
+        });
+    }
+
+    fetchProducts();
+</script>

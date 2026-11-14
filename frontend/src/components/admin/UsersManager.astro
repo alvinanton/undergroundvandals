@@ -1,0 +1,476 @@
+---
+interface Props {
+    isAdmin?: boolean;
+}
+
+const { isAdmin = false } = Astro.props;
+---
+
+<div class="space-y-6" id="users-manager-root" data-is-admin={isAdmin ? "true" : "false"}>
+    {/* Section: Users Management List */}
+    <div
+        class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6"
+    >
+        <div
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4"
+        >
+            <div>
+                <h2 class="text-lg font-bold text-white uppercase tracking-wide">
+                    User Accounts & Security
+                </h2>
+                <p class="text-xs text-zinc-400 mt-0.5">
+                    Manage administrative access, system roles, and user profiles
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button
+                    id="open-create-user-modal-btn"
+                    class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black uppercase text-xs rounded-lg shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer font-mono"
+                >
+                    + New User
+                </button>
+                <button
+                    id="refresh-users-btn"
+                    class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                    ↻ Refresh
+                </button>
+            </div>
+        </div>
+
+        {/* Search & Role Filters */}
+        <div
+            class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60"
+        >
+            <div class="sm:col-span-2">
+                <input
+                    type="text"
+                    id="search-user-input"
+                    placeholder="Search by name, username, or email..."
+                    class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 text-xs focus:outline-none focus:border-orange-500 font-mono"
+                />
+            </div>
+            <div>
+                <select
+                    id="filter-user-role"
+                    class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
+                >
+                    <option value="ALL">All System Roles</option>
+                    <option value="Admin">Administrators</option>
+                    <option value="Editor">Editors</option>
+                    <option value="User">Standard Users</option>
+                </select>
+            </div>
+        </div>
+
+        {/* Users Table */}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr
+                        class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400 select-none"
+                    >
+                        <th class="py-3 px-4">User Profile</th>
+                        <th class="py-3 px-4">Email Address</th>
+                        <th class="py-3 px-4">System Role</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody
+                    id="users-table-body"
+                    class="divide-y divide-zinc-800/50 text-xs"
+                >
+                    <tr>
+                        <td
+                            colspan="5"
+                            class="py-8 text-center text-zinc-500 font-mono"
+                            >Loading user accounts...</td
+                        >
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {/* Unified User Modal (Create & Edit) */}
+    <div
+        id="user-modal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4"
+    >
+        <div
+            class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
+        >
+            <div class="flex justify-between items-center border-b border-zinc-800/80 pb-4">
+                <div>
+                    <h3 id="user-modal-title" class="text-base font-bold text-white uppercase tracking-wide">
+                        Create New Account
+                    </h3>
+                    <p id="user-modal-subtitle" class="text-xs text-zinc-400">
+                        Grant dashboard or system access to a team member
+                    </p>
+                </div>
+                <button
+                    id="user-modal-close"
+                    class="text-zinc-400 hover:text-orange-500 font-mono text-sm cursor-pointer transition-colors"
+                >✕</button>
+            </div>
+
+            <form id="user-form" class="space-y-4">
+                <input type="hidden" id="user-id" value="" />
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-username" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                            Username *
+                        </label>
+                        <input
+                            type="text"
+                            id="user-username"
+                            required
+                            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                            placeholder="vandal_admin"
+                        />
+                    </div>
+
+                    <div>
+                        <label for="user-name" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                            Full Name
+                        </label>
+                        <input
+                            type="text"
+                            id="user-name"
+                            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                            placeholder="Alex Smith"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label for="user-email" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                        Email Address *
+                    </label>
+                    <input
+                        type="email"
+                        id="user-email"
+                        required
+                        class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                        placeholder="admin@undergroundvandals.com"
+                    />
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-role" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                            System Role *
+                        </label>
+                        <select
+                            id="user-role"
+                            required
+                            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
+                        >
+                            <option value="Editor">Editor</option>
+                            <option value="Admin">Admin</option>
+                            <option value="User">User</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="user-password" id="user-password-label" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
+                            Password *
+                        </label>
+                        <input
+                            type="password"
+                            id="user-password"
+                            class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500"
+                            placeholder="••••••••"
+                        />
+                    </div>
+                </div>
+
+                <div id="user-status-msg" class="hidden text-xs font-mono text-center rounded-lg p-2.5"></div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button
+                        type="button"
+                        id="user-modal-cancel"
+                        class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer"
+                    >Cancel</button>
+                    <button
+                        type="submit"
+                        id="user-submit-btn"
+                        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer"
+                    >Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+    let allUsers: any[] = [];
+
+    const rootEl = document.getElementById("users-manager-root");
+    const isAdmin = rootEl?.dataset.isAdmin === "true";
+
+    const userModal = document.getElementById("user-modal");
+    const modalTitle = document.getElementById("user-modal-title");
+    const modalSubtitle = document.getElementById("user-modal-subtitle");
+    const passwordLabel = document.getElementById("user-password-label");
+    const passwordInput = document.getElementById("user-password") as HTMLInputElement;
+    const submitBtn = document.getElementById("user-submit-btn") as HTMLButtonElement;
+
+    const openCreateBtn = document.getElementById("open-create-user-modal-btn");
+    const closeBtn = document.getElementById("user-modal-close");
+    const cancelBtn = document.getElementById("user-modal-cancel");
+
+    const userForm = document.getElementById("user-form") as HTMLFormElement;
+    const userIdInput = document.getElementById("user-id") as HTMLInputElement;
+    const statusMsg = document.getElementById("user-status-msg");
+
+    function getToken(): string | undefined {
+        return document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("uv_auth_token="))
+            ?.split("=")[1];
+    }
+
+    function openCreateModal() {
+        userForm.reset();
+        userIdInput.value = "";
+        
+        if (modalTitle) modalTitle.innerText = "Create New Account";
+        if (modalSubtitle) modalSubtitle.innerText = "Grant dashboard or system access to a team member";
+        if (passwordLabel) passwordLabel.innerText = "Password *";
+        if (passwordInput) {
+            passwordInput.required = true;
+            passwordInput.placeholder = "••••••••";
+        }
+        if (submitBtn) submitBtn.innerText = "Create User";
+
+        if (statusMsg) statusMsg.className = "hidden text-xs font-mono text-center rounded-lg p-2.5";
+        userModal?.classList.remove("hidden");
+    }
+
+    function openEditModal(user: any) {
+        userForm.reset();
+        userIdInput.value = user.id;
+
+        (document.getElementById("user-username") as HTMLInputElement).value = user.username || "";
+        (document.getElementById("user-name") as HTMLInputElement).value = user.name || "";
+        (document.getElementById("user-email") as HTMLInputElement).value = user.email || "";
+        (document.getElementById("user-role") as HTMLSelectElement).value = user.role || "User";
+
+        if (modalTitle) modalTitle.innerText = "Edit User Account";
+        if (modalSubtitle) modalSubtitle.innerText = `Update settings for ${user.username || user.email}`;
+        if (passwordLabel) passwordLabel.innerText = "New Password (Optional)";
+        if (passwordInput) {
+            passwordInput.required = false;
+            passwordInput.placeholder = "Leave blank to keep unchanged";
+        }
+        if (submitBtn) submitBtn.innerText = "Save Changes";
+
+        if (statusMsg) statusMsg.className = "hidden text-xs font-mono text-center rounded-lg p-2.5";
+        userModal?.classList.remove("hidden");
+    }
+
+    function closeModal() {
+        userModal?.classList.add("hidden");
+    }
+
+    openCreateBtn?.addEventListener("click", openCreateModal);
+    closeBtn?.addEventListener("click", closeModal);
+    cancelBtn?.addEventListener("click", closeModal);
+    userModal?.addEventListener("click", (e) => {
+        if (e.target === userModal) closeModal();
+    });
+
+    // Refresh
+    const refreshBtn = document.getElementById("refresh-users-btn") as HTMLButtonElement;
+    refreshBtn?.addEventListener("click", async () => {
+        refreshBtn.disabled = true;
+        refreshBtn.innerText = "↻ Refreshing...";
+        await fetchUsers();
+        refreshBtn.innerText = "↻ Refresh";
+        refreshBtn.disabled = false;
+    });
+
+    // Filters
+    document.getElementById("search-user-input")?.addEventListener("input", renderUsersTable);
+    document.getElementById("filter-user-role")?.addEventListener("change", renderUsersTable);
+
+    // Form Submit (Create / Edit)
+    userForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (submitBtn) submitBtn.disabled = true;
+
+        const token = getToken();
+        if (!token) return;
+
+        const userId = userIdInput.value;
+        const isEditMode = Boolean(userId);
+        const passVal = passwordInput.value;
+
+        const payload: any = {
+            username: (document.getElementById("user-username") as HTMLInputElement).value,
+            name: (document.getElementById("user-name") as HTMLInputElement).value || "",
+            email: (document.getElementById("user-email") as HTMLInputElement).value,
+            role: (document.getElementById("user-role") as HTMLSelectElement).value,
+        };
+
+        if (passVal) payload.password = passVal;
+
+        const targetUrl = isEditMode ? `${API_URL}/api/users/${userId}` : `${API_URL}/api/users`;
+        const targetMethod = isEditMode ? "PUT" : "POST";
+
+        try {
+            const res = await fetch(targetUrl, {
+                method: targetMethod,
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || `Failed to ${isEditMode ? "update" : "create"} user.`);
+            }
+
+            closeModal();
+            await fetchUsers();
+        } catch (err: any) {
+            if (statusMsg) {
+                statusMsg.innerText = err.message || "An error occurred.";
+                statusMsg.className = "text-xs font-mono text-center rounded-lg p-2.5 bg-red-950/80 text-red-400 border border-red-800 block";
+            }
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    });
+
+    // Fetch Users
+    async function fetchUsers() {
+        const tableBody = document.getElementById("users-table-body");
+        if (!tableBody) return;
+
+        const token = getToken();
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_URL}/api/users`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) throw new Error("Failed to load user accounts.");
+
+            allUsers = await response.json();
+            renderUsersTable();
+        } catch (err: any) {
+            tableBody.innerHTML = `
+            <tr>
+              <td colspan="5" class="py-8 text-center text-red-400 font-mono">Error loading user accounts. Verify endpoint permissions.</td>
+            </tr>`;
+        }
+    }
+
+    function renderUsersTable() {
+        const tableBody = document.getElementById("users-table-body");
+        if (!tableBody) return;
+
+        const searchQuery = (document.getElementById("search-user-input") as HTMLInputElement)?.value.toLowerCase().trim() || "";
+        const filterRole = (document.getElementById("filter-user-role") as HTMLSelectElement)?.value || "ALL";
+
+        let filtered = allUsers.filter((user) => {
+            if (filterRole !== "ALL" && user.role !== filterRole) return false;
+
+            if (searchQuery) {
+                const matchName = user.name?.toLowerCase().includes(searchQuery);
+                const matchUsername = user.username?.toLowerCase().includes(searchQuery);
+                const matchEmail = user.email?.toLowerCase().includes(searchQuery);
+                if (!matchName && !matchUsername && !matchEmail) return false;
+            }
+
+            return true;
+        });
+
+        if (!filtered || filtered.length === 0) {
+            tableBody.innerHTML = `
+            <tr>
+              <td colspan="5" class="py-8 text-center text-zinc-500 font-mono">No matching users found.</td>
+            </tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = filtered
+            .map((u: any) => {
+                const initial = (u.username || u.name || u.email || "U").charAt(0).toUpperCase();
+                const roleBadge = u.role === "Admin"
+                    ? `<span class="px-2 py-0.5 text-[10px] font-mono bg-orange-950/60 text-orange-400 border border-orange-900/80 rounded-full font-bold">Admin</span>`
+                    : u.role === "Editor"
+                    ? `<span class="px-2 py-0.5 text-[10px] font-mono bg-blue-950/60 text-blue-400 border border-blue-900/80 rounded-full">Editor</span>`
+                    : `<span class="px-2 py-0.5 text-[10px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-full">User</span>`;
+
+                return `
+                <tr class="hover:bg-zinc-800/30 transition-colors">
+                  <td class="py-3 px-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-orange-400 font-mono font-bold text-xs">
+                            ${initial}
+                        </div>
+                        <div>
+                            <div class="font-bold text-white">${u.username || u.name || 'N/A'}</div>
+                            <div class="text-[11px] text-zinc-400 font-mono">${u.name || ''}</div>
+                        </div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-zinc-300 text-xs">${u.email}</td>
+                  <td class="py-3 px-4">${roleBadge}</td>
+                  <td class="py-3 px-4">
+                    <span class="px-2 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-900/80 rounded-full">Active</span>
+                  </td>
+                  <td class="py-3 px-4 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        <button data-action="edit" data-id="${u.id}" class="user-action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded transition-colors cursor-pointer">Edit</button>
+                        ${isAdmin ? `<button data-action="delete" data-id="${u.id}" class="user-action-btn px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer">Delete</button>` : ""}
+                    </div>
+                  </td>
+                </tr>`;
+            })
+            .join("");
+
+        tableBody.querySelectorAll(".user-action-btn").forEach((btn) => {
+            btn.addEventListener("click", async (e) => {
+                const el = e.currentTarget as HTMLElement;
+                const action = el.dataset.action;
+                const id = el.dataset.id;
+                if (!id || !action) return;
+
+                const user = allUsers.find((u) => String(u.id) === String(id));
+                if (!user) return;
+
+                if (action === "edit") {
+                    openEditModal(user);
+                } else if (action === "delete") {
+                    if (!confirm(`Permanently remove access for "${user.username || user.email}"?`)) return;
+                    const token = getToken();
+                    if (!token) return;
+
+                    try {
+                        const res = await fetch(`${API_URL}/api/users/${id}`, {
+                            method: "DELETE",
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        if (!res.ok) throw new Error("Failed to delete user.");
+                        await fetchUsers();
+                    } catch (err: any) {
+                        alert(err.message || "Error deleting user.");
+                    }
+                }
+            });
+        });
+    }
+
+    fetchUsers();
+</script>

@@ -1,0 +1,213 @@
+---
+// src/pages/shop/order.astro
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="My Order | Underground Vandals">
+  <div class="space-y-8 max-w-2xl mx-auto">
+    <div class="border-b border-zinc-800/80 pb-6">
+      <span class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-2">
+        Order
+      </span>
+      <h1 class="text-3xl font-black uppercase tracking-tight text-white">
+        Your <span class="text-orange-500">Order</span>
+      </h1>
+    </div>
+
+    {/* Auto-filled after a successful checkout (via sessionStorage), hidden otherwise. */}
+    <div id="order-result"></div>
+
+    {/* Always available: look up any order by number + email. */}
+    <div id="lookup-section" class="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-5 sm:p-6">
+      <h2 class="text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1" id="lookup-title">
+        Track an Order
+      </h2>
+      <p class="text-xs text-zinc-500 mb-4">
+        Enter your order number and the email address used for purchase.
+      </p>
+      <form id="lookup-form" class="space-y-3">
+        <input
+          type="text" id="lookup-order-number" placeholder="UV-20261025-XXXXXXXX" required
+          class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 font-mono text-xs focus:outline-none focus:border-orange-500 uppercase"
+        />
+        <input
+          type="email" id="lookup-email" placeholder="email@example.com" required
+          class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-orange-500"
+        />
+        <button
+          type="submit"
+          class="w-full py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+        >
+          Find order
+        </button>
+        <p id="lookup-error" class="hidden text-xs font-mono text-center text-red-400"></p>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { getOrder } from '../../services/ecommerce/orderService';
+  import type { OrderView, OrderStatus } from '../../types/ecommerce';
+
+  const resultEl = document.getElementById('order-result');
+  const lookupTitle = document.getElementById('lookup-title');
+  const lookupError = document.getElementById('lookup-error');
+
+  const STATUS_LABELS: Record<OrderStatus, string> = {
+    AwaitingShippingQuote: 'Awaiting shipping quote',
+    PendingPayment: 'Pending payment',
+    Paid: 'Payment confirmed',
+    Processing: 'In preparation',
+    Shipped: 'Shipped',
+    Completed: 'Completed',
+    Cancelled: 'Cancelled',
+    Expired: 'Expired',
+    Refunded: 'Refunded',
+  };
+
+  const STATUS_COLORS: Record<OrderStatus, string> = {
+    AwaitingShippingQuote: 'bg-amber-950/60 text-amber-400 border-amber-900/80',
+    PendingPayment: 'bg-amber-950/60 text-amber-400 border-amber-900/80',
+    Paid: 'bg-emerald-950/60 text-emerald-400 border-emerald-900/80',
+    Processing: 'bg-blue-950/60 text-blue-400 border-blue-900/80',
+    Shipped: 'bg-blue-950/60 text-blue-400 border-blue-900/80',
+    Completed: 'bg-emerald-950/60 text-emerald-400 border-emerald-900/80',
+    Cancelled: 'bg-zinc-800 text-zinc-400 border-zinc-700',
+    Expired: 'bg-red-950/60 text-red-400 border-red-900/80',
+    Refunded: 'bg-zinc-800 text-zinc-400 border-zinc-700',
+  };
+
+  const BANK_INFO =
+    import.meta.env.PUBLIC_BANK_TRANSFER_INFO ||
+    'Contact us to receive bank account details.';
+
+  function escapeHtml(str: string): string {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderOrder(order: OrderView) {
+    if (!resultEl) return;
+
+    const itemsHtml = order.items
+      .map(
+        (i) => `
+        <div class="flex justify-between text-xs py-1.5">
+          <span class="text-zinc-400">${escapeHtml(i.productName)} <span class="text-zinc-600">× ${i.quantity}</span></span>
+          <span class="text-zinc-300 font-mono">Q${i.subtotal.toFixed(2)}</span>
+        </div>
+      `,
+      )
+      .join('');
+
+    const shippingLine =
+      order.status === 'AwaitingShippingQuote'
+        ? `<div class="flex justify-between text-xs mt-1">
+            <span class="text-zinc-500 font-mono">Shipping</span>
+            <span class="text-zinc-500 font-mono">To be confirmed</span>
+          </div>`
+        : order.shippingCost > 0
+          ? `<div class="flex justify-between text-xs mt-1">
+              <span class="text-zinc-500 font-mono">Shipping${order.shippingCarrier ? ` (${escapeHtml(order.shippingCarrier)})` : ''}</span>
+              <span class="text-zinc-300 font-mono">Q${order.shippingCost.toFixed(2)}</span>
+            </div>`
+          : '';
+
+    const showPaymentInstructions = order.status === 'PendingPayment';
+    const showQuoteNote = order.status === 'AwaitingShippingQuote';
+
+    resultEl.innerHTML = `
+      <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-5 sm:p-6 space-y-5">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Order</p>
+            <p class="text-lg font-mono font-bold text-white">${escapeHtml(order.orderNumber)}</p>
+          </div>
+          <span class="px-3 py-1.5 text-xs font-mono rounded-full border ${STATUS_COLORS[order.status]}">
+            ${STATUS_LABELS[order.status]}
+          </span>
+        </div>
+
+        <div class="divide-y divide-zinc-800/50">${itemsHtml}</div>
+
+        <div class="pt-3 border-t border-zinc-800/80 space-y-1">
+          <div class="flex justify-between text-sm">
+            <span class="text-zinc-400 font-mono">Subtotal</span>
+            <span class="text-white font-mono">Q${order.subtotal.toFixed(2)}</span>
+          </div>
+          ${shippingLine}
+          <div class="flex justify-between text-base pt-1">
+            <span class="text-zinc-300 font-mono font-bold">Total</span>
+            <span class="text-orange-500 font-mono font-black">Q${order.totalAmount.toFixed(2)} ${escapeHtml(order.currency)}</span>
+          </div>
+        </div>
+
+        ${
+          showPaymentInstructions
+            ? `<div class="bg-zinc-950/60 border border-orange-500/20 rounded-lg p-4 space-y-2">
+                <p class="text-xs font-mono uppercase tracking-wider text-orange-400">Bank transfer details</p>
+                <p class="text-xs text-zinc-300 whitespace-pre-line">${escapeHtml(BANK_INFO)}</p>
+                <p class="text-[11px] text-zinc-500 font-mono">Include your order number (${escapeHtml(order.orderNumber)}) as payment reference.</p>
+                ${order.expiresAt ? `<p class="text-[11px] text-amber-500 font-mono">Expires: ${new Date(order.expiresAt).toLocaleString('en-US')}</p>` : ''}
+              </div>`
+            : ''
+        }
+
+        ${
+          showQuoteNote
+            ? `<div class="bg-zinc-950/60 border border-zinc-800 rounded-lg p-4">
+                <p class="text-xs text-zinc-400">We will contact you soon to confirm shipping costs. Once confirmed, payment details will appear here.</p>
+              </div>`
+            : ''
+        }
+      </div>
+    `;
+
+    if (lookupTitle) lookupTitle.textContent = 'Track another order';
+  }
+
+  async function tryAutoLoad(): Promise<boolean> {
+    const raw = sessionStorage.getItem('uv_last_order');
+    if (!raw) return false;
+
+    try {
+      const { orderNumber, email } = JSON.parse(raw);
+      if (!orderNumber || !email) return false;
+
+      const result = await getOrder(orderNumber, email);
+      if (!result.success) return false;
+
+      renderOrder(result.data);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const lookupForm = document.getElementById('lookup-form') as HTMLFormElement | null;
+
+  lookupForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    lookupError?.classList.add('hidden');
+
+    const orderNumber = (document.getElementById('lookup-order-number') as HTMLInputElement).value.trim();
+    const email = (document.getElementById('lookup-email') as HTMLInputElement).value.trim();
+
+    const result = await getOrder(orderNumber, email);
+
+    if (!result.success) {
+      if (lookupError) {
+        lookupError.textContent = 'No order found with those details.';
+        lookupError.classList.remove('hidden');
+      }
+      return;
+    }
+
+    renderOrder(result.data);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  tryAutoLoad();
+</script>

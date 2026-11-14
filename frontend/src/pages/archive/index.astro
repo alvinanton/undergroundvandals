@@ -1,0 +1,522 @@
+---
+// src/pages/archive/index.astro
+import Layout from '../../layouts/Layout.astro';
+import MediaCard from '../../components/MediaCard.astro';
+import type { MediaItem } from '../../types/media';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+
+let mediaItems: MediaItem[] = [];
+
+try {
+  const response = await fetch(`${API_URL}/api/media`);
+  if (response.ok) {
+    mediaItems = await response.json();
+  }
+} catch (error) {
+  console.error("Error fetching media items for archive:", error);
+}
+---
+
+<Layout title="Graffiti Archive | Underground Vandals">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-10">
+    
+    {/* Header with Filter Indicator */}
+    <header class="flex items-center justify-between border-b border-zinc-800/80 py-2 mb-5">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+        <h1 class="text-xs font-mono font-semibold uppercase tracking-widest text-zinc-400">
+          Graffiti Archive
+        </h1>
+
+        {/* Active Filter Indicator */}
+        <div id="active-filter-badge" class="hidden items-center gap-1.5 ml-2 pl-2 border-l border-zinc-800">
+          <span class="text-[11px] font-mono text-zinc-500">Filtering:</span>
+          <span id="active-tag-name" class="text-[11px] font-mono text-orange-400 bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 rounded"></span>
+          <button 
+            id="clear-filter-btn" 
+            type="button" 
+            class="text-[10px] font-mono text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+            title="Clear filter"
+          >
+            ✕ Clear
+          </button>
+        </div>
+      </div>
+
+      <span id="item-count-badge" class="text-xs font-mono text-zinc-600 uppercase tracking-wider">
+        [{mediaItems.length} items]
+      </span>
+    </header>
+
+    {/* Media Cards Grid */}
+    {mediaItems.length > 0 ? (
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {mediaItems.map((item) => (
+          <MediaCard item={item} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-20 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl max-w-2xl mx-auto">
+        <p class="text-zinc-500 font-mono text-sm">[ NO DATA RECORDED IN ARCHIVE ]</p>
+      </div>
+    )}
+
+  </main>
+
+  {/* GLOBAL LIGHTBOX MODAL WITH CAROUSEL */}
+  <div 
+    id="media-modal" 
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/100 sm:bg-black/95 backdrop-blur-md p-0 sm:p-6"
+  >
+    <button 
+      id="modal-close" 
+      class="absolute top-4 right-4 z-[60] p-2 text-white bg-black/60 backdrop-blur-md sm:bg-zinc-900/80 rounded-full border border-white/10 sm:border-zinc-800 transition-all duration-300 cursor-pointer"
+      aria-label="Close modal"
+    >
+      <svg class="w-6 h-6 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+
+    <div class="relative max-w-5xl w-full h-[100dvh] sm:h-[88vh] flex flex-col justify-between overflow-hidden sm:rounded-2xl bg-black sm:bg-zinc-950 sm:border sm:border-zinc-800 shadow-2xl">
+      <div id="modal-media-container" class="relative flex-1 w-full min-h-0 flex items-center justify-center bg-black overflow-hidden select-none">
+        <button 
+          id="modal-fullscreen" 
+          class="hidden sm:flex absolute bottom-4 right-4 z-40 p-2.5 rounded-lg bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer items-center justify-center"
+          aria-label="Toggle Fullscreen"
+          title="Fullscreen (or double click)"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4"/>
+          </svg>
+        </button>
+
+        <button 
+          id="modal-prev" 
+          class="hidden absolute left-3 z-40 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+          aria-label="Previous asset"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+
+        <button 
+          id="modal-next" 
+          class="hidden absolute right-3 z-40 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-zinc-700/50 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+          aria-label="Next asset"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+
+        <div id="modal-asset-wrapper" class="w-full h-full flex items-center justify-center p-0 sm:p-2 transition-opacity duration-200 ease-in-out opacity-100"></div>
+      </div>
+
+      <div id="modal-info" class="shrink-0 w-full p-4 bg-zinc-900/95 border-t border-zinc-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 max-h-[30vh] overflow-y-auto pb-8 sm:pb-4">
+        <div>
+          <p id="modal-description" class="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed"></p>
+          <div id="modal-hashtags" class="flex flex-wrap gap-1.5 mt-2"></div>
+        </div>
+        
+        <div class="flex items-center gap-3 shrink-0 self-end sm:self-center mt-2 sm:mt-0">
+          <span id="modal-counter" class="hidden text-xs font-mono text-zinc-500"></span>
+          <span id="modal-category" class="text-xs font-mono px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full border border-zinc-700/50"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const modal = document.getElementById('media-modal');
+  const closeBtn = document.getElementById('modal-close');
+  const fullscreenBtn = document.getElementById('modal-fullscreen');
+  const mediaContainer = document.getElementById('modal-media-container');
+  const assetWrapper = document.getElementById('modal-asset-wrapper');
+  const prevBtn = document.getElementById('modal-prev');
+  const nextBtn = document.getElementById('modal-next');
+  const counterBadge = document.getElementById('modal-counter');
+
+  const modalDesc = document.getElementById('modal-description');
+  const modalCategory = document.getElementById('modal-category');
+  const modalHashtags = document.getElementById('modal-hashtags');
+
+  const activeFilterBadge = document.getElementById('active-filter-badge');
+  const activeTagName = document.getElementById('active-tag-name');
+  const clearFilterBtn = document.getElementById('clear-filter-btn');
+  const itemCountBadge = document.getElementById('item-count-badge');
+
+  interface Asset {
+    id?: string;
+    url: string;
+    publicId?: string;
+    type: number | string;
+  }
+
+  let currentAssets: Asset[] = [];
+  let currentAssetIndex = 0;
+  let isMobileImmersive = false;
+
+  function applyTagFilter(tag: string | null) {
+    const cards = document.querySelectorAll('.media-card-item');
+    let visibleCount = 0;
+
+    cards.forEach((card) => {
+      const cardTags: string[] = JSON.parse((card as HTMLElement).dataset.hashtags || '[]');
+      if (!tag || cardTags.includes(tag)) {
+        card.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+
+    if (tag) {
+      if (activeFilterBadge) {
+        activeFilterBadge.classList.remove('hidden');
+        activeFilterBadge.classList.add('flex');
+      }
+      if (activeTagName) activeTagName.textContent = `#${tag}`;
+    } else {
+      if (activeFilterBadge) {
+        activeFilterBadge.classList.add('hidden');
+        activeFilterBadge.classList.remove('flex');
+      }
+    }
+
+    if (itemCountBadge) {
+      itemCountBadge.textContent = `[${visibleCount} items]`;
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const target = (e.target as HTMLElement).closest('.hashtag-btn');
+    if (target) {
+      e.stopPropagation();
+      const tag = target.getAttribute('data-tag');
+      if (tag) {
+        closeModal();
+        applyTagFilter(tag);
+      }
+    }
+  });
+
+  clearFilterBtn?.addEventListener('click', () => applyTagFilter(null));
+
+  async function renderCurrentAsset(skipAnimation = false) {
+    if (!assetWrapper || currentAssets.length === 0) return;
+
+    if (!skipAnimation) {
+      assetWrapper.style.opacity = '0';
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    assetWrapper.innerHTML = '';
+    const asset = currentAssets[currentAssetIndex];
+
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.m4v'];
+    const urlLower = asset.url ? asset.url.toLowerCase() : '';
+    const isVideo = 
+      asset.type === 1 || 
+      asset.type === '1' || 
+      (typeof asset.type === 'string' && asset.type.toLowerCase() === 'video') ||
+      videoExtensions.some(ext => urlLower.endsWith(ext));
+
+    if (isVideo) {
+      const video = document.createElement('video');
+      video.src = asset.url;
+      video.controls = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.className = 'max-h-full max-w-full w-auto h-auto object-contain';
+      assetWrapper.appendChild(video);
+      
+      if (fullscreenBtn) fullscreenBtn.style.display = 'none';
+    } else {
+      const img = document.createElement('img');
+      img.src = asset.url;
+      img.className = 'max-h-full max-w-full w-auto h-auto object-contain pointer-events-none select-none';
+      assetWrapper.appendChild(img);
+      
+      if (fullscreenBtn) fullscreenBtn.style.display = '';
+    }
+
+    setTimeout(() => {
+      assetWrapper.style.opacity = '1';
+    }, 50);
+
+    if (currentAssets.length > 1 && !isMobileImmersive) {
+      prevBtn?.classList.remove('hidden');
+      nextBtn?.classList.remove('hidden');
+      if (counterBadge) {
+        counterBadge.textContent = `${currentAssetIndex + 1} / ${currentAssets.length}`;
+        counterBadge.classList.remove('hidden');
+      }
+    } else {
+      prevBtn?.classList.add('hidden');
+      nextBtn?.classList.add('hidden');
+      counterBadge?.classList.add('hidden');
+    }
+  }
+
+  function nextAsset() {
+    if (currentAssets.length <= 1) return;
+    currentAssetIndex = (currentAssetIndex + 1) % currentAssets.length;
+    renderCurrentAsset();
+  }
+
+  function prevAsset() {
+    if (currentAssets.length <= 1) return;
+    currentAssetIndex = (currentAssetIndex - 1 + currentAssets.length) % currentAssets.length;
+    renderCurrentAsset();
+  }
+
+  function toggleMobileImmersiveMode() {
+    isMobileImmersive = !isMobileImmersive;
+    
+    const modalInfo = document.getElementById('modal-info');
+    const modalClose = document.getElementById('modal-close');
+
+    if (isMobileImmersive) {
+      if (modalInfo) modalInfo.classList.add('hidden');
+      if (modalClose) modalClose.classList.add('hidden');
+      prevBtn?.classList.add('hidden');
+      nextBtn?.classList.add('hidden');
+    } else {
+      if (modalInfo) modalInfo.classList.remove('hidden');
+      if (modalClose) modalClose.classList.remove('hidden');
+      if (currentAssets.length > 1) {
+        prevBtn?.classList.remove('hidden');
+        nextBtn?.classList.remove('hidden');
+      }
+    }
+  }
+
+  function toggleFullscreen() {
+    const mediaArea = document.getElementById('modal-media-container') as any;
+    const mediaEl = assetWrapper?.querySelector('video') as any;
+    const doc = document as any;
+
+    if (!mediaArea) return;
+
+    if (!doc.fullscreenElement) {
+      if (mediaArea.requestFullscreen) {
+        mediaArea.requestFullscreen().catch((err: any) => console.warn(err));
+      } else if (mediaArea.webkitRequestFullscreen) {
+        mediaArea.webkitRequestFullscreen();
+      } else if (mediaEl && mediaEl.webkitEnterFullscreen) {
+        mediaEl.webkitEnterFullscreen();
+      }
+    } else {
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      }
+    }
+  }
+
+  function openModal(data: DOMStringMap) {
+    if (!modal) return;
+
+    try {
+      currentAssets = JSON.parse(data.assets || '[]');
+    } catch {
+      currentAssets = [];
+    }
+    currentAssetIndex = 0;
+    isMobileImmersive = false;
+
+    renderCurrentAsset(true);
+
+    if (modalDesc) modalDesc.textContent = data.description || '';
+
+    if (modalCategory) {
+      if (data.category) {
+        modalCategory.textContent = data.category;
+        modalCategory.classList.remove('hidden');
+      } else {
+        modalCategory.classList.add('hidden');
+      }
+    }
+
+    if (modalHashtags) {
+      modalHashtags.innerHTML = '';
+      try {
+        const tags: string[] = JSON.parse(data.hashtags || '[]');
+        tags.forEach((tag) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'hashtag-btn text-[10px] font-mono text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 px-1.5 py-0.5 rounded transition-all cursor-pointer';
+          btn.setAttribute('data-tag', tag);
+          btn.textContent = `#${tag}`;
+          modalHashtags.appendChild(btn);
+        });
+      } catch (e) {
+        console.error('Error parsing hashtags for modal', e);
+      }
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+
+    const modalInfo = document.getElementById('modal-info');
+    const modalClose = document.getElementById('modal-close');
+    
+    if (modalInfo) modalInfo.classList.remove('hidden');
+    if (modalClose) modalClose.classList.remove('hidden');
+
+    if (!history.state?.modalOpen) {
+      history.pushState({ modalOpen: true }, '');
+    }
+  }
+
+  function closeModal(isPopState = false) {
+    if (!modal || modal.classList.contains('hidden')) return;
+
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    if (assetWrapper) assetWrapper.innerHTML = '';
+    document.body.style.overflow = '';
+    
+    isMobileImmersive = false;
+
+    const modalInfo = document.getElementById('modal-info');
+    const modalClose = document.getElementById('modal-close');
+    
+    if (modalInfo) modalInfo.classList.remove('hidden');
+    if (modalClose) modalClose.classList.remove('hidden');
+
+    if (!isPopState && history.state?.modalOpen) {
+      history.back();
+    }
+  }
+
+  let idleTimer: number | undefined;
+  const IDLE_TIMEOUT = 2500;
+
+  function setIdleState(isIdle: boolean) {
+    const uiElements = [prevBtn, nextBtn, fullscreenBtn];
+    uiElements.forEach(el => {
+      if (el && !el.classList.contains('hidden')) {
+        if (isIdle) {
+          el.classList.add('opacity-0', 'pointer-events-none');
+        } else {
+          el.classList.remove('opacity-0', 'pointer-events-none');
+        }
+      }
+    });
+  }
+
+  function resetIdleTimer() {
+    setIdleState(false);
+    if (idleTimer) window.clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(() => {
+      setIdleState(true);
+    }, IDLE_TIMEOUT);
+  }
+
+  if (mediaContainer) {
+    mediaContainer.addEventListener('mousemove', resetIdleTimer);
+    mediaContainer.addEventListener('mouseleave', () => {
+      if (idleTimer) window.clearTimeout(idleTimer);
+      setIdleState(true);
+    });
+  }
+
+  fullscreenBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFullscreen();
+  });
+
+  prevBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    prevAsset();
+    resetIdleTimer();
+  });
+
+  nextBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    nextAsset();
+    resetIdleTimer();
+  });
+
+  window.addEventListener('popstate', () => closeModal(true));
+
+  document.addEventListener('keydown', (e) => {
+    if (modal && !modal.classList.contains('hidden')) {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === 'ArrowRight') { nextAsset(); resetIdleTimer(); }
+      if (e.key === 'ArrowLeft') { prevAsset(); resetIdleTimer(); }
+      if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+    }
+  });
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+  let lastTapTime = 0;
+
+  if (mediaContainer) {
+    mediaContainer.addEventListener('touchstart', (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = new Date().getTime();
+      }
+      resetIdleTimer();
+    }, { passive: true });
+
+    mediaContainer.addEventListener('touchend', (e: TouchEvent) => {
+      if (e.changedTouches.length === 0) return;
+
+      const diffX = e.changedTouches[0].clientX - touchStartX;
+      const diffY = e.changedTouches[0].clientY - touchStartY;
+      const currentTime = new Date().getTime();
+      const touchDuration = currentTime - touchStartTime;
+      const timeSinceLastTap = currentTime - lastTapTime;
+
+      if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && touchDuration < 250) {
+        if (timeSinceLastTap > 0 && timeSinceLastTap < 300) {
+          const isVideo = assetWrapper?.querySelector('video');
+          if (!isVideo) {
+            toggleMobileImmersiveMode();
+          }
+          lastTapTime = 0;
+          return;
+        }
+        lastTapTime = currentTime;
+      }
+
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (diffX < 0) nextAsset();
+        else prevAsset();
+      }
+      else if (diffY > 100) {
+        closeModal();
+      }
+    });
+
+    mediaContainer.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      toggleFullscreen();
+    });
+  }
+
+  document.querySelectorAll('.media-card-trigger').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      openModal((trigger as HTMLElement).dataset);
+      resetIdleTimer();
+    });
+  });
+
+  closeBtn?.addEventListener('click', () => closeModal());
+  
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+</script>

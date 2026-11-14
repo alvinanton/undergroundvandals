@@ -1,105 +1,193 @@
 ---
+// src/layouts/Layout.astro
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import "../styles/global.css";
 
 interface Props {
-    title?: string;
+  title?: string;
 }
 
 const { title = "Underground Vandals" } = Astro.props;
+const currentPath = Astro.url.pathname;
 ---
 
 <!doctype html>
 <html lang="en" class="bg-zinc-950 text-zinc-100 antialiased">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <title>{title}</title>
-    </head>
-    <body class="min-h-screen bg-zinc-950 flex flex-col font-sans">
-        <header
-            class="w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50"
-        >
-            <div
-                class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between"
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-zinc-950 flex flex-col font-sans">
+    <header
+      class="w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between"
+      >
+        {/* 1. LOGO & BRANDING */}
+        <a href="/" class="group flex items-center gap-2">
+          <span
+            class="text-xl sm:text-2xl font-black tracking-tight text-white uppercase group-hover:text-orange-500 transition-colors"
+          >
+            Underground<span
+              class="text-orange-500 group-hover:text-white transition-colors"
+              >Vandals</span
             >
-                {/* 1. LOGO & BRANDING */}
-                <a href="/" class="group flex items-center gap-2">
-                    <span
-                        class="text-xl sm:text-2xl font-black tracking-tight text-white uppercase group-hover:text-orange-500 transition-colors"
-                    >
-                        Underground<span
-                            class="text-orange-500 group-hover:text-white transition-colors"
-                            >Vandals</span
-                        >
-                    </span>
-                </a>
+          </span>
+        </a>
 
-                {/* 2. SUBTITLE / VERSION BADGE */}
-                <span
-                    class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-zinc-400 hidden sm:inline-block"
-                >
-                    v1.0 • Gallery
-                </span>
-            </div>
-        </header>
+        {/* 2. NAVIGATION LINKS */}
+        <nav class="flex items-center gap-4 sm:gap-6">
+          <a
+            href="/"
+            class={`text-xs font-mono uppercase tracking-wider transition-colors ${
+              currentPath === "/"
+                ? "text-orange-400 font-bold"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Home
+          </a>
+          <a
+            href="/archive"
+            class={`text-xs font-mono uppercase tracking-wider transition-colors ${
+              currentPath.startsWith("/archive")
+                ? "text-orange-400 font-bold"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Archive
+          </a>
+          <a
+            href="/gallery"
+            class={`text-xs font-mono uppercase tracking-wider transition-colors ${
+              currentPath.startsWith("/gallery")
+                ? "text-orange-400 font-bold"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Gallery
+          </a>
+          <a
+            href="/shop"
+            class={`text-xs font-mono uppercase tracking-wider transition-colors ${
+              currentPath.startsWith("/shop")
+                ? "text-orange-400 font-bold"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Shop
+          </a>
+        </nav>
 
-        {/* 3. MAIN CONTENT AREA */}
-        <main
-            class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10"
-        >
-            <slot />
-        </main>
+        {/* 3. CART & VERSION */}
+        <div class="flex items-center gap-3">
+          <a
+            href="/shop/cart"
+            class="relative px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg transition-colors"
+            title="Cart"
+          >
+            <span class="text-base" aria-hidden="true">🛒</span>
+            <span
+              id="cart-count-badge"
+              class="hidden absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-1 flex items-center justify-center rounded-full bg-orange-500 text-zinc-950 text-[10px] font-black font-mono"
+            >
+              0
+            </span>
+          </a>
 
-        {/* 4. FOOTER */}
-        <footer
-            class="border-t border-zinc-900 py-6 mt-auto text-center text-xs text-zinc-500"
-        >
-            <p>
-                &copy; {new Date().getFullYear()} Underground Vandals. All rights
-                reserved.
-            </p>
-        </footer>
+          <span
+            class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-zinc-400 hidden lg:inline-block"
+          >
+            v1.0
+          </span>
+        </div>
+      </div>
+    </header>
 
-        {/* 5. VERCEL ANALYTICS & PERFORMANCE TRACKING */}
-        <Analytics />
-        <SpeedInsights />
-    </body>
+    {/* 4. MAIN CONTENT AREA */}
+    <main
+      class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10"
+    >
+      <slot />
+    </main>
 
-    <script>
-        const API_URL =
-            import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+    {/* 5. FOOTER */}
+    <footer
+      class="border-t border-zinc-900 py-6 mt-auto text-center text-xs text-zinc-500"
+    >
+      <p>
+        &copy; {new Date().getFullYear()} Underground Vandals. All rights
+        reserved.
+      </p>
+    </footer>
 
-        function sendVisitTracking() {
-            const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
-            const deviceType = isMobile ? "Mobile" : "Desktop";
+    {/* VERCEL ANALYTICS */}
+    <Analytics />
+    <SpeedInsights />
+  </body>
 
-            const payload = {
-                path: window.location.pathname,
-                deviceType: deviceType,
-                referrer: document.referrer || null,
-            };
+  <script>
+    const API_URL =
+      import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
 
-            fetch(`${API_URL}/api/visits/track`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-                keepalive: true,
-            }).catch(() => {
-                // Manejo silencioso de errores en producción
-            });
-        }
+    function sendVisitTracking() {
+      const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+      const deviceType = isMobile ? "Mobile" : "Desktop";
 
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", sendVisitTracking);
-        } else {
-            sendVisitTracking();
-        }
+      const payload = {
+        path: window.location.pathname,
+        deviceType: deviceType,
+        referrer: document.referrer || null,
+      };
 
-        document.addEventListener("astro:page-load", sendVisitTracking);
-    </script>
+      fetch(`${API_URL}/api/visits/track`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      }).catch(() => {
+        // Silent error handling in production
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", sendVisitTracking);
+    } else {
+      sendVisitTracking();
+    }
+
+    document.addEventListener("astro:page-load", sendVisitTracking);
+  </script>
+
+  <script>
+    import { getCartCount, CART_UPDATED_EVENT } from "../lib/cart";
+
+    function updateCartBadge() {
+      const badge = document.getElementById("cart-count-badge");
+      if (!badge) return;
+
+      const count = getCartCount();
+      if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : String(count);
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", updateCartBadge);
+    } else {
+      updateCartBadge();
+    }
+
+    document.addEventListener("astro:page-load", updateCartBadge);
+    window.addEventListener(CART_UPDATED_EVENT, updateCartBadge);
+  </script>
 </html>

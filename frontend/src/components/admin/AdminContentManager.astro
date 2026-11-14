@@ -1,0 +1,94 @@
+---
+// src/components/admin/AdminContentManager.astro
+import AdminArchiveManager from './AdminArchiveManager.astro';
+import AdminGalleryManager from './AdminGalleryManager.astro';
+
+export type UserRole = 'SuperAdmin' | 'ArchiveAdmin' | 'GalleryAdmin';
+
+interface Props {
+  userRole?: UserRole;
+  isAdmin?: boolean;
+}
+
+const { userRole = 'SuperAdmin', isAdmin = false } = Astro.props;
+
+const canAccessArchive = userRole === 'SuperAdmin' || userRole === 'ArchiveAdmin';
+const canAccessGallery = userRole === 'SuperAdmin' || userRole === 'GalleryAdmin';
+const showTabBar = userRole === 'SuperAdmin';
+---
+
+<div class="space-y-8" id="content-manager-root">
+  
+  <!-- SUB-TAB NAVIGATION BAR (SuperAdmin Only) -->
+  {showTabBar && (
+    <div class="flex items-center gap-3 border-b border-zinc-800 pb-4 select-none">
+      <button
+        id="subtab-btn-archive"
+        type="button"
+        class="sub-tab-btn active px-4 py-2.5 bg-orange-500 text-zinc-950 font-black font-mono text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-orange-500/10"
+        data-subtab="archive"
+      >
+        <span>📁</span>
+        <span>Archive Media</span>
+      </button>
+
+      <button
+        id="subtab-btn-gallery"
+        type="button"
+        class="sub-tab-btn px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/40 text-zinc-400 hover:text-white font-mono text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-2"
+        data-subtab="gallery"
+      >
+        <span>📰</span>
+        <span>Gallery Editorial</span>
+      </button>
+    </div>
+  )}
+
+  <!-- ARCHIVE MODULE -->
+  {canAccessArchive && (
+    <div id="subtab-content-archive" class="sub-tab-content">
+      <AdminArchiveManager isAdmin={isAdmin} userRole={userRole} />
+    </div>
+  )}
+
+  <!-- GALLERY MODULE -->
+  {canAccessGallery && (
+    <div id="subtab-content-gallery" class={`sub-tab-content ${showTabBar ? 'hidden' : ''}`}>
+      <AdminGalleryManager isAdmin={isAdmin} userRole={userRole} />
+    </div>
+  )}
+
+</div>
+
+<!-- ISOLATED CLIENT SWITCHER SCRIPT -->
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const subTabBtns = document.querySelectorAll('.sub-tab-btn');
+    const subTabContents = document.querySelectorAll('.sub-tab-content');
+
+    subTabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetTab = btn.getAttribute('data-subtab');
+
+        // Reset button states
+        subTabBtns.forEach((b) => {
+          b.classList.remove('bg-orange-500', 'text-zinc-950', 'font-black');
+          b.classList.add('bg-zinc-900', 'border', 'border-zinc-800', 'text-zinc-400');
+        });
+
+        // Activate clicked button
+        btn.classList.remove('bg-zinc-900', 'border', 'border-zinc-800', 'text-zinc-400');
+        btn.classList.add('bg-orange-500', 'text-zinc-950', 'font-black');
+
+        // Toggle view containers
+        subTabContents.forEach((content) => {
+          if (content.id === `subtab-content-${targetTab}`) {
+            content.classList.remove('hidden');
+          } else {
+            content.classList.add('hidden');
+          }
+        });
+      });
+    });
+  });
+</script>

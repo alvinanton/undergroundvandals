@@ -1,0 +1,49 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import AdminNav from "../../components/admin/AdminNav.astro";
+import ProductsManager from "../../components/admin/ProductsManager.astro";
+
+// SSR Check
+const token = Astro.cookies.get("uv_auth_token")?.value;
+if (!token) {
+    return Astro.redirect("/admin/login");
+}
+
+const user = Astro.locals.user as { role: string; email: string; name?: string; username?: string };
+const isAdmin = user?.role === "Admin";
+
+const username =
+    user?.username ||
+    user?.name ||
+    (user?.email ? user.email.split("@")[0] : "User");
+---
+
+<Layout title="Products Management | Underground Vandals">
+    <div class="space-y-8 max-w-5xl mx-auto pb-12">
+        {/* Header */}
+        <div
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6"
+            id="dashboard-root"
+            data-is-admin={isAdmin ? "true" : "false"}
+        >
+            <div>
+                <span
+                    class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-2"
+                >
+                    E-Shop Panel • {user?.role || "Editor"}
+                </span>
+                <h1
+                    class="text-3xl font-black uppercase tracking-tight text-white"
+                >
+                    Welcome, <span class="text-orange-500">{username}</span>
+                </h1>
+            </div>
+        </div>
+
+        {/* Centralized Navigation Bar */}
+        <AdminNav activeTab="products" isAdmin={isAdmin} />
+
+        {/* Products Manager Component */}
+        <ProductsManager isAdmin={isAdmin} />
+    </div>
+</Layout>
