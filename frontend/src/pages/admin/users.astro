@@ -4,8 +4,7 @@ import AdminNav from "../../components/admin/AdminNav.astro";
 import UsersManager from "../../components/admin/UsersManager.astro";
 
 // SSR Verification & Role Guard
-const token = Astro.cookies.get("uv_auth_token")?.value;
-if (!token) {
+if (!Astro.locals.user) {
     return Astro.redirect("/admin/login");
 }
 

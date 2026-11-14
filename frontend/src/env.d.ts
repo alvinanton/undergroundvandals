@@ -2,9 +2,6 @@
 
 declare namespace App {
     interface Locals {
-        user?: {
-            role: string;
-            email: string;
-        } | null;
+        user: import('./lib/server/auth').SessionUser | null;
     }
 }

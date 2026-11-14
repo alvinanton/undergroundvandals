@@ -1,0 +1,98 @@
+meta {
+  name: Create user
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/users
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "{{newUsername}}",
+    "email": "{{newEmail}}",
+    "password": "{{newPassword}}",
+    "role": "{{newRole}}"
+  }
+}
+
+script:post-response {
+  if (res.status >= 200 && res.status < 300 && res.body?.id) {
+    bru.setVar("userId", res.body.id);
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  # Create user
+
+  `POST /api/users`
+
+  Create an active user and hash the password using BCrypt.
+
+  ## Authentication
+
+  Admin; inherited Bearer token.
+
+  ## Parameters
+
+  No path or query parameters.
+
+  ## Request body
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | username, email, password | string | Non-nullable fields; no explicit email format or password length attributes in this DTO. |
+  | role | string enum | Admin or Editor; Editor if omitted. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "username": "{{newUsername}}",
+    "email": "{{newEmail}}",
+    "password": "{{newPassword}}",
+    "role": "{{newRole}}"
+  }
+  ```
+
+  ## Response
+
+  HTTP **201**.
+
+  ```json
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "username": "Example editor",
+    "email": "editor@example.com",
+    "role": "Editor",
+    "isActive": true,
+    "createdAt": "2026-11-14T12:00:00Z",
+    "lastLoginAt": null
+  }
+  ```
+
+  ## Errors
+
+  - 400: Email is already registered. or model validation.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  The response includes a Location header targeting the list action, not a user-detail endpoint. Captures userId on success. Use a unique newEmail; configure secret newPassword.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

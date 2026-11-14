@@ -455,7 +455,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
 <!-- CLIENT-SIDE SCRIPT FOR GALLERY EDITORIAL MANAGER -->
 <script>
-  const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+  const API_URL = "/api/admin/content";
 
   const rootEl = document.getElementById("gallery-manager-root");
   const userRole = rootEl?.dataset.userRole || "SuperAdmin";
@@ -463,13 +463,6 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
   let allArticles: any[] = [];
   let attachedExhibitionUrls: string[] = [];
-
-  function getToken(): string | undefined {
-    return document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("uv_auth_token="))
-      ?.split("=")[1];
-  }
 
   // ACCORDION TOGGLE
   const accordionBtn = document.getElementById("gallery-accordion-toggle-btn");
@@ -510,14 +503,11 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
   heroFileInput?.addEventListener("change", async (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
-    const token = getToken();
-    if (!file || !token) return;
+    if (!file) return;
 
     try {
       if (uploadHeroBtn) uploadHeroBtn.innerText = "Uploading...";
-      const sigRes = await fetch(`${API_URL}/api/media/upload-signature?folder=underground_vandals/gallery_heroes`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const sigRes = await fetch(`${API_URL}/media/upload-signature?folder=underground_vandals/gallery_heroes`);
       const sigData = await sigRes.json();
 
       const formData = new FormData();
@@ -550,15 +540,12 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
   shotsFileInput?.addEventListener("change", async (e) => {
     const files = Array.from((e.target as HTMLInputElement).files || []);
-    const token = getToken();
-    if (files.length === 0 || !token) return;
+    if (files.length === 0) return;
 
     try {
       if (uploadShotsBtn) uploadShotsBtn.innerText = "Uploading...";
       for (const file of files) {
-        const sigRes = await fetch(`${API_URL}/api/media/upload-signature?folder=underground_vandals/gallery_exhibitions`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const sigRes = await fetch(`${API_URL}/media/upload-signature?folder=underground_vandals/gallery_exhibitions`);
         const sigData = await sigRes.json();
 
         const formData = new FormData();
@@ -612,8 +599,6 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
   createForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const token = getToken();
-    if (!token) return;
 
     if (submitBtn) submitBtn.disabled = true;
 
@@ -639,11 +624,10 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     };
 
     try {
-      const res = await fetch(`${API_URL}/api/gallery`, {
+      const res = await fetch(`${API_URL}/gallery`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -682,7 +666,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     if (!tableBody) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/gallery?includeUnpublished=true`);
+      const response = await fetch(`${API_URL}/gallery?includeUnpublished=true`);
       if (!response.ok) throw new Error("Failed to load articles.");
 
       allArticles = await response.json();
@@ -761,20 +745,17 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         const el = e.currentTarget as HTMLElement;
         const action = el.dataset.action;
         const id = el.dataset.id;
-        const token = getToken();
-        if (!id || !action || !token) return;
+        if (!id || !action) return;
 
         if (action === "toggle-featured") {
-          await fetch(`${API_URL}/api/gallery/${id}/featured`, {
+          await fetch(`${API_URL}/gallery/${id}/featured`, {
             method: "PATCH",
-            headers: { Authorization: `Bearer ${token}` }
           });
           await fetchArticles();
         } else if (action === "delete") {
           if (!confirm("Are you sure you want to delete this feature article?")) return;
-          await fetch(`${API_URL}/api/gallery/${id}`, {
+          await fetch(`${API_URL}/gallery/${id}`, {
             method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` }
           });
           await fetchArticles();
         }

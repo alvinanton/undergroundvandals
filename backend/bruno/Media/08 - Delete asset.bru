@@ -1,0 +1,58 @@
+meta {
+  name: Delete asset
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/media/assets/{{assetId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  # Delete asset
+
+  `DELETE /api/media/assets/{{assetId}}`
+
+  Delete the primary cloud file, optional thumbnail, and asset record.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | assetId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **204**.
+
+  Empty response body.
+
+  ## Errors
+
+  - 404: Asset not found.
+  - 500: unhandled storage/database failure.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  No body. May leave a post without assets. Storage and database deletion are not one transaction; partial deletion is possible.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

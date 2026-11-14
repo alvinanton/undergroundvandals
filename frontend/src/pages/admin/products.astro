@@ -4,8 +4,7 @@ import AdminNav from "../../components/admin/AdminNav.astro";
 import ProductsManager from "../../components/admin/ProductsManager.astro";
 
 // SSR Check
-const token = Astro.cookies.get("uv_auth_token")?.value;
-if (!token) {
+if (!Astro.locals.user) {
     return Astro.redirect("/admin/login");
 }
 

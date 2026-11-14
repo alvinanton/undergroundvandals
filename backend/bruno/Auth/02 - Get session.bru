@@ -1,0 +1,62 @@
+meta {
+  name: Get session
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/auth/session
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Get session
+
+  `GET /api/auth/session`
+
+  Return identity claims and the token expiry timestamp.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  No path or query parameters.
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "username": "Admin",
+    "email": "admin@example.com",
+    "role": "Admin",
+    "expiresAt": 1794700800
+  }
+  ```
+
+  ## Errors
+
+  - 401: invalid/expired token or missing/unparseable exp claim.
+  - 403: token role is not allowed.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  expiresAt is a Unix timestamp in seconds. Uses token claims, not a fresh user database lookup. Response caching is disabled.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

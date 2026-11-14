@@ -1,0 +1,79 @@
+meta {
+  name: Track visit
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/visits/track
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "path": "/gallery/escena-urbana-guatemala",
+    "deviceType": "Desktop",
+    "referrer": "https://example.com/"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Track visit
+
+  `POST /api/visits/track`
+
+  Insert one website visit per call, without deduplication.
+
+  ## Authentication
+
+  Public.
+
+  ## Parameters
+
+  No path or query parameters.
+
+  ## Request body
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | path | string or null | / if omitted/null; stored lowercase. |
+  | deviceType | string or null | Unknown if blank/null; no validated enum or detection. |
+  | referrer | string or null | Optional; stored as supplied. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "path": "/gallery/escena-urbana-guatemala",
+    "deviceType": "Desktop",
+    "referrer": "https://example.com/"
+  }
+  ```
+
+  ## Response
+
+  HTTP **200**.
+
+  Empty response body.
+
+  ## Errors
+
+  - 400: malformed JSON or model validation.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Returns 200 with no response body. Uses forwarding/proxy headers for IP and geography, User-Agent for the agent, and SHA-256 of IP_agent as userHash. No HTTP endpoint exposes visit statistics.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

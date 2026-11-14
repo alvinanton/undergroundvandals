@@ -1,0 +1,63 @@
+meta {
+  name: Toggle featured status
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/api/gallery/{{articleId}}/featured
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Toggle featured status
+
+  `PATCH /api/gallery/{{articleId}}/featured`
+
+  Invert isFeatured; featuring removes featured status from other articles.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | articleId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "message": "Article marked as featured.",
+    "id": "44444444-4444-4444-8444-444444444444",
+    "isFeatured": true
+  }
+  ```
+
+  ## Errors
+
+  - 404: Gallery article not found.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  No body. Repeating the call reverses the state. Unfeaturing returns message Article unfeatured. and isFeatured=false. Updates updatedAt.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

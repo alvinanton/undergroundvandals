@@ -1,0 +1,174 @@
+meta {
+  name: Create article
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/gallery
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Escena urbana de Guatemala",
+    "slug": "{{articleSlug}}",
+    "subtitle": "Artistas y espacios de la ciudad",
+    "category": "EDITORIAL",
+    "heroImageUrl": "https://example.com/portada.webp",
+    "videoUrl": null,
+    "videoSource": "NONE",
+    "contentMarkdown": "## La escena\nTexto del artículo.",
+    "readingTimeMinutes": 5,
+    "subjectName": "Colectivo UV",
+    "location": "Ciudad de Guatemala",
+    "externalUrl": "https://example.com/artista",
+    "eventDate": "2026-12-01T18:00:00Z",
+    "isFeatured": false,
+    "isPublished": true,
+    "shopCollectionSlug": "urban-art",
+    "shopCollectionTitle": "Urban Art",
+    "tags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "galleryImageUrls": [
+      "https://example.com/detalle.webp"
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status >= 200 && res.status < 300 && res.body?.id) {
+    bru.setVar("articleId", res.body.id);
+  }
+  if (res.status >= 200 && res.status < 300 && res.body?.slug) {
+    bru.setVar("articleSlug", res.body.slug);
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  # Create article
+
+  `POST /api/gallery`
+
+  Create an article with a unique slug.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  No path or query parameters.
+
+  ## Request body
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | title | string | POST requires a nonblank title; PUT has no equivalent explicit check. |
+  | slug | string | Generated from title if blank; otherwise lowercased. Must be unique. |
+  | subtitle, heroImageUrl, contentMarkdown | string | Empty string if omitted. URLs are not format-validated. |
+  | category | string | EDITORIAL if blank or omitted; stored uppercase. |
+  | videoUrl | string or null | Optional. |
+  | videoSource | string | NONE if blank or omitted; uppercase, no validated enum. |
+  | readingTimeMinutes | integer | 5 if omitted or <= 0. |
+  | subjectName, location, externalUrl | string or null | Optional. |
+  | eventDate | ISO 8601 date or null | Optional. |
+  | isFeatured | boolean | false; featuring removes featured status from other articles. |
+  | isPublished | boolean | true. |
+  | shopCollectionSlug, shopCollectionTitle | string or null | Optional shop references, not validated against the shop. |
+  | tags | string[] | []; values are lowercased. |
+  | galleryImageUrls | string[] | []; file existence is not checked. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "title": "Escena urbana de Guatemala",
+    "slug": "{{articleSlug}}",
+    "subtitle": "Artistas y espacios de la ciudad",
+    "category": "EDITORIAL",
+    "heroImageUrl": "https://example.com/portada.webp",
+    "videoUrl": null,
+    "videoSource": "NONE",
+    "contentMarkdown": "## La escena\nTexto del artículo.",
+    "readingTimeMinutes": 5,
+    "subjectName": "Colectivo UV",
+    "location": "Ciudad de Guatemala",
+    "externalUrl": "https://example.com/artista",
+    "eventDate": "2026-12-01T18:00:00Z",
+    "isFeatured": false,
+    "isPublished": true,
+    "shopCollectionSlug": "urban-art",
+    "shopCollectionTitle": "Urban Art",
+    "tags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "galleryImageUrls": [
+      "https://example.com/detalle.webp"
+    ]
+  }
+  ```
+
+  ## Response
+
+  HTTP **201**.
+
+  ```json
+  {
+    "title": "Escena urbana de Guatemala",
+    "slug": "urban-scene",
+    "subtitle": "Artistas y espacios de la ciudad",
+    "category": "EDITORIAL",
+    "heroImageUrl": "https://example.com/portada.webp",
+    "videoUrl": null,
+    "videoSource": "NONE",
+    "contentMarkdown": "## La escena\nTexto del artículo.",
+    "readingTimeMinutes": 5,
+    "subjectName": "Colectivo UV",
+    "location": "Ciudad de Guatemala",
+    "externalUrl": "https://example.com/artista",
+    "eventDate": "2026-12-01T18:00:00Z",
+    "isFeatured": false,
+    "isPublished": true,
+    "shopCollectionSlug": "urban-art",
+    "shopCollectionTitle": "Urban Art",
+    "tags": [
+      "graffiti",
+      "guatemala"
+    ],
+    "galleryImageUrls": [
+      "https://example.com/detalle.webp"
+    ],
+    "id": "44444444-4444-4444-8444-444444444444",
+    "publishedAt": "2026-11-14T12:00:00Z",
+    "createdAt": "2026-11-14T12:00:00Z",
+    "updatedAt": null
+  }
+  ```
+
+  ## Errors
+
+  - 400: Title is required. / An article with this slug already exists. / model validation.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Captures articleId and articleSlug; returns a Location header. Sets publishedAt and createdAt to current UTC even when unpublished. Featuring an article unfeatures others. Automatic slug generation lowercases, replaces spaces with hyphens, and removes : ? ! /; it does not remove accents.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

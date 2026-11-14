@@ -1,0 +1,58 @@
+meta {
+  name: Delete post
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/api/media/{{postId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  # Delete post
+
+  `DELETE /api/media/{{postId}}`
+
+  Delete a post, associated assets, primary files, and thumbnails.
+
+  ## Authentication
+
+  Admin; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | postId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **204**.
+
+  Empty response body.
+
+  ## Errors
+
+  - 404: Media item not found.
+  - 500: unhandled storage/database failure.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  No body. Storage and database deletion are not one transaction; partial deletion is possible.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

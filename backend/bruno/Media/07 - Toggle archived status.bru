@@ -1,0 +1,63 @@
+meta {
+  name: Toggle archived status
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/api/media/{{postId}}/archive
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Toggle archived status
+
+  `PATCH /api/media/{{postId}}/archive`
+
+  Invert isArchived for a post.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | postId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "message": "Media item successfully archived.",
+    "id": "22222222-2222-4222-8222-222222222222",
+    "isArchived": true
+  }
+  ```
+
+  ## Errors
+
+  - 404: Media item not found.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  No body. Repeating the call reverses the state. Unarchiving returns isArchived=false and message Media item successfully unarchived.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

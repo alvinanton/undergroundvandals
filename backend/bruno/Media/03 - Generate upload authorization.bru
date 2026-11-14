@@ -1,0 +1,77 @@
+meta {
+  name: Generate upload authorization
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/media/upload-signature?target={{target}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  target: {{target}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    for (const key of ["uploadUrl", "fileUrl", "publicId"]) {
+      if (res.body?.[key]) bru.setVar(key, res.body[key]);
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Generate upload authorization
+
+  `GET /api/media/upload-signature`
+
+  Generate a SAS URL for a direct Azure Blob upload.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | target | Query | Example: `{{target}}`. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "uploadUrl": "https://example.blob.core.windows.net/archive-media/photos/uuid?sv=...&sig=...",
+    "fileUrl": "https://example.blob.core.windows.net/archive-media/photos/uuid",
+    "publicId": "archive-media/photos/uuid",
+    "provider": "AzureBlob"
+  }
+  ```
+
+  ## Errors
+
+  - 400: missing/blank target.
+  - 500: unhandled storage configuration or Azure failure.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  target is required: use container/folder, for example archive-media/photos, archive-media/videos, or gallery-media/articles. SAS allows create/write and expires 15 minutes after generation. Upload bytes with PUT to uploadUrl using x-ms-blob-type: BlockBlob and the file Content-Type; authorize that request with the SAS rather than the API JWT. Then register fileUrl/publicId via Create post or Add assets. The script captures uploadUrl, fileUrl, and publicId in runtime variables.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

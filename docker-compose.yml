@@ -87,6 +87,8 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=4321
+      - API_INTERNAL_URL=http://api:8080
+      - SITE_ORIGIN=${SITE_ORIGIN:-http://localhost:4321}
       - PUBLIC_API_URL=${PUBLIC_API_URL}
       - PUBLIC_ECOMMERCE_API_URL=${PUBLIC_ECOMMERCE_API_URL}
       - PUBLIC_BANK_TRANSFER_INFO=${PUBLIC_BANK_TRANSFER_INFO}

@@ -1,0 +1,90 @@
+meta {
+  name: Sign in
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{email}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  bru.deleteVar("token");
+  if (res.status === 200 && res.body?.token) {
+    bru.setVar("token", res.body.token);
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Sign in
+
+  `POST /api/auth/login`
+
+  Authenticate an active account, update lastLoginAt, and issue an 8-hour HS256 JWT.
+
+  ## Authentication
+
+  Public; no Authorization header.
+
+  ## Parameters
+
+  No path or query parameters.
+
+  ## Request body
+
+  | Field | Type | Rules |
+  | --- | --- | --- |
+  | email | string | Required, not normalized during login. |
+  | password | string | Required, checked using BCrypt. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "email": "{{email}}",
+    "password": "{{password}}"
+  }
+  ```
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "token": "eyJ...example-token",
+    "username": "Admin",
+    "role": "Admin"
+  }
+  ```
+
+  ## Errors
+
+  - 400: malformed JSON or model validation.
+  - 401: Invalid credentials. / Account is deactivated. Please contact an administrator.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Set email and secret password in the selected Local or Docker environment. On success the post-response script stores token as a runtime variable. No refresh token is issued. Email comparison is exact.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

@@ -1,0 +1,95 @@
+meta {
+  name: List posts
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/media?category={{category}}&tag={{tag}}&includeArchived={{includeArchived}}
+  body: none
+  auth: none
+}
+
+params:query {
+  category: {{category}}
+  tag: {{tag}}
+  includeArchived: {{includeArchived}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # List posts
+
+  `GET /api/media`
+
+  Return posts ordered by createdAt descending.
+
+  ## Authentication
+
+  Public.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | category | Query | Example: `{{category}}`. |
+  | tag | Query | Example: `{{tag}}`. |
+  | includeArchived | Query | Example: `{{includeArchived}}`. |
+
+  ## Request body
+
+  No request body.
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  [
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "title": "City mural",
+      "description": "Session documentation",
+      "category": "Graffiti",
+      "hashtags": [
+        "graffiti"
+      ],
+      "media": [
+        {
+          "id": "33333333-3333-4333-8333-333333333333",
+          "url": "https://example.com/mural.webp",
+          "type": "image",
+          "isCover": true,
+          "thumbnailUrl": null
+        }
+      ],
+      "isArchived": false,
+      "createdAt": "2026-11-14T12:00:00Z",
+      "mediaAssets": [
+        {
+          "id": "33333333-3333-4333-8333-333333333333",
+          "url": "https://example.com/mural.webp",
+          "type": "image",
+          "isCover": true,
+          "thumbnailUrl": null
+        }
+      ]
+    }
+  ]
+  ```
+
+  ## Errors
+
+  - 400: invalid includeArchived boolean.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Filters use AND. category is case-insensitive; tag is lowercased and matched as exact array membership. includeArchived defaults to false. Archived records can be included publicly. No pagination. Disable category/tag in Params to list all posts.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

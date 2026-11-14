@@ -1,0 +1,129 @@
+meta {
+  name: Add assets to a post
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/media/{{postId}}/assets
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "assets": [
+      {
+        "url": "https://example.com/mural.webp",
+        "publicId": "archive-media/photos/uuid",
+        "type": "image",
+        "isCover": false,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  # Add assets to a post
+
+  `POST /api/media/{{postId}}/assets`
+
+  Append previously uploaded assets to an existing post.
+
+  ## Authentication
+
+  Admin or Editor; inherited Bearer token.
+
+  ## Parameters
+
+  | Name | Location | Meaning |
+  | --- | --- | --- |
+  | postId | Path | GUID; replace the example with a real resource. |
+
+  ## Request body
+
+  | Field | Type | Rules / default |
+  | --- | --- | --- |
+  | assets | object[] | At least one asset required. |
+  | assets[].url | string | Required; URL of a previously uploaded file. |
+  | assets[].publicId | string | Required; container/blob path returned by Azure authorization. |
+  | assets[].type | string | Defaults to image; video (case-insensitive) creates a video, other nonempty values create an image. |
+  | assets[].isCover | boolean | false; no unique-cover constraint. |
+  | assets[].thumbnailUrl | string or null | Optional thumbnail or video poster URL. |
+
+  Send Content-Type: application/json.
+
+  ```json
+  {
+    "assets": [
+      {
+        "url": "https://example.com/mural.webp",
+        "publicId": "archive-media/photos/uuid",
+        "type": "image",
+        "isCover": false,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+  ```
+
+  ## Response
+
+  HTTP **200**.
+
+  ```json
+  {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "title": "City mural",
+    "description": "Session documentation",
+    "category": "Graffiti",
+    "hashtags": [
+      "graffiti"
+    ],
+    "media": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ],
+    "isArchived": false,
+    "createdAt": "2026-11-14T12:00:00Z",
+    "mediaAssets": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "url": "https://example.com/mural.webp",
+        "type": "image",
+        "isCover": true,
+        "thumbnailUrl": null
+      }
+    ]
+  }
+  ```
+
+  ## Errors
+
+  - 400: At least one asset is required. or model validation.
+  - 404: Media item not found.
+  - 401: missing, invalid, or expired Bearer token.
+  - 403: authenticated token with an insufficient role.
+
+  Automatic model validation can return ValidationProblemDetails; explicit controller errors use a message field. Authentication middleware errors may have no body.
+
+  ## Notes
+
+  Preserves existing assets. Upload bytes to Azure before registering these metadata.
+
+  Examples contain fictitious data. The assertion checks the successful scenario; a missing record or insufficient permissions can produce a different documented status.
+}

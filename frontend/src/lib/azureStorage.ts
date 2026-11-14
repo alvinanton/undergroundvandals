@@ -23,8 +23,6 @@ const CHUNK_SIZE = 8 * 1024 * 1024; // 8 MB por trozo
 export async function uploadFileToAzure(
   file: File,
   targetPath: string,
-  token: string,
-  apiUrl: string = import.meta.env.PUBLIC_API_URL || "http://localhost:5098",
   onProgress?: (percentage: number) => void
 ): Promise<AzureUploadResult> {
   // 0. Optimización en cliente: Si es imagen, comprimir a WebP transparente en navegador
@@ -35,9 +33,8 @@ export async function uploadFileToAzure(
 
   // 1. Solicitar firma SAS al backend
   const encodedPath = encodeURIComponent(targetPath);
-  const sigRes = await fetch(`${apiUrl}/api/media/upload-signature?target=${encodedPath}`, {
+  const sigRes = await fetch(`/api/admin/content/media/upload-signature?target=${encodedPath}`, {
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!sigRes.ok) {
