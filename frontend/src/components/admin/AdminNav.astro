@@ -72,8 +72,14 @@ const { activeTab, isAdmin = false } = Astro.props;
 </div>
 
 <script>
-    document.getElementById("logout-btn")?.addEventListener("click", () => {
-        document.cookie = "uv_auth_token=; path=/; max-age=0;";
+    document.getElementById("logout-btn")?.addEventListener("click", async () => {
+        try {
+            const response = await fetch("/api/auth/logout", { method: "POST" });
+            if (!response.ok) throw new Error("Sign out failed.");
+        } catch {
+            alert("Could not sign out. Please try again.");
+            return;
+        }
         window.location.href = "/admin/login";
     });
 </script>

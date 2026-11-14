@@ -7,6 +7,7 @@ using UndergroundVandals.Api.Entities;
 
 namespace UndergroundVandals.Api.Controllers;
 
+[Tags("Gallery")]
 [ApiController]
 [Route("api/[controller]")]
 public class GalleryController : ControllerBase
@@ -19,6 +20,10 @@ public class GalleryController : ControllerBase
     }
 
     [HttpGet]
+    [EndpointSummary("List articles")]
+    [EndpointDescription("Public. Optional category, tag, isFeatured, and includeUnpublished filters (false by default), combined with AND. No pagination. includeUnpublished=true is also publicly accessible.")]
+    [ProducesResponseType(typeof(IEnumerable<GalleryArticleResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IEnumerable<GalleryArticleResponseDto>>> GetAll(
         [FromQuery] string? category,
         [FromQuery] string? tag,
@@ -47,6 +52,10 @@ public class GalleryController : ControllerBase
     }
 
     [HttpGet("featured")]
+    [EndpointSummary("Get featured article")]
+    [EndpointDescription("Public. Returns the latest published featured article, falling back to the latest published article. Returns 404 if no published articles exist.")]
+    [ProducesResponseType(typeof(GalleryArticleResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiMessageResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<GalleryArticleResponseDto>> GetFeatured()
     {
         var featured = await _context.GalleryArticles
@@ -63,47 +72,61 @@ public class GalleryController : ControllerBase
         }
 
         if (featured == null)
-            return NotFound(new { message = "No gallery articles found." });
+            return NotFound(new ApiMessageResponseDto("No gallery articles found."));
 
         return Ok(MapToDto(featured));
     }
 
     [HttpGet("{id:guid}")]
+    [EndpointSummary("Get article by ID")]
+    [EndpointDescription("Public. Looks up an article by GUID, including unpublished articles.")]
+    [ProducesResponseType(typeof(GalleryArticleResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiMessageResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<GalleryArticleResponseDto>> GetById(Guid id)
     {
         var article = await _context.GalleryArticles.FindAsync(id);
 
         if (article == null)
-            return NotFound(new { message = "Gallery article not found." });
+            return NotFound(new ApiMessageResponseDto("Gallery article not found."));
 
         return Ok(MapToDto(article));
     }
 
     [HttpGet("slug/{slug}")]
+    [EndpointSummary("Get article by slug")]
+    [EndpointDescription("Public. Performs a case-insensitive slug lookup, including unpublished articles.")]
+    [ProducesResponseType(typeof(GalleryArticleResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiMessageResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<GalleryArticleResponseDto>> GetBySlug(string slug)
     {
         var article = await _context.GalleryArticles
             .FirstOrDefaultAsync(a => a.Slug.ToLower() == slug.ToLower());
 
         if (article == null)
-            return NotFound(new { message = "Gallery article not found." });
+            return NotFound(new ApiMessageResponseDto("Gallery article not found."));
 
         return Ok(MapToDto(article));
     }
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost]
+    [EndpointSummary("Create article")]
+    [EndpointDescription("Admin or Editor. Requires a title and a unique slug; generates the slug if empty. Featuring the new article removes featured status from other articles.")]
+    [ProducesResponseType(typeof(GalleryArticleResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest, Description = "Automatic validation error (ValidationProblemDetails) or a controller error with a message field.")]
+    [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<GalleryArticleResponseDto>> Create([FromBody] CreateGalleryArticleDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Title))
-            return BadRequest(new { message = "Title is required." });
+            return BadRequest(new ApiMessageResponseDto("Title is required."));
 
         var slug = string.IsNullOrWhiteSpace(dto.Slug)
             ? GenerateSlug(dto.Title)
             : dto.Slug.ToLower();
 
         if (await _context.GalleryArticles.AnyAsync(a => a.Slug == slug))
-            return BadRequest(new { message = "An article with this slug already exists." });
+            return BadRequest(new ApiMessageResponseDto("An article with this slug already exists."));
 
         if (dto.IsFeatured)
         {
@@ -142,19 +165,26 @@ public class GalleryController : ControllerBase
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPut("{id:guid}")]
+    [EndpointSummary("Update article")]
+    [EndpointDescription("Admin or Editor. Replaces all editable fields; omitted fields use their defaults. Preserves createdAt and publishedAt. Requires a unique slug.")]
+    [ProducesResponseType(typeof(GalleryArticleResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest, Description = "Automatic validation error (ValidationProblemDetails) or a controller error with a message field.")]
+    [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiMessageResponseDto), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<GalleryArticleResponseDto>> Update(Guid id, [FromBody] UpdateGalleryArticleDto dto)
     {
         var article = await _context.GalleryArticles.FindAsync(id);
 
         if (article == null)
-            return NotFound(new { message = "Gallery article not found." });
+            return NotFound(new ApiMessageResponseDto("Gallery article not found."));
 
         var slug = string.IsNullOrWhiteSpace(dto.Slug)
             ? GenerateSlug(dto.Title)
             : dto.Slug.ToLower();
 
         if (article.Slug != slug && await _context.GalleryArticles.AnyAsync(a => a.Slug == slug))
-            return BadRequest(new { message = "An article with this slug already exists." });
+            return BadRequest(new ApiMessageResponseDto("An article with this slug already exists."));
 
         if (dto.IsFeatured && !article.IsFeatured)
         {
@@ -189,12 +219,18 @@ public class GalleryController : ControllerBase
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPatch("{id:guid}/featured")]
+    [EndpointSummary("Toggle featured status")]
+    [EndpointDescription("Admin or Editor. No request body. Toggles isFeatured; featuring an article removes featured status from other articles and updates updatedAt.")]
+    [ProducesResponseType(typeof(FeaturedStatusResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiMessageResponseDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ToggleFeatured(Guid id)
     {
         var article = await _context.GalleryArticles.FindAsync(id);
 
         if (article == null)
-            return NotFound(new { message = "Gallery article not found." });
+            return NotFound(new ApiMessageResponseDto("Gallery article not found."));
 
         if (!article.IsFeatured)
         {
@@ -209,22 +245,26 @@ public class GalleryController : ControllerBase
         article.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        return Ok(new
-        {
-            message = article.IsFeatured ? "Article marked as featured." : "Article unfeatured.",
-            id = article.Id,
-            isFeatured = article.IsFeatured
-        });
+        return Ok(new FeaturedStatusResponseDto(
+            article.IsFeatured ? "Article marked as featured." : "Article unfeatured.",
+            article.Id,
+            article.IsFeatured));
     }
 
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
+    [EndpointSummary("Delete article")]
+    [EndpointDescription("Admin only. Deletes the article record without deleting stored files or shop collections.")]
+    [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiMessageResponseDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var article = await _context.GalleryArticles.FindAsync(id);
 
         if (article == null)
-            return NotFound(new { message = "Gallery article not found." });
+            return NotFound(new ApiMessageResponseDto("Gallery article not found."));
 
         _context.GalleryArticles.Remove(article);
         await _context.SaveChangesAsync();

@@ -5,8 +5,7 @@ import AdminNav from "../../components/admin/AdminNav.astro";
 import AdminContentManager, { type UserRole } from "../../components/admin/AdminContentManager.astro";
 
 // SSR Check
-const token = Astro.cookies.get("uv_auth_token")?.value;
-if (!token) {
+if (!Astro.locals.user) {
   return Astro.redirect("/admin/login");
 }
 

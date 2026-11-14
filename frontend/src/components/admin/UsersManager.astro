@@ -208,7 +208,7 @@ const { isAdmin = false } = Astro.props;
 </div>
 
 <script>
-    const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:5098";
+    const API_URL = "/api/admin/content";
     let allUsers: any[] = [];
 
     const rootEl = document.getElementById("users-manager-root");
@@ -229,12 +229,6 @@ const { isAdmin = false } = Astro.props;
     const userIdInput = document.getElementById("user-id") as HTMLInputElement;
     const statusMsg = document.getElementById("user-status-msg");
 
-    function getToken(): string | undefined {
-        return document.cookie
-            .split("; ")
-            .find((row) => row.startsWith("uv_auth_token="))
-            ?.split("=")[1];
-    }
 
     function openCreateModal() {
         userForm.reset();
@@ -305,8 +299,6 @@ const { isAdmin = false } = Astro.props;
         e.preventDefault();
         if (submitBtn) submitBtn.disabled = true;
 
-        const token = getToken();
-        if (!token) return;
 
         const userId = userIdInput.value;
         const isEditMode = Boolean(userId);
@@ -321,7 +313,7 @@ const { isAdmin = false } = Astro.props;
 
         if (passVal) payload.password = passVal;
 
-        const targetUrl = isEditMode ? `${API_URL}/api/users/${userId}` : `${API_URL}/api/users`;
+        const targetUrl = isEditMode ? `${API_URL}/users/${userId}` : `${API_URL}/users`;
         const targetMethod = isEditMode ? "PUT" : "POST";
 
         try {
@@ -329,7 +321,6 @@ const { isAdmin = false } = Astro.props;
                 method: targetMethod,
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(payload),
             });
@@ -356,13 +347,9 @@ const { isAdmin = false } = Astro.props;
         const tableBody = document.getElementById("users-table-body");
         if (!tableBody) return;
 
-        const token = getToken();
-        if (!token) return;
 
         try {
-            const response = await fetch(`${API_URL}/api/users`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await fetch(`${API_URL}/users`);
             if (!response.ok) throw new Error("Failed to load user accounts.");
 
             allUsers = await response.json();
@@ -454,13 +441,10 @@ const { isAdmin = false } = Astro.props;
                     openEditModal(user);
                 } else if (action === "delete") {
                     if (!confirm(`Permanently remove access for "${user.username || user.email}"?`)) return;
-                    const token = getToken();
-                    if (!token) return;
 
                     try {
-                        const res = await fetch(`${API_URL}/api/users/${id}`, {
+                        const res = await fetch(`${API_URL}/users/${id}`, {
                             method: "DELETE",
-                            headers: { Authorization: `Bearer ${token}` },
                         });
                         if (!res.ok) throw new Error("Failed to delete user.");
                         await fetchUsers();

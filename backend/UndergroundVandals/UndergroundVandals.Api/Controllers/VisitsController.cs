@@ -7,6 +7,7 @@ using System.Text;
 
 namespace UndergroundVandals.Api.Controllers
 {
+    [Tags("Visits")]
     [ApiController]
     [Route("api/[controller]")]
     public class VisitsController : ControllerBase
@@ -19,6 +20,10 @@ namespace UndergroundVandals.Api.Controllers
         }
 
         [HttpPost("track")]
+        [EndpointSummary("Track visit")]
+        [EndpointDescription("Public. Accepts a JSON payload with optional path, deviceType, and referrer fields. Inserts one visit per call and returns 200 with no response body.")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> TrackVisit([FromBody] TrackVisitDto dto)
         {
             var ipAddress = Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim()
