@@ -14,3 +14,5 @@ dist/
 .env
 .env.*
 !.env.example
+
+/AUDIT_AND_ACTION_PLAN.md
