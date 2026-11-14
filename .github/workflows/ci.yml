@@ -27,11 +27,13 @@ jobs:
               - 'docker-compose.yml'
               - '.env.example'
               - '.github/workflows/**'
+              - '.github/scripts/**'
             frontend:
               - 'frontend/**'
               - 'docker-compose.yml'
               - '.env.example'
               - '.github/workflows/**'
+              - '.github/scripts/**'
 
   infrastructure:
     name: Infrastructure
@@ -56,6 +58,17 @@ jobs:
             --mount "type=bind,source=$GITHUB_WORKSPACE/.github,target=/work/.github,readonly" \
             --workdir /work \
             rhysd/actionlint:1.7.12 -color "${workflows[@]}"
+
+      - name: Validate deployment shell scripts
+        run: |
+          shopt -s nullglob
+          scripts=(.github/scripts/*.sh)
+          if (( ${#scripts[@]} > 0 )); then
+            docker run --rm --network none \
+              --mount "type=bind,source=$GITHUB_WORKSPACE/.github,target=/work/.github,readonly" \
+              --workdir /work --entrypoint shellcheck \
+              rhysd/actionlint:1.7.12 "${scripts[@]}"
+          fi
 
   backend:
     name: Backend (.NET)

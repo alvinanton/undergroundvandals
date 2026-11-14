@@ -1,113 +1,237 @@
-name: CI/CD Pipeline
+name: Deploy to Production (Azure)
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
 
-jobs:
-  ci:
-    name: Build & Test (CI)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend/UndergroundVandals
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+permissions:
+  contents: read
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+concurrency:
+  group: production-azure
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    name: Prepare production release
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 45
+    steps:
+      - name: Require main
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Production releases must be started from main." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
         with:
-          dotnet-version: '10.0.x'
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore pinned EF tooling
+        working-directory: backend/UndergroundVandals
+        run: dotnet tool restore
 
       - name: Restore dependencies
-        run: dotnet restore
+        working-directory: backend/UndergroundVandals
+        run: dotnet restore UndergroundVandals.slnx
 
-      - name: Build solution
-        run: dotnet build --no-restore --configuration Release
+      - name: Build release
+        working-directory: backend/UndergroundVandals
+        run: dotnet build UndergroundVandals.slnx --no-restore -c Release
 
       - name: Run tests
-        run: dotnet test --no-build --verbosity normal
+        working-directory: backend/UndergroundVandals
+        run: dotnet test UndergroundVandals.slnx --no-build -c Release
 
-  detect-changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      api: ${{ steps.filter.outputs.api }}
-      bot: ${{ steps.filter.outputs.bot }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Publish API and bot packages
+        working-directory: backend/UndergroundVandals
+        run: |
+          dotnet publish UndergroundVandals.Api/UndergroundVandals.Api.csproj --no-restore -c Release -o "$GITHUB_WORKSPACE/release/api" /p:UseAppHost=false
+          dotnet publish UndergroundVandals.Bot/UndergroundVandals.Bot.csproj --no-restore -c Release -o "$GITHUB_WORKSPACE/release/bot" /p:UseAppHost=false
 
-      - name: Check changed paths
-        id: filter
-        uses: dorny/paths-filter@v3
+      - name: Build migration bundle without production credentials
+        working-directory: backend/UndergroundVandals
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          JwtSettings__Secret: migration-design-time-placeholder-not-used-by-the-deployed-app
+          ConnectionStrings__DefaultConnection: Host=127.0.0.1;Port=1;Database=unused;Username=unused;Password=unused
+        run: |
+          dotnet tool run dotnet-ef migrations bundle \
+            --project UndergroundVandals.Api \
+            --startup-project UndergroundVandals.Api \
+            --configuration Release --no-build \
+            --self-contained -r linux-x64 \
+            --output "$GITHUB_WORKSPACE/release/efbundle" --force
+          cp "$GITHUB_WORKSPACE/release/api/appsettings.json" "$GITHUB_WORKSPACE/release/appsettings.json"
+          printf '%s\n' "$GITHUB_SHA" > "$GITHUB_WORKSPACE/release/commit.txt"
+
+      - name: Upload release packages
+        uses: actions/upload-artifact@v4
         with:
-          filters: |
-            api:
-              - 'backend/UndergroundVandals/UndergroundVandals.Api/**'
-            bot:
-              - 'backend/UndergroundVandals/UndergroundVandals.Bot/**'
+          name: production-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
 
-  deploy-api:
-    name: Deploy API to Azure
-    needs: [ci, detect-changes]
-    if: ${{ always() && needs.ci.result == 'success' && (needs.detect-changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch') }}
-    runs-on: ubuntu-latest
+      - name: Summarize release awaiting approval
+        run: |
+          {
+            echo "## Production release prepared"
+            echo "Commit: $GITHUB_SHA"
+            echo "API, bot, and migrations were prepared from the same commit."
+            echo "No production credentials were used in this job."
+            echo "Approve the Production environment only after validating this version in dev."
+            echo "Resolve the bot storage-provider mismatch before publishing."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Back up, migrate, and deploy production
+    needs: prepare
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 60
+    environment:
+      name: Production
+      url: ${{ vars.API_BASE_URL }}
     env:
-      PROJECT_PATH: 'backend/UndergroundVandals/UndergroundVandals.Api/UndergroundVandals.Api.csproj'
+      POSTGRES_IMAGE: postgres:18-alpine
+      AZURE_CLI_IMAGE: mcr.microsoft.com/azure-cli:azurelinux3.0
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      BOT_BASE_URL: ${{ vars.BOT_BASE_URL }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Initialize temporary paths
+        run: |
+          {
+            echo "RELEASE_DIR=$RUNNER_TEMP/production-release-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            echo "BACKUP_DIR=$RUNNER_TEMP/production-backup-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          } >> "$GITHUB_ENV"
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v4
         with:
-          dotnet-version: '10.0.x'
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
-      - name: Restore dependencies
-        run: dotnet restore ${{ env.PROJECT_PATH }}    
+      - name: Validate production settings
+        env:
+          DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          AZURE_BOT_PUBLISH_PROFILE: ${{ secrets.AZURE_BOT_PUBLISH_PROFILE }}
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Production releases must be started from main." >&2
+            exit 1
+          fi
+          for name in DATABASE_CONNECTION_STRING PRODUCTION_DATABASE_URL AZURE_STORAGE_CONNECTION_STRING AZURE_WEBAPP_PUBLISH_PROFILE AZURE_BOT_PUBLISH_PROFILE API_BASE_URL BOT_BASE_URL; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Required Production setting is missing: $name" >&2
+              exit 1
+            fi
+          done
+          for name in API_BASE_URL BOT_BASE_URL; do
+            if [[ ! "${!name}" =~ ^https://[a-zA-Z0-9.-]+(:[0-9]+)?$ ]]; then
+              echo "$name must be an HTTPS origin without a path or trailing slash." >&2
+              exit 1
+            fi
+          done
+          docker info > /dev/null
+          curl --version > /dev/null
 
-      - name: Install EF Core CLI Tool
-        run: dotnet tool install --global dotnet-ef
+      - name: Download approved release packages
+        uses: actions/download-artifact@v4
+        with:
+          name: production-${{ github.sha }}
+          path: ${{ env.RELEASE_DIR }}
 
-      - name: Apply Database Migrations
-        run: dotnet ef database update --project ${{ env.PROJECT_PATH }} --connection "${{ secrets.DATABASE_CONNECTION_STRING }}"
+      - name: Verify release identity
+        run: |
+          [[ "$(cat "$RELEASE_DIR/commit.txt")" == "$GITHUB_SHA" ]]
+          test -s "$RELEASE_DIR/api/UndergroundVandals.Api.dll"
+          test -s "$RELEASE_DIR/bot/UndergroundVandals.Bot.dll"
+          test -s "$RELEASE_DIR/efbundle"
 
-      - name: Publish API
-        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ./publish-api
+      - name: Back up Neon and verify a private remote copy
+        id: backup
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+        run: bash .github/scripts/backup-production.sh
+
+      - name: Apply approved migration bundle
+        working-directory: ${{ env.RELEASE_DIR }}
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          JwtSettings__Secret: migration-design-time-placeholder-not-used-by-the-deployed-app
+          ConnectionStrings__DefaultConnection: ${{ secrets.DATABASE_CONNECTION_STRING }}
+        run: |
+          chmod u+x ./efbundle
+          ./efbundle
 
       - name: Deploy API to Azure
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'underground-vandals-api'
+          app-name: underground-vandals-api
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./publish-api
+          package: ${{ env.RELEASE_DIR }}/api
 
-  deploy-bot:
-    name: Deploy Bot to Azure
-    needs: [ci, detect-changes]
-    if: ${{ always() && needs.ci.result == 'success' && (needs.detect-changes.outputs.bot == 'true' || github.event_name == 'workflow_dispatch') }}
-    runs-on: ubuntu-latest
-    env:
-      PROJECT_PATH: 'backend/UndergroundVandals/UndergroundVandals.Bot/UndergroundVandals.Bot.csproj'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Verify API readiness
+        run: |
+          status=$(curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-all-errors --connect-timeout 5 --max-time 15 --output /dev/null --write-out '%{http_code}' "$API_BASE_URL/healthz")
+          [[ "$status" == "200" ]]
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Publish Bot
-        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ./publish-bot
-
-      - name: Deploy Bot to Azure
+      - name: Deploy bot to Azure
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'underground-vandals-bot'
+          app-name: underground-vandals-bot
           publish-profile: ${{ secrets.AZURE_BOT_PUBLISH_PROFILE }}
-          package: ./publish-bot
+          package: ${{ env.RELEASE_DIR }}/bot
+
+      - name: Verify bot readiness
+        run: |
+          status=$(curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-all-errors --connect-timeout 5 --max-time 15 --output /dev/null --write-out '%{http_code}' "$BOT_BASE_URL/healthz")
+          [[ "$status" == "200" ]]
+
+      - name: Summarize production result
+        if: always()
+        env:
+          RELEASE_STATUS: ${{ job.status }}
+          BACKUP_BLOB: ${{ steps.backup.outputs.blob }}
+          BACKUP_STATUS: ${{ steps.backup.outcome }}
+        run: |
+          {
+            echo "## Azure production publication"
+            echo "Result: $RELEASE_STATUS"
+            echo "Commit: $GITHUB_SHA"
+            echo "Backup verification: $BACKUP_STATUS"
+            echo "Backup container: db-backups"
+            echo "Backup blob: $BACKUP_BLOB"
+            if [[ "$RELEASE_STATUS" == "success" ]]; then
+              echo "Verify login and bot commands before promoting the Vercel deployment for this exact commit."
+              echo "Bot HTTP readiness does not verify Telegram connectivity or storage deletion."
+            else
+              echo "Do not promote the frontend. Production may be partially updated; inspect the failed step."
+              echo "There is no automatic application or database rollback."
+            fi
+            echo "Vercel promotion is manual; this workflow does not publish the frontend."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary release files
+        if: always()
+        run: |
+          expected="$RUNNER_TEMP/production-release-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          if [[ "$RELEASE_DIR" == "$expected" && -d "$RELEASE_DIR" ]]; then
+            rm -rf -- "$RELEASE_DIR"
+          fi
