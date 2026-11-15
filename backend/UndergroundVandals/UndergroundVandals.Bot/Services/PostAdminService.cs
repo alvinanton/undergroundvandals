@@ -18,7 +18,7 @@ public sealed record PostDetail(
     IReadOnlyList<MediaItem> Media,
     DateTime CreatedAt);
 
-public sealed record MediaItem(string Url, bool IsVideo);
+public sealed record MediaItem(string Url, bool IsVideo, string? ThumbnailUrl = null);
 
 public sealed record PostCover(Guid Id, string Title, bool IsArchived, MediaItem? Cover);
 
@@ -117,7 +117,7 @@ public sealed class PostAdminService(
                 p.IsArchived,
                 Cover = p.MediaAssets
                     .OrderBy(a => a.Id)
-                    .Select(a => new { a.Url, a.Type })
+                    .Select(a => new { a.Url, a.Type, a.ThumbnailUrl })
                     .Take(1)
                     .ToList()
             })
@@ -128,7 +128,9 @@ public sealed class PostAdminService(
                 r.Id,
                 r.Title,
                 r.IsArchived,
-                r.Cover.Count > 0 ? new MediaItem(r.Cover[0].Url, r.Cover[0].Type == MediaType.Video) : null))
+                r.Cover.Count > 0
+                    ? new MediaItem(r.Cover[0].Url, r.Cover[0].Type == MediaType.Video, r.Cover[0].ThumbnailUrl)
+                    : null))
             .ToList();
 
         return new PagedResult<PostCover>(items, total, page, pageSize);
@@ -145,7 +147,7 @@ public sealed class PostAdminService(
             ? null
             : new PostDetail(post.Id, post.Title, post.Description, post.Category, post.IsArchived,
                 post.Hashtags, post.MediaAssets.Count,
-                post.MediaAssets.Select(a => new MediaItem(a.Url, a.Type == MediaType.Video)).ToList(),
+                post.MediaAssets.Select(a => new MediaItem(a.Url, a.Type == MediaType.Video, a.ThumbnailUrl)).ToList(),
                 post.CreatedAt);
     }
 
@@ -170,7 +172,18 @@ public sealed class PostAdminService(
 
         // Copy what we need before the rows disappear
         var files = post.MediaAssets
-            .Select(a => (a.PublicId, ResourceType: a.Type == MediaType.Video ? "video" : "image"))
+            .SelectMany(a =>
+            {
+                var assetFiles = new List<(string PublicId, string ResourceType)>();
+                if (!string.IsNullOrWhiteSpace(a.PublicId))
+                    assetFiles.Add((a.PublicId, a.Type == MediaType.Video ? "video" : "image"));
+
+                if (TryGetAzureBlobPublicId(a.ThumbnailUrl, out var thumbnailPublicId))
+                    assetFiles.Add((thumbnailPublicId, "image"));
+
+                return assetFiles;
+            })
+            .DistinctBy(file => file.PublicId)
             .ToList();
 
         // Database first: the site never shows a post whose files are already gone
@@ -200,5 +213,16 @@ public sealed class PostAdminService(
         }
 
         return new DeleteResult(true, files.Count - failed.Count, failed);
+    }
+
+    private static bool TryGetAzureBlobPublicId(string? url, out string publicId)
+    {
+        publicId = string.Empty;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            !uri.Host.EndsWith(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        publicId = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
+        return publicId.Contains('/');
     }
 }

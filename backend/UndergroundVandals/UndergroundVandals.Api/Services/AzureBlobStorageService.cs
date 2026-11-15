@@ -1,5 +1,6 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Sas;
 using Microsoft.Extensions.Options;
 using UndergroundVandals.Api.DTOs;
@@ -9,10 +10,12 @@ namespace UndergroundVandals.Api.Services;
 public class AzureBlobStorageService : IFileStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly string _connectionString;
 
     public AzureBlobStorageService(IOptions<AzureStorageSettings> config)
     {
-        _blobServiceClient = new BlobServiceClient(config.Value.ConnectionString);
+        _connectionString = config.Value.ConnectionString;
+        _blobServiceClient = new BlobServiceClient(_connectionString);
     }
 
     public async Task<FileUploadResult> UploadImageAsync(IFormFile file, string containerName, string folderName)
@@ -82,7 +85,7 @@ public class AzureBlobStorageService : IFileStorageService
     /// Generates a SAS URL for direct client-side (Frontend) uploads.
     /// targetPath format expected: "container-name/folder-name" (e.g., "archive-media/photos").
     /// </summary>
-    public async Task<Dictionary<string, object>> GenerateUploadParametersAsync(string targetPath)
+    public async Task<Dictionary<string, object>> GenerateUploadParametersAsync(string targetPath, Guid? uploadSessionId = null)
     {
         if (string.IsNullOrWhiteSpace(targetPath))
             throw new ArgumentException("Target path cannot be empty", nameof(targetPath));
@@ -95,8 +98,25 @@ public class AzureBlobStorageService : IFileStorageService
         await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
         // Eliminado .bin para evitar distorsión de extensiones en Azure Storage
-        var blobName = $"{folderPrefix}{Guid.NewGuid()}";
+        var blobName = $"{folderPrefix}{uploadSessionId ?? Guid.NewGuid():D}";
         var blobClient = containerClient.GetBlobClient(blobName);
+
+        var uncommittedBlockIds = new List<string>();
+        if (uploadSessionId.HasValue)
+        {
+            try
+            {
+                var blockList = await new BlockBlobClient(_connectionString, containerName, blobName)
+                    .GetBlockListAsync(BlockListTypes.Uncommitted);
+                uncommittedBlockIds = blockList.Value.UncommittedBlocks
+                    .Select(block => block.Name)
+                    .ToList();
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+            {
+                // A new resumable upload session does not have a blob yet.
+            }
+        }
 
         var sasBuilder = new BlobSasBuilder
         {
@@ -115,7 +135,8 @@ public class AzureBlobStorageService : IFileStorageService
             { "uploadUrl", sasUri.ToString() },
             { "fileUrl", blobClient.Uri.ToString() },
             { "publicId", $"{containerName}/{blobName}" },
-            { "provider", "AzureBlob" }
+            { "provider", "AzureBlob" },
+            { "uncommittedBlockIds", uncommittedBlockIds }
         };
     }
 

@@ -49,6 +49,12 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       class="hidden border-t border-zinc-800/80 p-6 sm:p-8 space-y-6 bg-zinc-950/40"
     >
       <form id="gallery-create-form" class="space-y-6">
+        <div id="gallery-draft-notice" class="hidden rounded-lg border border-amber-700/60 bg-amber-950/40 p-4 text-xs font-mono text-amber-200" role="status">
+          <div class="flex items-start justify-between gap-4">
+            <p id="gallery-draft-notice-text"></p>
+            <button type="button" id="gallery-draft-clear" class="shrink-0 text-amber-100 underline">Clear saved draft</button>
+          </div>
+        </div>
 
         {/* Block 1: Basic Information */}
         <div class="space-y-4">
@@ -144,7 +150,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 id="gallery-hero-url"
                 required
                 class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-xs font-mono"
-                placeholder="https://res.cloudinary.com/... or upload image"
+                placeholder="https://... or upload image to Azure"
               />
               <input type="file" id="hero-file-input" accept="image/*" class="hidden" />
               <button
@@ -455,6 +461,9 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
 <!-- CLIENT-SIDE SCRIPT FOR GALLERY EDITORIAL MANAGER -->
 <script>
+  import { uploadFileToAzure } from "../../lib/azureStorage";
+  import { clearAdminDraft, readAdminDraft, saveAdminDraft } from "../../lib/adminDraft";
+
   const API_URL = "/api/admin/content";
 
   const rootEl = document.getElementById("gallery-manager-root");
@@ -494,7 +503,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       .replace(/-+/g, "-");
   });
 
-  // UPLOAD HERO IMAGE TO CLOUDINARY
+  // UPLOAD HERO IMAGE TO AZURE BLOB STORAGE
   const heroUrlInput = document.getElementById("gallery-hero-url") as HTMLInputElement;
   const heroFileInput = document.getElementById("hero-file-input") as HTMLInputElement;
   const uploadHeroBtn = document.getElementById("upload-hero-btn");
@@ -507,22 +516,12 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
     try {
       if (uploadHeroBtn) uploadHeroBtn.innerText = "Uploading...";
-      const sigRes = await fetch(`${API_URL}/media/upload-signature?folder=underground_vandals/gallery_heroes`);
-      const sigData = await sigRes.json();
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("api_key", sigData.apiKey);
-      formData.append("timestamp", sigData.timestamp.toString());
-      formData.append("signature", sigData.signature);
-      formData.append("folder", sigData.folder);
-
-      const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`, {
-        method: "POST",
-        body: formData
-      });
-      const cloudData = await cloudRes.json();
-      if (heroUrlInput) heroUrlInput.value = cloudData.secure_url;
+      galleryUploadInterrupted = true;
+      persistGalleryDraft();
+      const upload = await uploadFileToAzure(file, "gallery-media/gallery-heroes");
+      if (heroUrlInput) heroUrlInput.value = upload.url;
+      galleryUploadInterrupted = false;
+      persistGalleryDraft();
     } catch (err: any) {
       alert("Error uploading Hero image: " + err.message);
     } finally {
@@ -530,7 +529,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     }
   });
 
-  // UPLOAD EXHIBITION SHOTS TO CLOUDINARY
+  // UPLOAD EXHIBITION SHOTS TO AZURE BLOB STORAGE
   const shotsFileInput = document.getElementById("shots-file-input") as HTMLInputElement;
   const uploadShotsBtn = document.getElementById("upload-shots-btn");
   const shotsCountLabel = document.getElementById("shots-count-label");
@@ -544,25 +543,16 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
     try {
       if (uploadShotsBtn) uploadShotsBtn.innerText = "Uploading...";
+      galleryUploadInterrupted = true;
+      persistGalleryDraft();
       for (const file of files) {
-        const sigRes = await fetch(`${API_URL}/media/upload-signature?folder=underground_vandals/gallery_exhibitions`);
-        const sigData = await sigRes.json();
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("api_key", sigData.apiKey);
-        formData.append("timestamp", sigData.timestamp.toString());
-        formData.append("signature", sigData.signature);
-        formData.append("folder", sigData.folder);
-
-        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`, {
-          method: "POST",
-          body: formData
-        });
-        const cloudData = await cloudRes.json();
-        attachedExhibitionUrls.push(cloudData.secure_url);
+        const upload = await uploadFileToAzure(file, "gallery-media/exhibitions");
+        attachedExhibitionUrls.push(upload.url);
+        persistGalleryDraft();
       }
       renderShotsPreview();
+      galleryUploadInterrupted = false;
+      persistGalleryDraft();
     } catch (err: any) {
       alert("Error uploading exhibition photos: " + err.message);
     } finally {
@@ -596,11 +586,118 @@ const isSuperAdmin = userRole === 'SuperAdmin';
   const createForm = document.getElementById("gallery-create-form") as HTMLFormElement;
   const submitBtn = document.getElementById("gallery-submit-btn") as HTMLButtonElement;
   const createStatus = document.getElementById("gallery-create-status");
+  const galleryDraftKey = "uv.admin.gallery-create-draft.v1";
+  const galleryDraftNotice = document.getElementById("gallery-draft-notice");
+  const galleryDraftNoticeText = document.getElementById("gallery-draft-notice-text");
+  const galleryDraftClearButton = document.getElementById("gallery-draft-clear");
+  let galleryUploadInterrupted = false;
+
+  type GalleryDraftValues = {
+    title: string;
+    slug: string;
+    subtitle: string;
+    category: string;
+    readingTimeMinutes: string;
+    heroImageUrl: string;
+    videoSource: string;
+    videoUrl: string;
+    contentMarkdown: string;
+    subjectName: string;
+    location: string;
+    externalUrl: string;
+    shopCollectionSlug: string;
+    shopCollectionTitle: string;
+    tags: string;
+    galleryImageUrls: string[];
+    isPublished: boolean;
+    isFeatured: boolean;
+  };
+
+  function getGalleryDraftValues(): GalleryDraftValues {
+    const value = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
+    return {
+      title: value("gallery-title"),
+      slug: value("gallery-slug"),
+      subtitle: value("gallery-subtitle"),
+      category: value("gallery-category"),
+      readingTimeMinutes: value("gallery-reading-time"),
+      heroImageUrl: value("gallery-hero-url"),
+      videoSource: value("gallery-video-source"),
+      videoUrl: value("gallery-video-url"),
+      contentMarkdown: value("gallery-content-markdown"),
+      subjectName: value("gallery-subject"),
+      location: value("gallery-location"),
+      externalUrl: value("gallery-external-url"),
+      shopCollectionSlug: value("gallery-shop-slug"),
+      shopCollectionTitle: value("gallery-shop-title"),
+      tags: value("gallery-tags"),
+      galleryImageUrls: [...attachedExhibitionUrls],
+      isPublished: (document.getElementById("gallery-is-published") as HTMLInputElement).checked,
+      isFeatured: (document.getElementById("gallery-is-featured") as HTMLInputElement).checked,
+    };
+  }
+
+  function persistGalleryDraft() {
+    saveAdminDraft(galleryDraftKey, getGalleryDraftValues(), galleryUploadInterrupted);
+  }
+
+  const savedGalleryDraft = readAdminDraft<GalleryDraftValues>(galleryDraftKey);
+  if (savedGalleryDraft) {
+    const values = savedGalleryDraft.values;
+    const fields: Array<[string, string | undefined]> = [
+      ["gallery-title", values.title],
+      ["gallery-slug", values.slug],
+      ["gallery-subtitle", values.subtitle],
+      ["gallery-category", values.category],
+      ["gallery-reading-time", values.readingTimeMinutes],
+      ["gallery-hero-url", values.heroImageUrl],
+      ["gallery-video-source", values.videoSource],
+      ["gallery-video-url", values.videoUrl],
+      ["gallery-content-markdown", values.contentMarkdown],
+      ["gallery-subject", values.subjectName],
+      ["gallery-location", values.location],
+      ["gallery-external-url", values.externalUrl],
+      ["gallery-shop-slug", values.shopCollectionSlug],
+      ["gallery-shop-title", values.shopCollectionTitle],
+      ["gallery-tags", values.tags],
+    ];
+    for (const [id, savedValue] of fields) {
+      const field = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+      if (field && savedValue !== undefined) field.value = savedValue;
+    }
+    (document.getElementById("gallery-is-published") as HTMLInputElement).checked = values.isPublished;
+    (document.getElementById("gallery-is-featured") as HTMLInputElement).checked = values.isFeatured;
+    attachedExhibitionUrls = values.galleryImageUrls || [];
+    galleryUploadInterrupted = savedGalleryDraft.uploadInterrupted;
+    renderShotsPreview();
+
+    if (galleryDraftNotice && galleryDraftNoticeText) {
+      galleryDraftNoticeText.textContent = savedGalleryDraft.uploadInterrupted
+        ? "An upload was interrupted. Your article details were restored. Re-select the same image(s) to resume any interrupted upload."
+        : "Your saved article draft was restored. Re-select the same image(s) if you need to resume an interrupted upload.";
+      galleryDraftNotice.classList.remove("hidden");
+      accordionContent?.classList.remove("hidden");
+      if (accordionBadge) accordionBadge.innerText = "- Collapse Form";
+    }
+  }
+
+  let galleryDraftSaveTimer = 0;
+  createForm?.addEventListener("input", () => {
+    window.clearTimeout(galleryDraftSaveTimer);
+    galleryDraftSaveTimer = window.setTimeout(persistGalleryDraft, 300);
+  });
+  createForm?.addEventListener("change", persistGalleryDraft);
+  galleryDraftClearButton?.addEventListener("click", () => {
+    clearAdminDraft(galleryDraftKey);
+    galleryDraftNotice?.classList.add("hidden");
+  });
 
   createForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     if (submitBtn) submitBtn.disabled = true;
+    galleryUploadInterrupted = false;
+    persistGalleryDraft();
 
     const payload = {
       title: titleInput.value,
@@ -642,6 +739,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       createForm.reset();
       attachedExhibitionUrls = [];
       renderShotsPreview();
+      clearAdminDraft(galleryDraftKey);
+      galleryDraftNotice?.classList.add("hidden");
       await fetchArticles();
 
       setTimeout(() => {
@@ -651,6 +750,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       }, 1500);
 
     } catch (err: any) {
+      persistGalleryDraft();
       if (createStatus) {
         createStatus.innerText = err.message || "Error creating article.";
         createStatus.className = "text-xs font-mono text-center rounded-lg p-3 bg-red-950/80 text-red-400 border border-red-800 block";

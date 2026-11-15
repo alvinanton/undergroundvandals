@@ -13,5 +13,5 @@ public interface IFileStorageService
     Task<bool> DeleteFileAsync(string publicId, string resourceType = "image");
 
     // Genera firma SAS pasando la ruta completa (ej: "archive-media/photos" o "gallery-media/articles")
-    Task<Dictionary<string, object>> GenerateUploadParametersAsync(string targetPath);
+    Task<Dictionary<string, object>> GenerateUploadParametersAsync(string targetPath, Guid? uploadSessionId = null);
 }

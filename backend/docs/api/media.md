@@ -76,7 +76,7 @@ Ejemplo de paso 2, con variables del shell:
 curl -X PUT "$uploadUrl" -H "x-ms-blob-type: BlockBlob" -H "Content-Type: image/webp" --data-binary @mural.webp
 ```
 
-El frontend implementa optimización WebP y carga por bloques para archivos mayores a 8 MiB en `frontend/src/lib/azureStorage.ts`; 8 MiB es un umbral del cliente, no una validación de la API. Los bloques se suben a la SAS con `comp=block&blockid=...` y se confirman con `comp=blocklist`. No existen rutas HTTP de chunks en esta API .NET. Cloudinary está presente como implementación alternativa, pero el servicio registrado actualmente es Azure Blob.
+El frontend implementa optimización WebP y carga por bloques para archivos mayores a 8 MiB en `frontend/src/lib/azureStorage.ts`; 8 MiB es un umbral del cliente, no una validación de la API. Los bloques se suben a la SAS con `comp=block&blockid=...` y se confirman con `comp=blocklist`. No existen rutas HTTP de chunks en esta API .NET. Azure Blob Storage es el proveedor de archivos usado por esta API.
 
 ## POST /api/media/upload
 

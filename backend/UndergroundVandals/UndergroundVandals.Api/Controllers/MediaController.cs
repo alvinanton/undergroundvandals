@@ -78,19 +78,32 @@ public class MediaController : ControllerBase
     [Authorize(Roles = "Admin,Editor")]
     [HttpGet("upload-signature")]
     [EndpointSummary("Generate upload authorization")]
-    [EndpointDescription("Admin or Editor. Requires target in container/folder format. Returns uploadUrl, fileUrl, publicId, and provider for a direct upload to Azure; the SAS is valid for 15 minutes.")]
+    [EndpointDescription("Admin or Editor. Requires target in container/folder format. Returns a 15-minute Azure upload SAS. Optional uploadSessionId renews authorization for a resumable upload and returns its uncommitted block IDs; session IDs are limited to supported media targets.")]
     [ProducesResponseType(typeof(Dictionary<string, object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest, Description = "Automatic validation error (ValidationProblemDetails) or a controller error with a message field.")]
     [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetUploadSignature([FromQuery] string target)
+    public async Task<IActionResult> GetUploadSignature([FromQuery] string target, [FromQuery] Guid? uploadSessionId)
     {
         if (string.IsNullOrWhiteSpace(target))
             return BadRequest(new ApiMessageResponseDto("Target path (e.g., 'archive-media/photos') is required."));
 
-        var uploadParams = await _fileStorageService.GenerateUploadParametersAsync(target);
+        if (uploadSessionId.HasValue && !IsResumableUploadTarget(target))
+            return BadRequest(new ApiMessageResponseDto("Resumable uploads are not enabled for this target."));
+
+        var uploadParams = await _fileStorageService.GenerateUploadParametersAsync(target, uploadSessionId);
         return Ok(uploadParams);
     }
+
+    private static bool IsResumableUploadTarget(string target) =>
+        new[]
+        {
+            "archive-media/photos",
+            "archive-media/videos",
+            "archive-media/thumbnails",
+            "gallery-media/gallery-heroes",
+            "gallery-media/exhibitions"
+        }.Contains(target.Trim('/'), StringComparer.OrdinalIgnoreCase);
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost("upload")]
