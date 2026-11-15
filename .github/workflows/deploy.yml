@@ -193,29 +193,45 @@ jobs:
           echo "Bot did not become ready within 300 seconds (last HTTP status: $status)." >&2
           exit 1
 
+      - name: Set up Node for Vercel CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Promote matching frontend deployment to Vercel production
+        id: promote_frontend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TELEMETRY_DISABLED: '1'
+          GITHUB_SHA: ${{ github.sha }}
+        run: bash .github/scripts/promote-vercel-production.sh
+
       - name: Summarize production result
         if: always()
         env:
           RELEASE_STATUS: ${{ job.status }}
           BACKUP_BLOB: ${{ steps.backup.outputs.blob }}
           BACKUP_STATUS: ${{ steps.backup.outcome }}
+          VERCEL_PROMOTION_STATUS: ${{ steps.promote_frontend.outcome }}
+          VERCEL_DEPLOYMENT_URL: ${{ steps.promote_frontend.outputs.deployment_url }}
         run: |
           {
-            echo "## Azure production publication"
+            echo "## Production release"
             echo "Result: $RELEASE_STATUS"
             echo "Commit: $GITHUB_SHA"
             echo "Release packages were built and used locally on this runner; no GitHub artifact storage was used."
             echo "Backup verification: $BACKUP_STATUS"
             echo "Backup container: db-backups"
             echo "Backup blob: $BACKUP_BLOB"
+            echo "Vercel frontend promotion: $VERCEL_PROMOTION_STATUS"
+            echo "Vercel deployment: $VERCEL_DEPLOYMENT_URL"
             if [[ "$RELEASE_STATUS" == "success" ]]; then
-              echo "Verify login and bot commands before promoting the Vercel deployment for this exact commit."
+              echo "The API, bot, and matching Vercel frontend deployment completed successfully."
               echo "Bot HTTP readiness does not verify Telegram connectivity or storage deletion."
             else
-              echo "Do not promote the frontend. Production may be partially updated; inspect the failed step."
+              echo "Production may be partially updated; inspect the failed step before retrying."
               echo "There is no automatic application or database rollback."
             fi
-            echo "Vercel promotion is manual; this workflow does not publish the frontend."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove temporary release files
