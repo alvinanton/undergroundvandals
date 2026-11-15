@@ -12,7 +12,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
                        ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
 // Add services to the container.
-builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSection("AzureStorageSettings"));
 builder.Services.AddScoped<IFileStorageService, AzureBlobStorageService>();
 

@@ -62,9 +62,8 @@ services:
       - TelegramBot__AdminChatId=${TELEGRAM_ADMIN_CHAT_ID}
       - TelegramBot__ReportTimeUtc=${TELEGRAM_REPORT_TIME_UTC:-03:00}
       - ApiSettings__BaseUrl=http://api:8080
-      - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
-      - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
-      - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - AzureStorageSettings__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}
+      - AzureStorageSettings__AccountName=${AZURE_STORAGE_ACCOUNT_NAME}
     networks:
       - uv-network
 

@@ -49,6 +49,12 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             class="hidden border-t border-zinc-800/80 p-6 sm:p-8 space-y-6 bg-zinc-950/40"
         >
             <form id="upload-form" class="space-y-5">
+                <div id="archive-draft-notice" class="hidden rounded-lg border border-amber-700/60 bg-amber-950/40 p-4 text-xs font-mono text-amber-200" role="status">
+                    <div class="flex items-start justify-between gap-4">
+                        <p id="archive-draft-notice-text"></p>
+                        <button type="button" id="archive-draft-clear" class="shrink-0 text-amber-100 underline">Clear saved draft</button>
+                    </div>
+                </div>
                 <div>
                     <label
                         for="title"
@@ -550,6 +556,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
 <script>
     import { uploadFileToAzure } from "../../lib/azureStorage";
+    import { clearAdminDraft, readAdminDraft, saveAdminDraft } from "../../lib/adminDraft";
 
     const API_URL = "/api/admin/content";
 
@@ -582,6 +589,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     let sortDirection: "asc" | "desc" = "desc";
 
     let selectedUploadFiles: File[] = [];
+    let rememberedUploadFileNames: string[] = [];
     let activePreUploadIndex: number = -1;
     let coverFileIndex: number = 0;
     const customVideoPosters: Map<number, File> = new Map();
@@ -612,6 +620,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         if (target.files && target.files.length > 0) {
             const newFiles = Array.from(target.files);
             selectedUploadFiles = [...selectedUploadFiles, ...newFiles];
+            rememberedUploadFileNames = selectedUploadFiles.map((file) => file.name);
             target.value = "";
             renderPreUploadPreviews();
         }
@@ -649,6 +658,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     function removeSelectedFile(index: number) {
         if (index < 0 || index >= selectedUploadFiles.length) return;
         selectedUploadFiles.splice(index, 1);
+        rememberedUploadFileNames = selectedUploadFiles.map((file) => file.name);
         
         // Re-indexar las portadas de video capturadas en el Map
         const newMap = new Map<number, File>();
@@ -832,6 +842,63 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     const progressBar = document.getElementById("upload-progress-bar");
     const progressPercentage = document.getElementById("upload-percentage");
     const statusText = document.getElementById("upload-status-text");
+    const archiveDraftKey = "uv.admin.archive-upload-draft.v1";
+    const archiveDraftNotice = document.getElementById("archive-draft-notice");
+    const archiveDraftNoticeText = document.getElementById("archive-draft-notice-text");
+    const archiveDraftClearButton = document.getElementById("archive-draft-clear");
+
+    type ArchiveDraftValues = {
+        title: string;
+        category: string;
+        hashtags: string;
+        description: string;
+        fileNames: string[];
+    };
+
+    function getArchiveDraftValues(): ArchiveDraftValues {
+        return {
+            title: (document.getElementById("title") as HTMLInputElement).value,
+            category: (document.getElementById("category") as HTMLInputElement).value,
+            hashtags: (document.getElementById("hashtags") as HTMLInputElement).value,
+            description: (document.getElementById("description") as HTMLTextAreaElement).value,
+            fileNames: selectedUploadFiles.length
+                ? selectedUploadFiles.map((file) => file.name)
+                : rememberedUploadFileNames,
+        };
+    }
+
+    function showArchiveDraftNotice(uploadInterrupted: boolean, fileNames: string[]) {
+        if (!archiveDraftNotice || !archiveDraftNoticeText) return;
+        const fileNote = fileNames.length ? ` Selected files: ${fileNames.join(", ")}.` : "";
+        archiveDraftNoticeText.textContent = uploadInterrupted
+            ? `An upload was interrupted. Your form details were restored. Select the same file(s) again to resume the upload.${fileNote}`
+            : `Your saved archive draft was restored. Select the same file(s) again if you need to resume an interrupted upload.${fileNote}`;
+        archiveDraftNotice.classList.remove("hidden");
+        accordionContent?.classList.remove("hidden");
+        if (accordionBadge) accordionBadge.innerText = "- Collapse Form";
+    }
+
+    function persistArchiveDraft(uploadInterrupted = false) {
+        saveAdminDraft(archiveDraftKey, getArchiveDraftValues(), uploadInterrupted);
+    }
+
+    const savedArchiveDraft = readAdminDraft<ArchiveDraftValues>(archiveDraftKey);
+    if (savedArchiveDraft) {
+        const values = savedArchiveDraft.values;
+        rememberedUploadFileNames = values.fileNames || [];
+        (document.getElementById("title") as HTMLInputElement).value = values.title || "";
+        (document.getElementById("category") as HTMLInputElement).value = values.category || "General";
+        (document.getElementById("hashtags") as HTMLInputElement).value = values.hashtags || "";
+        (document.getElementById("description") as HTMLTextAreaElement).value = values.description || "";
+        showArchiveDraftNotice(savedArchiveDraft.uploadInterrupted, values.fileNames || []);
+    }
+
+    uploadForm?.addEventListener("input", () => persistArchiveDraft());
+    uploadForm?.addEventListener("change", () => persistArchiveDraft());
+    archiveDraftClearButton?.addEventListener("click", () => {
+        clearAdminDraft(archiveDraftKey);
+        archiveDraftNotice?.classList.add("hidden");
+    });
 
     uploadForm?.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -841,6 +908,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             showStatus("Please select at least one image or video file.", "error");
             return;
         }
+
+        persistArchiveDraft(true);
 
 
         uploadBtn.disabled = true;
@@ -934,6 +1003,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             customVideoPosters.clear();
             coverFileIndex = 0;
             renderPreUploadPreviews();
+            clearAdminDraft(archiveDraftKey);
+            archiveDraftNotice?.classList.add("hidden");
             await fetchMediaList();
 
             setTimeout(() => {

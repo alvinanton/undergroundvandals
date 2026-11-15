@@ -22,8 +22,8 @@ builder.Services.AddScoped<IReportBuilder, ReportBuilder>();
 builder.Services.AddSingleton<ConfirmationStore>();
 builder.Services.AddSingleton<CommandDispatcher>();
 
-builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-builder.Services.AddScoped<IFileStorageService, CloudinaryStorageService>();
+builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSection("AzureStorageSettings"));
+builder.Services.AddScoped<IFileStorageService, AzureBlobStorageService>();
 builder.Services.AddScoped<IPostAdminService, PostAdminService>();
 
 foreach (var type in typeof(IBotCommand).Assembly.GetTypes()
