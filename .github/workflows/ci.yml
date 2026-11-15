@@ -26,14 +26,10 @@ jobs:
               - 'backend/**'
               - 'docker-compose.yml'
               - '.env.example'
-              - '.github/workflows/**'
-              - '.github/scripts/**'
             frontend:
               - 'frontend/**'
               - 'docker-compose.yml'
               - '.env.example'
-              - '.github/workflows/**'
-              - '.github/scripts/**'
 
   infrastructure:
     name: Infrastructure
@@ -73,48 +69,61 @@ jobs:
   backend:
     name: Backend (.NET)
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
     runs-on: self-hosted
     defaults:
       run:
         working-directory: backend/UndergroundVandals
     steps:
+      - name: Skip backend validation when no backend changes were detected
+        if: needs.changes.outputs.backend != 'true'
+        run: echo "No backend-related files changed; backend build and tests are not needed."
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4
+        if: needs.changes.outputs.backend == 'true'
         env:
           DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
         with:
           dotnet-version: 10.0.x
 
       - name: Restore
+        if: needs.changes.outputs.backend == 'true'
         run: dotnet restore UndergroundVandals.slnx
 
       - name: Build
+        if: needs.changes.outputs.backend == 'true'
         run: dotnet build UndergroundVandals.slnx --no-restore -c Release
 
       - name: Test
+        if: needs.changes.outputs.backend == 'true'
         run: dotnet test UndergroundVandals.slnx --no-build -c Release
 
   frontend:
     name: Frontend (Astro)
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
     runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
     steps:
+      - name: Skip frontend validation when no frontend changes were detected
+        if: needs.changes.outputs.frontend != 'true'
+        run: echo "No frontend-related files changed; frontend installation and build are not needed."
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.frontend == 'true'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
+        if: needs.changes.outputs.frontend == 'true'
         run: npm ci
 
       - name: Build
+        if: needs.changes.outputs.frontend == 'true'
         run: npm run build

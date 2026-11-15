@@ -154,8 +154,20 @@ jobs:
 
       - name: Verify API readiness
         run: |
-          status=$(curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-all-errors --connect-timeout 5 --max-time 15 --output /dev/null --write-out '%{http_code}' "$API_BASE_URL/healthz")
-          [[ "$status" == "200" ]]
+          deadline=$((SECONDS + 300))
+          status=000
+          while (( SECONDS < deadline )); do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --connect-timeout 5 --max-time 15 "$API_BASE_URL/healthz" || true)
+            if [[ "$status" == "200" ]]; then
+              echo "API readiness verified (HTTP 200)."
+              exit 0
+            fi
+            echo "API is not ready yet (HTTP $status); retrying in 10 seconds."
+            sleep 10
+          done
+          echo "API did not become ready within 300 seconds (last HTTP status: $status)." >&2
+          exit 1
 
       - name: Deploy bot to Azure
         uses: azure/webapps-deploy@v3
@@ -166,8 +178,20 @@ jobs:
 
       - name: Verify bot readiness
         run: |
-          status=$(curl --fail --silent --show-error --retry 20 --retry-delay 3 --retry-all-errors --connect-timeout 5 --max-time 15 --output /dev/null --write-out '%{http_code}' "$BOT_BASE_URL/healthz")
-          [[ "$status" == "200" ]]
+          deadline=$((SECONDS + 300))
+          status=000
+          while (( SECONDS < deadline )); do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --connect-timeout 5 --max-time 15 "$BOT_BASE_URL/healthz" || true)
+            if [[ "$status" == "200" ]]; then
+              echo "Bot readiness verified (HTTP 200)."
+              exit 0
+            fi
+            echo "Bot is not ready yet (HTTP $status); retrying in 10 seconds."
+            sleep 10
+          done
+          echo "Bot did not become ready within 300 seconds (last HTTP status: $status)." >&2
+          exit 1
 
       - name: Summarize production result
         if: always()
