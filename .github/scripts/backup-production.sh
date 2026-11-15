@@ -53,11 +53,10 @@ if [[ -n "$access" ]]; then
   exit 1
 fi
 
-export PGDATABASE="$PRODUCTION_DATABASE_URL"
 docker create --name "$dump_container" \
-  --env PGDATABASE --env PGCONNECT_TIMEOUT=15 \
-  "$POSTGRES_IMAGE" pg_dump \
-  --no-password --format=custom --no-owner --no-acl --file=/tmp/production.dump > /dev/null
+  --env PRODUCTION_DATABASE_URL --env PGCONNECT_TIMEOUT=15 \
+  "$POSTGRES_IMAGE" sh -c \
+  'exec pg_dump --dbname="$PRODUCTION_DATABASE_URL" --no-password --format=custom --no-owner --no-acl --file=/tmp/production.dump' > /dev/null
 docker start --attach "$dump_container" > /dev/null
 docker cp "$dump_container:/tmp/production.dump" "$BACKUP_DIR/production.dump"
 docker rm "$dump_container" > /dev/null
