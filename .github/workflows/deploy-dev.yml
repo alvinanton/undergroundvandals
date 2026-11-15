@@ -2,8 +2,13 @@ name: Deploy to Dev-Server (Ubuntu)
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - '.github/workflows/deploy-dev.yml'
   workflow_dispatch:
 
 concurrency:
