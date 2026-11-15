@@ -54,12 +54,13 @@ if [[ -n "$access" ]]; then
 fi
 
 export PGDATABASE="$PRODUCTION_DATABASE_URL"
-docker run --rm --name "$dump_container" \
-  --user "$(id -u):$(id -g)" \
+docker create --name "$dump_container" \
   --env PGDATABASE --env PGCONNECT_TIMEOUT=15 \
-  --mount "type=bind,source=$BACKUP_DIR,target=/backup" \
   "$POSTGRES_IMAGE" pg_dump \
-  --no-password --format=custom --no-owner --no-acl --file=/backup/production.dump
+  --no-password --format=custom --no-owner --no-acl --file=/tmp/production.dump > /dev/null
+docker start --attach "$dump_container" > /dev/null
+docker cp "$dump_container:/tmp/production.dump" "$BACKUP_DIR/production.dump"
+docker rm "$dump_container" > /dev/null
 test -s "$BACKUP_DIR/production.dump"
 
 backup_blob="production/$(date -u +%Y%m%dT%H%M%SZ)-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.dump"
