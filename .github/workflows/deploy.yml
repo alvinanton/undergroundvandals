@@ -1,4 +1,4 @@
-name: Deploy to Production (Azure)
+name: Production Release
 
 on:
   workflow_dispatch:
