@@ -123,7 +123,8 @@ public class MediaController : ControllerBase
             Title = dto.Title,
             Description = dto.Description,
             Category = string.IsNullOrWhiteSpace(dto.Category) ? "General" : dto.Category,
-            Hashtags = dto.Hashtags ?? new List<string>()
+            Hashtags = dto.Hashtags ?? new List<string>(),
+            IsArchived = dto.IsArchived
         };
 
         foreach (var assetDto in dto.Assets)

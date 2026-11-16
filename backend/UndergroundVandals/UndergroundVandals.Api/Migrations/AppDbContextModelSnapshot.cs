@@ -57,6 +57,9 @@ namespace UndergroundVandals.Api.Migrations
                     b.Property<bool>("IsFeatured")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPublished")
                         .HasColumnType("boolean");
 
@@ -274,6 +277,48 @@ namespace UndergroundVandals.Api.Migrations
             modelBuilder.Entity("UndergroundVandals.Api.Entities.Post", b =>
                 {
                     b.Navigation("MediaAssets");
+                });
+
+            modelBuilder.Entity("UndergroundVandals.Api.Entities.SitePageSetting", b =>
+                {
+                    b.Property<string>("PageKey")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AnnouncementTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AnnouncementMessage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CtaLabel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CtaUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PageKey");
+
+                    b.ToTable("SitePageSettings");
                 });
 #pragma warning restore 612, 618
         }

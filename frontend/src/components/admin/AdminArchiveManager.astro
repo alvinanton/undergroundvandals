@@ -1,5 +1,7 @@
 ---
 // src/components/admin/AdminArchiveManager.astro
+import AdminPagination from "./AdminPagination.astro";
+import AdminFileDropzone from "./AdminFileDropzone.astro";
 export type UserRole = 'SuperAdmin' | 'ArchiveAdmin' | 'GalleryAdmin';
 
 interface Props {
@@ -12,42 +14,18 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 ---
 
 <div class="space-y-8" id="archive-manager-root" data-is-admin={isAdmin ? "true" : "false"} data-user-role={userRole}>
-    {/* Section 1: Upload Form (Collapsible Accordion) */}
-    <div
-        class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl backdrop-blur-md shadow-xl overflow-hidden transition-all"
-    >
-        {/* Accordion Header / Toggle Button */}
-        <button
-            id="accordion-toggle-btn"
-            type="button"
-            class="w-full p-6 sm:p-7 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors cursor-pointer select-none"
-        >
+    {/* Dedicated create screen */}
+    <section id="archive-create-view" aria-labelledby="archive-create-title" class="hidden space-y-6">
+        <header class="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <span class="text-xs font-mono text-orange-500 uppercase tracking-widest block mb-1">
-                    Quick Action
-                </span>
-                <h2 class="text-lg font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                    📤 Upload New Media
-                </h2>
-                <p class="text-xs text-zinc-400 mt-0.5">
-                    Add photos or videos to the archive (Direct Azure Cloud Upload)
-                </p>
+                <h2 id="archive-create-title" tabindex="-1" class="text-2xl font-bold tracking-tight text-white focus:outline-none sm:text-3xl">New media</h2>
+                <p class="mt-1 text-sm text-zinc-400">Add photos or videos to the archive. Large uploads go directly to Azure.</p>
             </div>
-            <div class="flex items-center gap-3">
-                <span
-                    id="accordion-badge"
-                    class="text-xs font-mono bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-lg text-zinc-300 group-hover:border-orange-500/50 transition-colors"
-                >
-                    + Expand Form
-                </span>
-            </div>
-        </button>
-
-        {/* Accordion Content Body */}
-        <div
-            id="accordion-content"
-            class="hidden border-t border-zinc-800/80 p-6 sm:p-8 space-y-6 bg-zinc-950/40"
-        >
+            <button id="archive-create-back" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-zinc-700 bg-zinc-900 px-4 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-800 sm:self-auto">
+                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/><path d="M9 12h12"/></svg>Back to archive
+            </button>
+        </header>
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-xl sm:p-7">
             <form id="upload-form" class="space-y-5">
                 <div id="archive-draft-notice" class="hidden rounded-lg border border-amber-700/60 bg-amber-950/40 p-4 text-xs font-mono text-amber-200" role="status">
                     <div class="flex items-start justify-between gap-4">
@@ -55,8 +33,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                         <button type="button" id="archive-draft-clear" class="shrink-0 text-amber-100 underline">Clear saved draft</button>
                     </div>
                 </div>
-                <div>
-                    <label
+            <div>
+                <label
                         for="title"
                         class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-2"
                     >
@@ -72,54 +50,34 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                     />
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label
-                            for="category"
-                            class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-2"
-                        >
-                            Category
-                        </label>
-                        <input
-                            type="text"
-                            id="category"
-                            name="category"
-                            value="General"
-                            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors text-sm font-mono"
-                            placeholder="e.g. Trains, Walls, General"
-                        />
-                    </div>
+                <div>
+                    <label
+                        for="category"
+                        class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-2"
+                    >
+                        Category
+                    </label>
+                    <input
+                        type="text"
+                        id="category"
+                        name="category"
+                        value="General"
+                        class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors text-sm font-mono"
+                        placeholder="e.g. Trains, Walls, General"
+                    />
+                </div>
 
-                    <div>
-                        <label
-                            class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-2"
-                        >
-                            Files (Images / Videos) *
-                        </label>
-                        <div class="flex items-center gap-3">
-                            <input
-                                type="file"
-                                id="files-input"
-                                accept="image/*,video/*"
-                                multiple
-                                class="hidden"
-                            />
-                            <button
-                                type="button"
-                                id="select-files-btn"
-                                class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-mono text-xs rounded-lg transition-colors cursor-pointer"
-                            >
-                                📁 Choose Files
-                            </button>
-                            <span id="file-count-label" class="text-xs font-mono text-zinc-400">
-                                No files selected
-                            </span>
-                        </div>
-                    </div>
+                <div>
+                    <p id="files-field-label" class="mb-2 block text-xs font-mono uppercase tracking-wider text-zinc-300">
+                        Files (Images / Videos) *
+                    </p>
+                    <AdminFileDropzone id="files-dropzone" inputId="files-input" accept="image/*,video/*" multiple label="Drag files here" hint="Images and videos · You can select multiple files" browseButtonId="select-files-btn" selectionId="file-count-label" selectionText="No files selected" feedbackId="files-drop-feedback" />
                 </div>
 
                 {/* Pre-upload Previews Grid */}
                 <div id="pre-upload-preview" class="flex flex-wrap gap-3 empty:hidden custom-scrollbar pt-2"></div>
+                <p id="archive-reorder-hint" class="hidden text-[11px] font-mono text-zinc-500">Drag images by the grip to change their order. Focus a grip and use the arrow keys to reorder.</p>
+                <p id="archive-reorder-announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
                 <div>
                     <label
@@ -153,6 +111,11 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                     ></textarea>
                 </div>
 
+                <label for="archive-is-archived" class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="archive-is-archived" class="size-4 cursor-pointer rounded border-zinc-700 bg-zinc-950 accent-orange-500" />
+                    <span class="text-xs font-mono uppercase tracking-wider text-zinc-300">Create as archived</span>
+                </label>
+
                 {/* Status Message */}
                 <div
                     id="status-message"
@@ -180,10 +143,11 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 </button>
             </form>
         </div>
-    </div>
+    </section>
 
     {/* Section 2: Media Management List */}
     <div
+        id="archive-list-view"
         class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6"
     >
         <div
@@ -199,17 +163,23 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                     View, edit, archive, or permanently delete gallery items
                 </p>
             </div>
-            <button
+            <div class="flex shrink-0 items-center gap-2">
+              <button id="archive-create-btn" type="button" class="inline-flex min-h-9 items-center gap-2 rounded-lg bg-orange-500 px-3 text-xs font-bold font-mono uppercase tracking-wider text-zinc-950 transition-colors hover:bg-orange-400">
+                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New media
+              </button>
+              <button
                 id="refresh-btn"
-                class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-            >
-                ↻ Refresh
-            </button>
+                type="button"
+                class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-zinc-800 px-3 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-700 disabled:opacity-50"
+              >
+                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5"/><path d="M19 12a7 7 0 1 1-2-4.9L20 12"/></svg><span>Refresh</span>
+              </button>
+            </div>
         </div>
 
         {/* Search & Filters */}
         <div
-            class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60"
+            class="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60"
         >
             <div class="sm:col-span-2">
                 <input
@@ -239,11 +209,29 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                     <option value="ARCHIVED">Archived</option>
                 </select>
             </div>
+            <div class="flex justify-end">
+                <button id="clear-media-filters-btn" type="button" disabled class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700/60 bg-zinc-800/80 px-3 py-2 text-xs font-mono uppercase tracking-wider text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
+                    <svg aria-hidden="true" class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Reset</span>
+                </button>
+            </div>
         </div>
 
         {/* Media Table Container */}
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <div>
+            <div class="xl:hidden flex items-center gap-2 mb-3">
+                <label class="sr-only" for="media-mobile-sort">Sort media by</label>
+                <select id="media-mobile-sort" class="min-w-0 grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 text-xs font-mono">
+                    <option value="createdAt">Date</option>
+                    <option value="title">Title</option>
+                    <option value="isArchived">Status</option>
+                </select>
+                <button id="media-mobile-sort-direction" type="button" aria-label="Change sort direction" class="shrink-0 px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-300 text-xs font-mono">Newest first</button>
+            </div>
+            <div id="media-card-list" class="xl:hidden grid gap-3" aria-live="polite">
+                <p class="py-8 text-center text-zinc-500 font-mono">Loading media items...</p>
+            </div>
+            <div class="hidden xl:block overflow-x-auto">
+            <table class="w-full min-w-[680px] text-left border-collapse">
                 <thead>
                     <tr
                         class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400 select-none"
@@ -293,6 +281,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                     </tr>
                 </tbody>
             </table>
+            </div>
+            <AdminPagination id="media" itemLabel="media items" />
         </div>
     </div>
 
@@ -337,7 +327,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                         id="pre-upload-modal-capture-btn"
                         class="hidden px-3.5 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/40 text-orange-400 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                     >
-                        📸 Set Frame as Poster
+                        <svg class="size-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Set Frame as Poster
                     </button>
 
                     <button
@@ -413,34 +403,27 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         </div>
     </div>
 
-    {/* Edit Media Modal */}
-    <div
+    {/* Dedicated edit screen */}
+    <section
         id="edit-modal"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4"
+        aria-labelledby="edit-media-title"
+        class="hidden space-y-6"
     >
-        <div
-            class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
-        >
-            <div
-                class="flex justify-between items-center border-b border-zinc-800/80 pb-4"
-            >
+        <div class="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h3
-                        class="text-base font-bold text-white uppercase tracking-wide"
-                    >
-                        Edit Media Item
-                    </h3>
-                    <p class="text-xs text-zinc-400">
+                    <h2 id="edit-media-title" tabindex="-1" class="text-2xl font-bold tracking-tight text-white focus:outline-none sm:text-3xl">Edit media item</h2>
+                    <p class="mt-1 text-sm text-zinc-400">
                         Update metadata or manage assets for this post
                     </p>
                 </div>
                 <button
                     id="edit-modal-close"
-                    class="text-zinc-400 hover:text-orange-500 font-mono text-sm cursor-pointer transition-colors"
-                    >✕</button
+                    type="button"
+                    class="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-zinc-700 bg-zinc-900 px-4 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-800 sm:self-auto"
+                    ><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/><path d="M9 12h12"/></svg>Back to archive</button
                 >
-            </div>
-
+        </div>
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-xl sm:p-7">
             <form id="edit-form" class="space-y-4">
                 <input type="hidden" id="edit-id" />
 
@@ -508,24 +491,22 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
                     <div>
                         <label class="block text-[11px] font-mono text-zinc-400 mb-1.5">
-                            Add More Files to this Media Item (Direct Cloud Upload):
+                            Add files to this media item. Save changes to upload them.
                         </label>
-                        <div class="flex items-center gap-2">
-                            <input
-                                type="file"
-                                id="add-more-files-input"
-                                accept="image/*,video/*"
-                                multiple
-                                class="text-xs text-zinc-400 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-mono file:bg-zinc-800 file:text-zinc-200 cursor-pointer"
-                            />
-                            <button
-                                type="button"
-                                id="add-files-btn"
-                                class="px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30 font-mono text-xs rounded transition-colors cursor-pointer shrink-0"
-                            >
-                                + Upload
-                            </button>
-                        </div>
+                        <AdminFileDropzone id="edit-add-files-dropzone" inputId="add-more-files-input" accept="image/*,video/*" multiple label="Drop images or videos here to add files" browseButtonId="add-more-files-browse" browseLabel="Browse files" selectionId="add-more-files-selection" selectionText="No files selected" feedbackId="edit-add-files-feedback" />
+                        <div id="edit-add-files-preview" class="mt-3 flex flex-wrap gap-3 empty:hidden"></div>
+                        <p id="edit-add-files-reorder-hint" class="hidden text-[11px] font-mono text-zinc-500">Drag files by the grip to change their order. Focus a grip and use the arrow keys to reorder.</p>
+                        <p id="edit-add-files-reorder-announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+                    </div>
+                </div>
+
+                <div id="edit-upload-progress" class="hidden space-y-2 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3" aria-live="polite">
+                    <div class="flex items-center justify-between gap-3 text-[11px] font-mono text-zinc-300">
+                        <span id="edit-upload-progress-label" class="min-w-0 truncate">Preparing uploads...</span>
+                        <span id="edit-upload-progress-percent" class="shrink-0 text-orange-400">0%</span>
+                    </div>
+                    <div id="edit-upload-progress-track" role="progressbar" aria-label="File upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" class="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                        <div id="edit-upload-progress-bar" class="h-full w-0 rounded-full bg-orange-500 transition-[width] duration-200 ease-out"></div>
                     </div>
                 </div>
 
@@ -540,7 +521,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                         type="button"
                         id="edit-cancel-btn"
                         class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer"
-                        >Cancel</button
+                        >Back to Archive</button
                     >
                     <button
                         type="submit"
@@ -551,12 +532,14 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
 
 <script>
     import { uploadFileToAzure } from "../../lib/azureStorage";
     import { clearAdminDraft, readAdminDraft, saveAdminDraft } from "../../lib/adminDraft";
+    import { attachFileDropzone } from "../../lib/fileDropzone";
+    import { createAdminPagination } from "../../lib/adminPagination";
 
     const API_URL = "/api/admin/content";
 
@@ -567,32 +550,106 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     const userRole = rootEl?.dataset.userRole || "SuperAdmin";
     const isSuperAdmin = userRole === "SuperAdmin";
 
-    // --- ACCORDION TOGGLE SYSTEM ---
-    const accordionBtn = document.getElementById("accordion-toggle-btn");
-    const accordionContent = document.getElementById("accordion-content");
-    const accordionBadge = document.getElementById("accordion-badge");
+    // --- ARCHIVE LIST / DEDICATED EDITOR VIEWS ---
+    const archiveListView = document.getElementById("archive-list-view");
+    const archiveCreateView = document.getElementById("archive-create-view");
+    const archiveCreateButton = document.getElementById("archive-create-btn");
+    const archiveCreateBackButton = document.getElementById("archive-create-back");
+    const editModal = document.getElementById("edit-modal");
+    const dashboardHeader = document.getElementById("dashboard-root");
+    const pageContent = dashboardHeader?.parentElement;
+    const contentManagerRoot = document.getElementById("content-manager-root");
+    const contentTabBar = contentManagerRoot?.querySelector<HTMLElement>("[role='tablist']");
+    const galleryTabPanel = document.getElementById("subtab-content-gallery");
+    let currentArchiveView: "list" | "create" | "edit" = "list";
+    let requestedEditId = new URLSearchParams(window.location.search).get("id");
 
-    accordionBtn?.addEventListener("click", () => {
-        const isHidden = accordionContent?.classList.contains("hidden");
-        if (isHidden) {
-            accordionContent?.classList.remove("hidden");
-            if (accordionBadge) accordionBadge.innerText = "- Collapse Form";
-        } else {
-            accordionContent?.classList.add("hidden");
-            if (accordionBadge) accordionBadge.innerText = "+ Expand Form";
+    function setArchiveView(view: "list" | "create" | "edit", editId?: string, updateUrl = true) {
+        currentArchiveView = view;
+        archiveListView?.classList.toggle("hidden", view !== "list");
+        archiveCreateView?.classList.toggle("hidden", view !== "create");
+        editModal?.classList.toggle("hidden", view !== "edit");
+        dashboardHeader?.classList.toggle("hidden", view !== "list");
+        if (archiveListView) archiveListView.style.display = view === "list" ? "block" : "none";
+        if (archiveCreateView) archiveCreateView.style.display = view === "create" ? "block" : "none";
+        if (editModal) editModal.style.display = view === "edit" ? "block" : "none";
+        if (dashboardHeader) dashboardHeader.style.display = view === "list" ? "flex" : "none";
+        pageContent?.classList.toggle("space-y-5", view === "list");
+        pageContent?.classList.toggle("space-y-0", view !== "list");
+        rootEl?.classList.toggle("space-y-8", view === "list");
+        rootEl?.classList.toggle("space-y-0", view !== "list");
+        contentTabBar?.classList.toggle("hidden", view !== "list");
+        if (contentTabBar) contentTabBar.style.display = view === "list" ? "" : "none";
+        if (galleryTabPanel) {
+            const galleryIsActive = document.getElementById("subtab-btn-gallery")?.getAttribute("aria-selected") === "true";
+            galleryTabPanel.classList.toggle("hidden", view !== "list" || !galleryIsActive);
+            galleryTabPanel.style.display = view === "list" && galleryIsActive ? "block" : "none";
         }
+
+        if (updateUrl) {
+            const url = new URL(window.location.href);
+            if (view === "list") {
+                url.searchParams.delete("archive");
+                url.searchParams.delete("id");
+            } else {
+                url.searchParams.set("archive", view);
+                if (view === "edit" && editId) url.searchParams.set("id", editId);
+                else url.searchParams.delete("id");
+            }
+            window.history.pushState({ archiveView: view, editId }, "", url);
+        }
+
+        if (view === "create") {
+            document.getElementById("archive-create-title")?.focus();
+        } else if (view === "edit") {
+            document.getElementById("edit-media-title")?.focus();
+        } else {
+            archiveCreateButton?.focus();
+        }
+    }
+
+    archiveCreateButton?.addEventListener("click", () => setArchiveView("create"));
+    archiveCreateBackButton?.addEventListener("click", () => setArchiveView("list"));
+    window.addEventListener("popstate", () => {
+        const url = new URL(window.location.href);
+        const view = url.searchParams.get("archive");
+        const editId = url.searchParams.get("id") || undefined;
+        if (view === "create") setArchiveView("create", undefined, false);
+        else if (view === "edit" && editId) {
+            const item = allMediaItems.find((media) => media.id === editId);
+            if (item) openEditScreen(item, false);
+        } else setArchiveView("list", undefined, false);
     });
+
+    const initialArchiveView = new URLSearchParams(window.location.search).get("archive");
+    if (initialArchiveView === "create") setArchiveView("create", undefined, false);
 
     // State
     let allMediaItems: any[] = [];
+    let stagedEditFiles: Array<{ file: File; previewUrl: string; uploadedAsset?: { url: string; publicId: string; type: string } }> = [];
+    let touchEditFileDrag: { pointerId: number; from: number; x: number; y: number; activated: boolean; timer: number } | null = null;
     let currentSortColumn: string = "createdAt";
     let sortDirection: "asc" | "desc" = "desc";
+    const mediaPagination = createAdminPagination("media", "media items", renderMediaTable);
 
     let selectedUploadFiles: File[] = [];
     let rememberedUploadFileNames: string[] = [];
     let activePreUploadIndex: number = -1;
     let coverFileIndex: number = 0;
-    const customVideoPosters: Map<number, File> = new Map();
+    const customVideoPosters: Map<File, File> = new Map();
+    const selectedFilePreviewUrls = new Map<File, string>();
+    const archiveReorderHint = document.getElementById("archive-reorder-hint");
+    const archiveReorderAnnouncement = document.getElementById("archive-reorder-announcement");
+    let touchArchiveDrag: { pointerId: number; fromFile: File; x: number; y: number; activated: boolean; timer: number } | null = null;
+
+    function getSelectedFilePreviewUrl(file: File) {
+        let url = selectedFilePreviewUrls.get(file);
+        if (!url) {
+            url = URL.createObjectURL(file);
+            selectedFilePreviewUrls.set(file, url);
+        }
+        return url;
+    }
 
     let currentGalleryAssets: any[] = [];
     let currentGalleryIndex: number = 0;
@@ -602,6 +659,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     // --- FILE PRE-UPLOAD PREVIEW SYSTEM ---
     const filesInput = document.getElementById("files-input") as HTMLInputElement;
     const selectFilesBtn = document.getElementById("select-files-btn");
+    const filesDropzone = document.getElementById("files-dropzone");
+    attachFileDropzone(filesDropzone, filesInput, { feedback: document.getElementById("files-drop-feedback"), nextStep: "submit" });
     const fileCountLabel = document.getElementById("file-count-label");
     const preUploadPreviewContainer = document.getElementById("pre-upload-preview");
 
@@ -615,14 +674,32 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
     selectFilesBtn?.addEventListener("click", () => filesInput?.click());
 
+    function appendSelectedFiles(files: File[]) {
+        const acceptedFiles = files.filter((file) => {
+            const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] || "";
+            const supportedExtension = /\.(avif|bmp|gif|heic|heif|jpeg|jpg|m4v|mkv|mov|mp4|png|webm|webp)$/i.test(extension);
+            return file.type.startsWith("image/") || file.type.startsWith("video/") || supportedExtension;
+        });
+        const rejectedCount = files.length - acceptedFiles.length;
+        const existingKeys = new Set(selectedUploadFiles.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+        const newFiles = acceptedFiles.filter((file) => !existingKeys.has(`${file.name}:${file.size}:${file.lastModified}`));
+
+        if (newFiles.length) selectedUploadFiles = [...selectedUploadFiles, ...newFiles];
+        rememberedUploadFileNames = selectedUploadFiles.map((file) => file.name);
+        renderPreUploadPreviews();
+
+        if (rejectedCount) {
+            showStatus(`${rejectedCount} unsupported file(s) were skipped. Choose image or video files.`, "error");
+        } else if (newFiles.length) {
+            showStatus(`${newFiles.length} file(s) added.`, "success");
+        }
+    }
+
     filesInput?.addEventListener("change", (e) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
-            const newFiles = Array.from(target.files);
-            selectedUploadFiles = [...selectedUploadFiles, ...newFiles];
-            rememberedUploadFileNames = selectedUploadFiles.map((file) => file.name);
+            appendSelectedFiles(Array.from(target.files));
             target.value = "";
-            renderPreUploadPreviews();
         }
     });
 
@@ -657,22 +734,12 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
     function removeSelectedFile(index: number) {
         if (index < 0 || index >= selectedUploadFiles.length) return;
-        selectedUploadFiles.splice(index, 1);
+        const [removedFile] = selectedUploadFiles.splice(index, 1);
+        const previewUrl = selectedFilePreviewUrls.get(removedFile);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        selectedFilePreviewUrls.delete(removedFile);
+        customVideoPosters.delete(removedFile);
         rememberedUploadFileNames = selectedUploadFiles.map((file) => file.name);
-        
-        // Re-indexar las portadas de video capturadas en el Map
-        const newMap = new Map<number, File>();
-        for (const [key, val] of customVideoPosters.entries()) {
-            if (key < index) {
-                newMap.set(key, val);
-            } else if (key > index) {
-                newMap.set(key - 1, val);
-            }
-        }
-        customVideoPosters.clear();
-        for (const [key, val] of newMap.entries()) {
-            customVideoPosters.set(key, val);
-        }
 
         // Ajustar el índice de la portada principal (Cover)
         if (coverFileIndex === index) {
@@ -686,6 +753,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
     function renderPreUploadPreviews() {
         if (!preUploadPreviewContainer || !fileCountLabel) return;
+        const previousRects = new Map(Array.from(preUploadPreviewContainer.querySelectorAll<HTMLElement>("[data-file-key]"), (tile) => [tile.dataset.fileKey!, tile.getBoundingClientRect()]));
 
         if (coverFileIndex >= selectedUploadFiles.length) {
             coverFileIndex = 0;
@@ -694,19 +762,21 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         fileCountLabel.innerText = selectedUploadFiles.length > 0
             ? `${selectedUploadFiles.length} file(s) selected`
             : "No files selected";
+        archiveReorderHint?.classList.toggle("hidden", selectedUploadFiles.length < 2);
 
         preUploadPreviewContainer.innerHTML = selectedUploadFiles
             .map((file, index) => {
-                const tempUrl = URL.createObjectURL(file);
+                const tempUrl = getSelectedFilePreviewUrl(file);
                 const isVideo = file.type.startsWith("video/");
                 const fileTypeIcon = isVideo ? PLAY_ICON_SVG : PHOTO_ICON_SVG;
                 const isCover = index === coverFileIndex;
-                const hasCustomPoster = customVideoPosters.has(index);
+                const hasCustomPoster = customVideoPosters.has(file);
 
                 return `
                 <div 
                     data-file-index="${index}"
-                    class="pre-upload-thumb relative group w-24 h-24 rounded-lg border ${isCover ? 'border-orange-500 ring-2 ring-orange-500/30' : 'border-zinc-800'} overflow-hidden bg-black flex items-center justify-center cursor-pointer transition-all"
+                    data-file-key="${tempUrl}"
+                    class="pre-upload-thumb relative group size-24 overflow-hidden rounded-lg border ${isCover ? 'border-orange-500 ring-2 ring-orange-500/30' : 'border-zinc-800'} bg-black transition-[border-color,box-shadow,transform] duration-150"
                     title="Click to preview file"
                 >
                     ${
@@ -719,16 +789,20 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                         ${fileTypeIcon}
                     </span>
 
+                    <button type="button" draggable="true" data-archive-drag-handle="${index}" aria-label="Drag file ${index + 1} to reorder" title="Drag to reorder" class="absolute left-1 top-7 inline-flex size-7 touch-none cursor-grab items-center justify-center rounded bg-zinc-950/90 text-zinc-100 hover:text-orange-400 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400">
+                      <svg aria-hidden="true" viewBox="0 0 16 16" class="size-4" fill="currentColor"><circle cx="5" cy="3" r="1"/><circle cx="11" cy="3" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="5" cy="13" r="1"/><circle cx="11" cy="13" r="1"/></svg>
+                    </button>
+
                     <button
                         type="button"
                         data-cover-index="${index}"
                         class="set-cover-btn absolute bottom-1 left-1 px-1.5 py-0.5 ${isCover ? 'bg-orange-500 text-zinc-950 font-bold' : 'bg-zinc-950/80 text-zinc-400 hover:text-orange-400'} border border-zinc-800 rounded text-[9px] font-mono transition-colors shadow-md z-10"
                         title="Set as main cover asset"
                     >
-                        ${isCover ? '★ Cover' : 'Set Cover'}
+                        ${isCover ? '<svg class="inline size-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.4l6.3-.9L12 2.8Z"/></svg> Cover' : 'Set Cover'}
                     </button>
 
-                    ${hasCustomPoster ? `<span class="absolute bottom-1 right-1 bg-emerald-500 text-zinc-950 text-[9px] font-mono px-1 rounded shadow-md z-10 font-bold" title="Custom video frame captured">📷 Poster</span>` : ''}
+                    ${hasCustomPoster ? `<span class="absolute bottom-1 right-1 inline-flex items-center gap-1 bg-emerald-500 text-zinc-950 text-[9px] font-mono px-1 rounded shadow-md z-10 font-bold" title="Custom video frame captured"><svg class="size-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="15" rx="2"/><circle cx="12" cy="13" r="3"/></svg>Poster</span>` : ''}
 
                     <button
                         type="button"
@@ -763,12 +837,105 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         preUploadPreviewContainer.querySelectorAll(".pre-upload-thumb").forEach((thumb) => {
             thumb.addEventListener("click", (e) => {
                 const target = e.target as HTMLElement;
-                if (target.closest(".remove-file-btn") || target.closest(".set-cover-btn")) return;
+                if (target.closest(".remove-file-btn") || target.closest(".set-cover-btn") || target.closest("[data-archive-drag-handle]")) return;
                 const index = parseInt((e.currentTarget as HTMLElement).dataset.fileIndex || "-1");
                 if (index > -1) openPreUploadModal(index);
             });
         });
+
+        preUploadPreviewContainer.querySelectorAll<HTMLElement>("[data-file-key]").forEach((tile) => {
+            const previous = previousRects.get(tile.dataset.fileKey!);
+            if (previous) {
+                const current = tile.getBoundingClientRect();
+                const dx = previous.left - current.left;
+                const dy = previous.top - current.top;
+                if (dx || dy) tile.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 180, easing: "ease-out" });
+            }
+            tile.addEventListener("dragover", (event) => {
+                event.preventDefault();
+                tile.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10");
+            });
+            tile.addEventListener("dragleave", () => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+            tile.addEventListener("drop", (event) => {
+                event.preventDefault();
+                moveSelectedFile(Number((event as DragEvent).dataTransfer?.getData("text/plain")), Number(tile.dataset.fileIndex));
+            });
+        });
+        preUploadPreviewContainer.querySelectorAll<HTMLButtonElement>("[data-archive-drag-handle]").forEach((handle) => {
+            handle.addEventListener("keydown", (event) => {
+                const keyboardEvent = event as KeyboardEvent;
+                const earlier = keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowUp";
+                const later = keyboardEvent.key === "ArrowRight" || keyboardEvent.key === "ArrowDown";
+                if (!earlier && !later) return;
+                keyboardEvent.preventDefault();
+                const from = Number(handle.dataset.archiveDragHandle);
+                if (moveSelectedFile(from, from + (earlier ? -1 : 1))) preUploadPreviewContainer?.querySelector<HTMLButtonElement>(`[data-archive-drag-handle="${from + (earlier ? -1 : 1)}"]`)?.focus();
+            });
+            handle.addEventListener("pointerdown", (event) => {
+                const pointer = event as PointerEvent;
+                if (pointer.pointerType !== "touch") return;
+                const from = Number(handle.dataset.archiveDragHandle);
+                const file = selectedUploadFiles[from];
+                if (!file) return;
+                touchArchiveDrag = { pointerId: pointer.pointerId, fromFile: file, x: pointer.clientX, y: pointer.clientY, activated: false, timer: window.setTimeout(() => {
+                    if (touchArchiveDrag?.pointerId !== pointer.pointerId) return;
+                    touchArchiveDrag.activated = true;
+                    handle.closest<HTMLElement>("[data-file-key]")?.classList.add("opacity-40");
+                }, 160) };
+            });
+            handle.addEventListener("pointermove", (event) => {
+                const pointer = event as PointerEvent;
+                if (touchArchiveDrag?.pointerId === pointer.pointerId && !touchArchiveDrag.activated && Math.hypot(pointer.clientX - touchArchiveDrag.x, pointer.clientY - touchArchiveDrag.y) > 7) {
+                    window.clearTimeout(touchArchiveDrag.timer);
+                    touchArchiveDrag = null;
+                }
+            });
+            handle.addEventListener("dragstart", (event) => {
+                const from = Number(handle.dataset.archiveDragHandle);
+                (event as DragEvent).dataTransfer?.setData("text/plain", String(from));
+                if ((event as DragEvent).dataTransfer) (event as DragEvent).dataTransfer!.effectAllowed = "move";
+                handle.closest<HTMLElement>("[data-file-key]")?.classList.add("opacity-40");
+            });
+        });
     }
+
+    function moveSelectedFile(from: number, to: number) {
+        if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= selectedUploadFiles.length || to >= selectedUploadFiles.length || from === to) return false;
+        const coverFile = selectedUploadFiles[coverFileIndex];
+        const activeFile = selectedUploadFiles[activePreUploadIndex];
+        const [moved] = selectedUploadFiles.splice(from, 1);
+        selectedUploadFiles.splice(to, 0, moved);
+        coverFileIndex = Math.max(0, selectedUploadFiles.indexOf(coverFile));
+        if (activeFile) activePreUploadIndex = selectedUploadFiles.indexOf(activeFile);
+        rememberedUploadFileNames = selectedUploadFiles.map((file) => file.name);
+        renderPreUploadPreviews();
+        archiveReorderAnnouncement && (archiveReorderAnnouncement.textContent = `File moved to position ${to + 1} of ${selectedUploadFiles.length}.`);
+        return true;
+    }
+
+    window.addEventListener("pointermove", (event) => {
+        if (!touchArchiveDrag?.activated || touchArchiveDrag.pointerId !== event.pointerId) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#pre-upload-preview [data-file-key]");
+        preUploadPreviewContainer?.querySelectorAll("[data-file-key]").forEach((tile) => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+        target?.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10");
+    });
+    window.addEventListener("pointerup", (event) => {
+        if (!touchArchiveDrag || touchArchiveDrag.pointerId !== event.pointerId) return;
+        window.clearTimeout(touchArchiveDrag.timer);
+        const drag = touchArchiveDrag;
+        touchArchiveDrag = null;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#pre-upload-preview [data-file-index]");
+        const from = selectedUploadFiles.indexOf(drag.fromFile);
+        const to = target ? Number(target.dataset.fileIndex) : -1;
+        if (drag.activated) moveSelectedFile(from, to);
+        preUploadPreviewContainer?.querySelectorAll("[data-file-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+    });
+    window.addEventListener("pointercancel", () => {
+        if (touchArchiveDrag) window.clearTimeout(touchArchiveDrag.timer);
+        touchArchiveDrag = null;
+        preUploadPreviewContainer?.querySelectorAll("[data-file-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+    });
+    preUploadPreviewContainer?.addEventListener("dragend", () => preUploadPreviewContainer.querySelectorAll("[data-file-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10")));
 
     function openPreUploadModal(index: number) {
         if (!preUploadModal || index < 0 || index >= selectedUploadFiles.length) return;
@@ -808,7 +975,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         const posterFile = await captureCurrentVideoFrame(preUploadModalVideo, currentFile.name);
 
         if (posterFile) {
-            customVideoPosters.set(activePreUploadIndex, posterFile);
+            customVideoPosters.set(currentFile, posterFile);
             renderPreUploadPreviews();
             showStatus("Video poster frame captured successfully!", "success");
         }
@@ -853,6 +1020,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         hashtags: string;
         description: string;
         fileNames: string[];
+        isArchived?: boolean;
     };
 
     function getArchiveDraftValues(): ArchiveDraftValues {
@@ -864,6 +1032,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             fileNames: selectedUploadFiles.length
                 ? selectedUploadFiles.map((file) => file.name)
                 : rememberedUploadFileNames,
+            isArchived: (document.getElementById("archive-is-archived") as HTMLInputElement).checked,
         };
     }
 
@@ -874,8 +1043,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             ? `An upload was interrupted. Your form details were restored. Select the same file(s) again to resume the upload.${fileNote}`
             : `Your saved archive draft was restored. Select the same file(s) again if you need to resume an interrupted upload.${fileNote}`;
         archiveDraftNotice.classList.remove("hidden");
-        accordionContent?.classList.remove("hidden");
-        if (accordionBadge) accordionBadge.innerText = "- Collapse Form";
+        const archivePanelIsActive = document.getElementById("subtab-content-archive")?.style.display !== "none";
+        if (archivePanelIsActive) setArchiveView("create");
     }
 
     function persistArchiveDraft(uploadInterrupted = false) {
@@ -890,6 +1059,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         (document.getElementById("category") as HTMLInputElement).value = values.category || "General";
         (document.getElementById("hashtags") as HTMLInputElement).value = values.hashtags || "";
         (document.getElementById("description") as HTMLTextAreaElement).value = values.description || "";
+        (document.getElementById("archive-is-archived") as HTMLInputElement).checked = Boolean(values.isArchived);
         showArchiveDraftNotice(savedArchiveDraft.uploadInterrupted, values.fileNames || []);
     }
 
@@ -913,9 +1083,12 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
 
         uploadBtn.disabled = true;
+        if (archiveCreateBackButton instanceof HTMLButtonElement) archiveCreateBackButton.disabled = true;
         uploadBtn.innerText = "Processing Direct Azure Upload...";
         statusMsg.classList.add("hidden");
         progressContainer?.classList.remove("hidden");
+        if (progressBar) progressBar.style.width = "0%";
+        if (progressPercentage) progressPercentage.innerText = "0%";
 
         const titleVal = (document.getElementById("title") as HTMLInputElement).value;
         const categoryVal = (document.getElementById("category") as HTMLInputElement).value;
@@ -929,6 +1102,21 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         try {
             const uploadedAssets: { url: string; publicId: string; type: string; isCover: boolean; thumbnailUrl?: string }[] = [];
             const totalFiles = selectedUploadFiles.length;
+            const totalUploadUnits = totalFiles + selectedUploadFiles.filter((file) => customVideoPosters.has(file)).length;
+            let completedUploadUnits = 0;
+            const uploadAndTrack = async (file: File, targetPath: string, label: string) => {
+                if (statusText) statusText.innerText = `${label}: ${file.name}`;
+                const result = await uploadFileToAzure(file, targetPath, (filePercent) => {
+                    const totalProgress = Math.min(Math.round(((completedUploadUnits + filePercent / 100) / totalUploadUnits) * 95), 95);
+                    if (progressBar) progressBar.style.width = `${totalProgress}%`;
+                    if (progressPercentage) progressPercentage.innerText = `${totalProgress}%`;
+                });
+                completedUploadUnits++;
+                const totalProgress = Math.min(Math.round((completedUploadUnits / totalUploadUnits) * 95), 95);
+                if (progressBar) progressBar.style.width = `${totalProgress}%`;
+                if (progressPercentage) progressPercentage.innerText = `${totalProgress}%`;
+                return result;
+            };
 
             for (let i = 0; i < totalFiles; i++) {
                 const file = selectedUploadFiles[i];
@@ -938,28 +1126,17 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 let thumbnailUrl: string | undefined = undefined;
 
                 // Subir el Poster del video a Azure (archive-media/thumbnails) si existe una captura
-                if (isVideo && customVideoPosters.has(i)) {
-                    const posterFile = customVideoPosters.get(i)!;
+                if (isVideo && customVideoPosters.has(file)) {
+                    const posterFile = customVideoPosters.get(file)!;
                     if (statusText) statusText.innerText = `Uploading video poster frame to Azure...`;
-                    const posterResult = await uploadFileToAzure(posterFile, "archive-media/thumbnails");
+                    const posterResult = await uploadAndTrack(posterFile, "archive-media/thumbnails", `Video poster ${i + 1} of ${totalFiles}`);
                     thumbnailUrl = posterResult.url;
                 }
 
                 const targetPath = isVideo ? "archive-media/videos" : "archive-media/photos";
                 if (statusText) statusText.innerText = `Authorizing & uploading ${file.name} to Azure (${i + 1}/${totalFiles})...`;
 
-                const azureResult = await uploadFileToAzure(
-                    file,
-                    targetPath,
-                    (filePercent) => {
-                        const fileProgress = (filePercent / 100) * (70 / totalFiles);
-                        const baseProgress = (i / totalFiles) * 70;
-                        const totalProgress = Math.min(Math.round(baseProgress + fileProgress + 30), 95);
-
-                        if (progressBar) progressBar.style.width = `${totalProgress}%`;
-                        if (progressPercentage) progressPercentage.innerText = `${totalProgress}%`;
-                    }
-                );
+                const azureResult = await uploadAndTrack(file, targetPath, `File ${i + 1} of ${totalFiles}`);
 
                 uploadedAssets.push({
                     url: azureResult.url,
@@ -979,6 +1156,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 description: descriptionVal || "",
                 category: categoryVal || "General",
                 hashtags: hashtagsArray,
+                isArchived: (document.getElementById("archive-is-archived") as HTMLInputElement).checked,
                 assets: uploadedAssets,
             };
 
@@ -1000,6 +1178,8 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             showStatus("Files uploaded to Azure and registered successfully!", "success");
             uploadForm.reset();
             selectedUploadFiles = [];
+            for (const previewUrl of selectedFilePreviewUrls.values()) URL.revokeObjectURL(previewUrl);
+            selectedFilePreviewUrls.clear();
             customVideoPosters.clear();
             coverFileIndex = 0;
             renderPreUploadPreviews();
@@ -1009,15 +1189,15 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
             setTimeout(() => {
                 progressContainer?.classList.add("hidden");
-                accordionContent?.classList.add("hidden");
-                if (accordionBadge) accordionBadge.innerText = "+ Expand Form";
+                setArchiveView("list");
             }, 1500);
 
         } catch (err: any) {
             showStatus(err.message || "An error occurred during upload.", "error");
-            progressContainer?.classList.add("hidden");
+            if (statusText) statusText.innerText = "Upload paused. Resolve the issue and submit again to continue.";
         } finally {
             uploadBtn.disabled = false;
+            if (archiveCreateBackButton instanceof HTMLButtonElement) archiveCreateBackButton.disabled = false;
             uploadBtn.innerText = "Upload to Archive";
         }
     });
@@ -1037,18 +1217,55 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
     refreshBtn?.addEventListener("click", async () => {
         refreshBtn.disabled = true;
-        refreshBtn.innerText = "↻ Refreshing...";
+        const label = refreshBtn.querySelector("span");
+        if (label) label.innerText = "Refreshing...";
         await fetchMediaList();
-        refreshBtn.innerText = "↻ Refresh";
+        if (label) label.innerText = "Refresh";
         refreshBtn.disabled = false;
     });
 
     // Filters
-    document.getElementById("search-input")?.addEventListener("input", renderMediaTable);
-    document.getElementById("filter-type")?.addEventListener("change", renderMediaTable);
-    document.getElementById("filter-status")?.addEventListener("change", renderMediaTable);
+    document.getElementById("search-input")?.addEventListener("input", () => { mediaPagination.reset(); renderMediaTable(); });
+    document.getElementById("filter-type")?.addEventListener("change", () => { mediaPagination.reset(); renderMediaTable(); });
+    document.getElementById("filter-status")?.addEventListener("change", () => { mediaPagination.reset(); renderMediaTable(); });
+    const clearMediaFiltersBtn = document.getElementById("clear-media-filters-btn") as HTMLButtonElement | null;
+    const searchInput = document.getElementById("search-input") as HTMLInputElement | null;
+    const mediaTypeFilter = document.getElementById("filter-type") as HTMLSelectElement | null;
+    const mediaStatusFilter = document.getElementById("filter-status") as HTMLSelectElement | null;
+    const updateMediaResetState = () => {
+        if (clearMediaFiltersBtn) clearMediaFiltersBtn.disabled = !Boolean(searchInput?.value.trim()) && mediaTypeFilter?.value === "ALL" && mediaStatusFilter?.value === "ALL";
+    };
+    searchInput?.addEventListener("input", updateMediaResetState);
+    mediaTypeFilter?.addEventListener("change", updateMediaResetState);
+    mediaStatusFilter?.addEventListener("change", updateMediaResetState);
+    clearMediaFiltersBtn?.addEventListener("click", () => {
+        if (searchInput) searchInput.value = "";
+        if (mediaTypeFilter) mediaTypeFilter.value = "ALL";
+        if (mediaStatusFilter) mediaStatusFilter.value = "ALL";
+        updateMediaResetState();
+        mediaPagination.reset();
+        renderMediaTable();
+    });
 
     // Sorting
+    const mobileSortSelect = document.getElementById("media-mobile-sort") as HTMLSelectElement;
+    const mobileSortDirectionBtn = document.getElementById("media-mobile-sort-direction") as HTMLButtonElement;
+
+    mobileSortSelect?.addEventListener("change", () => {
+        currentSortColumn = mobileSortSelect.value;
+        sortDirection = currentSortColumn === "createdAt" ? "desc" : "asc";
+        updateSortHeadersUI();
+        mediaPagination.reset();
+        renderMediaTable();
+    });
+
+    mobileSortDirectionBtn?.addEventListener("click", () => {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+        updateSortHeadersUI();
+        mediaPagination.reset();
+        renderMediaTable();
+    });
+
     document.querySelectorAll(".sort-header").forEach((header) => {
         header.addEventListener("click", (e) => {
             const target = e.currentTarget as HTMLElement;
@@ -1063,6 +1280,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             }
 
             updateSortHeadersUI();
+            mediaPagination.reset();
             renderMediaTable();
         });
     });
@@ -1091,6 +1309,13 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 }
             }
         });
+
+        if (mobileSortSelect) mobileSortSelect.value = currentSortColumn;
+        if (mobileSortDirectionBtn) {
+            mobileSortDirectionBtn.innerText = currentSortColumn === "createdAt"
+                ? sortDirection === "desc" ? "Newest first" : "Oldest first"
+                : sortDirection === "asc" ? "Ascending" : "Descending";
+        }
     }
 
     // Modal Carousel
@@ -1185,33 +1410,157 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     });
 
     // Edit Modal
-    const editModal = document.getElementById("edit-modal");
     const editModalCloseBtn = document.getElementById("edit-modal-close");
     const editCancelBtn = document.getElementById("edit-cancel-btn");
     const editForm = document.getElementById("edit-form") as HTMLFormElement;
     const editStatus = document.getElementById("edit-status") as HTMLDivElement;
     const editAssetsList = document.getElementById("edit-assets-list");
     const addMoreFilesInput = document.getElementById("add-more-files-input") as HTMLInputElement;
-    const addFilesBtn = document.getElementById("add-files-btn");
+    const addMoreFilesPreview = document.getElementById("edit-add-files-preview");
+    const editReorderHint = document.getElementById("edit-add-files-reorder-hint");
+    const editReorderAnnouncement = document.getElementById("edit-add-files-reorder-announcement");
+    const editUploadProgress = document.getElementById("edit-upload-progress");
+    const editUploadProgressLabel = document.getElementById("edit-upload-progress-label");
+    const editUploadProgressPercent = document.getElementById("edit-upload-progress-percent");
+    const editUploadProgressTrack = document.getElementById("edit-upload-progress-track");
+    const editUploadProgressBar = document.getElementById("edit-upload-progress-bar");
+    document.getElementById("add-more-files-browse")?.addEventListener("click", () => addMoreFilesInput?.click());
+    attachFileDropzone(document.getElementById("edit-add-files-dropzone"), addMoreFilesInput, { feedback: document.getElementById("edit-add-files-feedback"), nextStep: "submit" });
+
+    function renderStagedEditFiles() {
+        const label = document.getElementById("add-more-files-selection");
+        if (label) label.textContent = stagedEditFiles.length ? `${stagedEditFiles.length} file(s) ready to upload` : "No files selected";
+        editReorderHint?.classList.toggle("hidden", stagedEditFiles.length < 2);
+        if (!addMoreFilesPreview) return;
+        const previousRects = new Map(Array.from(addMoreFilesPreview.querySelectorAll<HTMLElement>("[data-edit-staged-key]"), (tile) => [tile.dataset.editStagedKey!, tile.getBoundingClientRect()]));
+        addMoreFilesPreview.innerHTML = stagedEditFiles.map(({ file, previewUrl }, index) => {
+            const isVideo = file.type.startsWith("video/");
+            return `<div data-edit-staged-index="${index}" data-edit-staged-key="${previewUrl}" class="relative size-24 overflow-hidden rounded-lg border ${stagedEditFiles[index].uploadedAsset ? "border-emerald-600/70" : "border-orange-500/50"} bg-zinc-950 transition-[border-color,box-shadow,transform] duration-150">
+                ${isVideo ? `<video src="${previewUrl}#t=0.1" class="h-full w-full object-cover"></video>` : `<img src="${previewUrl}" alt="Preview ${file.name}" class="h-full w-full object-cover" />`}
+                <span class="absolute bottom-0 left-0 right-0 truncate bg-zinc-950/90 px-1 py-0.5 text-center text-[9px] font-mono ${stagedEditFiles[index].uploadedAsset ? "text-emerald-300" : "text-orange-300"}">${stagedEditFiles[index].uploadedAsset ? "Uploaded" : "Ready"}</span>
+                <button type="button" draggable="true" data-edit-staged-handle="${index}" aria-label="Drag file ${index + 1} to reorder" title="Drag to reorder" class="absolute left-1 top-1 inline-flex size-7 touch-none cursor-grab items-center justify-center rounded bg-zinc-950/90 text-zinc-100 hover:text-orange-400 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"><svg aria-hidden="true" viewBox="0 0 16 16" class="size-4" fill="currentColor"><circle cx="5" cy="3" r="1"/><circle cx="11" cy="3" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="5" cy="13" r="1"/><circle cx="11" cy="13" r="1"/></svg></button>
+                <button type="button" data-remove-staged-edit-file="${index}" aria-label="Remove file ${index + 1}" class="absolute right-1 top-1 flex size-6 items-center justify-center rounded bg-zinc-950/90 text-xs text-zinc-200 hover:text-orange-400">×</button>
+            </div>`;
+        }).join("");
+        addMoreFilesPreview.querySelectorAll<HTMLElement>("[data-edit-staged-key]").forEach((tile) => {
+            const previous = previousRects.get(tile.dataset.editStagedKey!);
+            if (previous) {
+                const current = tile.getBoundingClientRect();
+                const dx = previous.left - current.left;
+                const dy = previous.top - current.top;
+                if (dx || dy) tile.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 180, easing: "ease-out" });
+            }
+            tile.addEventListener("dragover", (event) => { event.preventDefault(); tile.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10"); });
+            tile.addEventListener("dragleave", () => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+            tile.addEventListener("drop", (event) => {
+                event.preventDefault();
+                moveStagedEditFile(Number((event as DragEvent).dataTransfer?.getData("text/plain")), Number(tile.dataset.editStagedIndex));
+            });
+        });
+        addMoreFilesPreview.querySelectorAll<HTMLButtonElement>("[data-edit-staged-handle]").forEach((handle) => {
+            handle.addEventListener("keydown", (event) => {
+                const keyEvent = event as KeyboardEvent;
+                const earlier = keyEvent.key === "ArrowLeft" || keyEvent.key === "ArrowUp";
+                const later = keyEvent.key === "ArrowRight" || keyEvent.key === "ArrowDown";
+                if (!earlier && !later) return;
+                keyEvent.preventDefault();
+                const from = Number(handle.dataset.editStagedHandle);
+                const to = from + (earlier ? -1 : 1);
+                if (moveStagedEditFile(from, to)) addMoreFilesPreview?.querySelector<HTMLButtonElement>(`[data-edit-staged-handle="${to}"]`)?.focus();
+            });
+            handle.addEventListener("pointerdown", (event) => {
+                const pointer = event as PointerEvent;
+                if (pointer.pointerType !== "touch") return;
+                const from = Number(handle.dataset.editStagedHandle);
+                touchEditFileDrag = { pointerId: pointer.pointerId, from, x: pointer.clientX, y: pointer.clientY, activated: false, timer: window.setTimeout(() => {
+                    if (touchEditFileDrag?.pointerId !== pointer.pointerId) return;
+                    touchEditFileDrag.activated = true;
+                    handle.closest<HTMLElement>("[data-edit-staged-key]")?.classList.add("opacity-40");
+                }, 160) };
+            });
+            handle.addEventListener("pointermove", (event) => {
+                const pointer = event as PointerEvent;
+                if (touchEditFileDrag?.pointerId === pointer.pointerId && !touchEditFileDrag.activated && Math.hypot(pointer.clientX - touchEditFileDrag.x, pointer.clientY - touchEditFileDrag.y) > 7) {
+                    window.clearTimeout(touchEditFileDrag.timer);
+                    touchEditFileDrag = null;
+                }
+            });
+            handle.addEventListener("dragstart", (event) => {
+                (event as DragEvent).dataTransfer?.setData("text/plain", handle.dataset.editStagedHandle || "");
+                if ((event as DragEvent).dataTransfer) (event as DragEvent).dataTransfer!.effectAllowed = "move";
+                handle.closest<HTMLElement>("[data-edit-staged-key]")?.classList.add("opacity-40");
+            });
+        });
+        addMoreFilesPreview.querySelectorAll<HTMLButtonElement>("[data-remove-staged-edit-file]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const index = Number(button.dataset.removeStagedEditFile);
+                const [removed] = stagedEditFiles.splice(index, 1);
+                if (removed) URL.revokeObjectURL(removed.previewUrl);
+                renderStagedEditFiles();
+            });
+        });
+    }
+
+    function moveStagedEditFile(from: number, to: number) {
+        if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= stagedEditFiles.length || to >= stagedEditFiles.length || from === to) return false;
+        const [moved] = stagedEditFiles.splice(from, 1);
+        stagedEditFiles.splice(to, 0, moved);
+        renderStagedEditFiles();
+        if (editReorderAnnouncement) editReorderAnnouncement.textContent = `File moved to position ${to + 1} of ${stagedEditFiles.length}.`;
+        return true;
+    }
+
+    addMoreFilesPreview?.addEventListener("dragend", () => addMoreFilesPreview.querySelectorAll("[data-edit-staged-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10")));
+    window.addEventListener("pointermove", (event) => {
+        if (!touchEditFileDrag?.activated || touchEditFileDrag.pointerId !== event.pointerId) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#edit-add-files-preview [data-edit-staged-key]");
+        addMoreFilesPreview?.querySelectorAll("[data-edit-staged-key]").forEach((tile) => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+        target?.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10");
+    });
+    window.addEventListener("pointerup", (event) => {
+        if (!touchEditFileDrag || touchEditFileDrag.pointerId !== event.pointerId) return;
+        window.clearTimeout(touchEditFileDrag.timer);
+        const drag = touchEditFileDrag;
+        touchEditFileDrag = null;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#edit-add-files-preview [data-edit-staged-index]");
+        if (drag.activated) moveStagedEditFile(drag.from, target ? Number(target.dataset.editStagedIndex) : -1);
+        addMoreFilesPreview?.querySelectorAll("[data-edit-staged-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+    });
+    window.addEventListener("pointercancel", () => {
+        if (touchEditFileDrag) window.clearTimeout(touchEditFileDrag.timer);
+        touchEditFileDrag = null;
+        addMoreFilesPreview?.querySelectorAll("[data-edit-staged-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+    });
+
+    addMoreFilesInput?.addEventListener("change", () => {
+        const files = Array.from(addMoreFilesInput.files || []);
+        addMoreFilesInput.value = "";
+        for (const file of files) stagedEditFiles.push({ file, previewUrl: URL.createObjectURL(file) });
+        renderStagedEditFiles();
+        const feedback = document.getElementById("edit-add-files-feedback");
+        if (feedback && files.length) feedback.textContent = `${files.length} file(s) added. Save changes to upload.`;
+    });
 
     function closeEditModal() {
-        if (editModal) editModal.classList.add("hidden");
+        setArchiveView("list");
         if (editStatus) editStatus.className = "hidden text-xs font-mono text-center rounded-lg p-2.5";
+        editUploadProgress?.classList.add("hidden");
+        if (editUploadProgressBar) editUploadProgressBar.style.width = "0%";
+        if (editUploadProgressPercent) editUploadProgressPercent.textContent = "0%";
         if (addMoreFilesInput) addMoreFilesInput.value = "";
+        stagedEditFiles.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        stagedEditFiles = [];
+        renderStagedEditFiles();
     }
 
     editModalCloseBtn?.addEventListener("click", closeEditModal);
     editCancelBtn?.addEventListener("click", closeEditModal);
 
-    editModal?.addEventListener("click", (e) => {
-        if (e.target === editModal) closeEditModal();
-    });
-
     window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
             closeImageModal();
-            closeEditModal();
             closePreUploadModal();
+            if (currentArchiveView !== "list") setArchiveView("list");
         }
         if (imageModal && !imageModal.classList.contains("hidden")) {
             if (e.key === "ArrowLeft") prevGalleryItem();
@@ -1301,51 +1650,20 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         });
     }
 
-    addFilesBtn?.addEventListener("click", async () => {
-        const editId = (document.getElementById("edit-id") as HTMLInputElement).value;
-        const files = addMoreFilesInput?.files;
-
-        if (!editId || !files || files.length === 0) {
-            alert("Select at least one file to upload.");
-            return;
-        }
-
-        try {
-            const newAssets: { url: string; publicId: string; type: string }[] = [];
-
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const isVideo = file.type.startsWith("video/");
-                
-                const targetPath = isVideo ? "archive-media/videos" : "archive-media/photos";
-
-                const azureResult = await uploadFileToAzure(file, targetPath);
-
-                newAssets.push({
-                    url: azureResult.url,
-                    publicId: azureResult.publicId,
-                    type: isVideo ? "video" : "image",
-                });
-            }
-
-            const res = await fetch(`${API_URL}/media/${editId}/assets`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ assets: newAssets }),
-            });
-
-            if (!res.ok) throw new Error("Failed to add new files to record.");
-
-            addMoreFilesInput.value = "";
-            await fetchMediaList();
-            const updatedItem = allMediaItems.find((m) => m.id === editId);
-            if (updatedItem) renderEditAssets(updatedItem);
-        } catch (err: any) {
-            alert(err.message || "Error adding files.");
-        }
-    });
+    function openEditScreen(item: any, updateUrl = true) {
+        stagedEditFiles.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
+        stagedEditFiles = [];
+        renderStagedEditFiles();
+        (document.getElementById("edit-id") as HTMLInputElement).value = item.id;
+        (document.getElementById("edit-title") as HTMLInputElement).value = item.title || "";
+        (document.getElementById("edit-category") as HTMLInputElement).value = item.category || "";
+        (document.getElementById("edit-hashtags") as HTMLInputElement).value = item.hashtags?.join(", ") || "";
+        (document.getElementById("edit-description") as HTMLTextAreaElement).value = item.description || "";
+        const title = document.getElementById("edit-media-title");
+        if (title) title.textContent = `Edit ${item.title || "media item"}`;
+        renderEditAssets(item);
+        setArchiveView("edit", item.id, updateUrl);
+    }
 
     editForm?.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -1363,7 +1681,62 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 .filter(Boolean),
         };
 
+        const submitButton = document.getElementById("edit-submit-btn") as HTMLButtonElement | null;
+        if (submitButton) submitButton.disabled = true;
+
         try {
+            if (stagedEditFiles.length) {
+                editUploadProgress?.classList.remove("hidden");
+                if (editUploadProgressLabel) editUploadProgressLabel.textContent = `Preparing ${stagedEditFiles.length} file(s)...`;
+                if (editUploadProgressPercent) editUploadProgressPercent.textContent = "0%";
+                if (editUploadProgressTrack) editUploadProgressTrack.setAttribute("aria-valuenow", "0");
+                if (editUploadProgressBar) editUploadProgressBar.style.width = "0%";
+                const newAssets: { url: string; publicId: string; type: string }[] = [];
+                let completedFiles = 0;
+                for (let index = 0; index < stagedEditFiles.length; index++) {
+                    const staged = stagedEditFiles[index];
+                    const { file } = staged;
+                    if (!staged.uploadedAsset) {
+                        const isVideo = file.type.startsWith("video/");
+                        const targetPath = isVideo ? "archive-media/videos" : "archive-media/photos";
+                        const setProgress = (filePercent: number) => {
+                            const value = Math.min(Math.round(((completedFiles + filePercent / 100) / stagedEditFiles.length) * 95), 95);
+                            if (editUploadProgressLabel) editUploadProgressLabel.textContent = `Uploading file ${index + 1} of ${stagedEditFiles.length}: ${file.name}`;
+                            if (editUploadProgressPercent) editUploadProgressPercent.textContent = `${value}%`;
+                            if (editUploadProgressTrack) editUploadProgressTrack.setAttribute("aria-valuenow", String(value));
+                            if (editUploadProgressBar) editUploadProgressBar.style.width = `${value}%`;
+                        };
+                        const result = await uploadFileToAzure(file, targetPath, setProgress);
+                        staged.uploadedAsset = { url: result.url, publicId: result.publicId, type: isVideo ? "video" : "image" };
+                        renderStagedEditFiles();
+                    }
+                    completedFiles++;
+                    const value = Math.min(Math.round((completedFiles / stagedEditFiles.length) * 95), 95);
+                    if (editUploadProgressPercent) editUploadProgressPercent.textContent = `${value}%`;
+                    if (editUploadProgressTrack) editUploadProgressTrack.setAttribute("aria-valuenow", String(value));
+                    if (editUploadProgressBar) editUploadProgressBar.style.width = `${value}%`;
+                    newAssets.push(staged.uploadedAsset);
+                }
+
+                if (editUploadProgressLabel) editUploadProgressLabel.textContent = "Saving uploaded assets...";
+                if (editUploadProgressPercent) editUploadProgressPercent.textContent = "98%";
+                if (editUploadProgressTrack) editUploadProgressTrack.setAttribute("aria-valuenow", "98");
+                if (editUploadProgressBar) editUploadProgressBar.style.width = "98%";
+                const assetsResponse = await fetch(`${API_URL}/media/${editId}/assets`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ assets: newAssets }),
+                });
+                if (!assetsResponse.ok) throw new Error("Failed to add new files to record.");
+
+                stagedEditFiles.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
+                stagedEditFiles = [];
+                renderStagedEditFiles();
+                await fetchMediaList();
+                const updatedItem = allMediaItems.find((item) => item.id === editId);
+                if (updatedItem) renderEditAssets(updatedItem);
+            }
+
             const res = await fetch(`${API_URL}/media/${editId}`, {
                 method: "PUT",
                 headers: {
@@ -1374,18 +1747,32 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
             if (!res.ok) throw new Error("Failed to update item.");
 
+            if (!stagedEditFiles.length) {
+                // Metadata-only edit has no media upload progress to display.
+                editUploadProgress?.classList.add("hidden");
+            } else {
+                if (editUploadProgressLabel) editUploadProgressLabel.textContent = "Changes saved successfully.";
+                if (editUploadProgressPercent) editUploadProgressPercent.textContent = "100%";
+                if (editUploadProgressTrack) editUploadProgressTrack.setAttribute("aria-valuenow", "100");
+                if (editUploadProgressBar) editUploadProgressBar.style.width = "100%";
+            }
+
             closeEditModal();
             await fetchMediaList();
         } catch (err: any) {
+            if (editUploadProgress && !editUploadProgress.classList.contains("hidden") && editUploadProgressLabel) editUploadProgressLabel.textContent = "Upload paused. Resolve the issue and save again to continue.";
             if (editStatus) {
                 editStatus.innerText = err.message || "Error updating item.";
                 editStatus.className = "text-xs font-mono text-center rounded-lg p-2.5 bg-red-950/80 text-red-400 border border-red-800 block";
             }
+        } finally {
+            if (submitButton) submitButton.disabled = false;
         }
     });
 
     async function fetchMediaList() {
         const tableBody = document.getElementById("media-table-body");
+        const cardList = document.getElementById("media-card-list");
         if (!tableBody) return;
 
         try {
@@ -1399,11 +1786,13 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         <tr>
           <td colspan="6" class="py-8 text-center text-red-400 font-mono">Error loading media items. Check server status.</td>
         </tr>`;
+            if (cardList) cardList.innerHTML = `<p class="rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-sm text-red-300">Error loading media items. Check server status.</p>`;
         }
     }
 
     function renderMediaTable() {
         const tableBody = document.getElementById("media-table-body");
+        const cardList = document.getElementById("media-card-list");
         if (!tableBody) return;
 
         const searchQuery = (document.getElementById("search-input") as HTMLInputElement)?.value.toLowerCase().trim() || "";
@@ -1450,20 +1839,25 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         });
 
         if (!processedItems || processedItems.length === 0) {
+            mediaPagination.slice(processedItems);
             tableBody.innerHTML = `
         <tr>
           <td colspan="6" class="py-8 text-center text-zinc-500 font-mono">No matching media items found.</td>
         </tr>`;
+            if (cardList) cardList.innerHTML = `<p class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 text-center text-sm text-zinc-400">No matching media items found.</p>`;
             return;
         }
 
-        tableBody.innerHTML = processedItems
+        const pageItems = mediaPagination.slice(processedItems);
+
+        const mobileCards: string[] = [];
+        tableBody.innerHTML = pageItems
             .map((item: any) => {
                 const assets = item.media || [];
                 const primaryAsset = assets.find((a: any) => a.isCover) || assets[0];
                 const countBadge = assets.length > 1 ? `<span class="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1">${assets.length} items</span>` : '';
 
-                let previewHtml = `<div class="w-12 h-12 bg-zinc-800 rounded-md border border-zinc-700 flex items-center justify-center text-zinc-500 text-[10px] font-mono">EMPTY</div>`;
+                let previewHtml = `<div class="size-24 bg-zinc-800 rounded-lg border border-zinc-700 flex items-center justify-center text-zinc-500 text-[10px] font-mono">EMPTY</div>`;
 
                 if (primaryAsset) {
                     if (primaryAsset.type === "image") {
@@ -1471,7 +1865,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
               src="${primaryAsset.url}" 
               alt="${item.title}" 
               data-item-id="${item.id}"
-              class="preview-thumb w-12 h-12 object-cover rounded-md border border-zinc-800 cursor-pointer hover:opacity-80 hover:border-orange-500 transition-all" 
+              class="preview-thumb size-24 object-cover rounded-lg border border-zinc-800 cursor-pointer hover:opacity-80 hover:border-orange-500 transition-all"
               title="Click to open gallery"
             />`;
                     } else {
@@ -1480,12 +1874,12 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                                 src="${primaryAsset.thumbnailUrl}" 
                                 alt="${item.title}" 
                                 data-item-id="${item.id}"
-                                class="preview-thumb w-12 h-12 object-cover rounded-md border border-zinc-800 cursor-pointer hover:opacity-80 hover:border-orange-500 transition-all" 
+                                class="preview-thumb size-24 object-cover rounded-lg border border-zinc-800 cursor-pointer hover:opacity-80 hover:border-orange-500 transition-all"
                                 title="Click to open gallery"
                                />`
                             : `<div 
                                 data-item-id="${item.id}"
-                                class="preview-thumb w-12 h-12 bg-zinc-800 rounded-md border border-zinc-700 flex items-center justify-center text-orange-500 font-bold text-[10px] cursor-pointer hover:border-orange-500 transition-all"
+                                class="preview-thumb size-24 bg-zinc-800 rounded-lg border border-zinc-700 flex items-center justify-center text-orange-500 font-bold text-xs cursor-pointer hover:border-orange-500 transition-all"
                                 title="Click to open gallery"
                                >VIDEO</div>`;
                     }
@@ -1505,30 +1899,56 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                       })
                     : "N/A";
 
+                const actionsHtml = `
+            <button type="button" data-action="edit" data-id="${item.id}" aria-label="Edit ${item.title}" title="Edit" class="action-btn inline-flex size-10 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200 transition-colors hover:bg-zinc-700"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg></button>
+            <button type="button" data-action="archive" data-id="${item.id}" aria-label="${item.isArchived ? "Restore" : "Archive"} ${item.title}" title="${item.isArchived ? "Restore" : "Archive"}" class="action-btn inline-flex size-10 items-center justify-center rounded-lg border border-amber-900/50 bg-amber-950/40 text-amber-300 transition-colors hover:bg-amber-900/60"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v13H3zM2 4h20v3H2zM9 11h6"/></svg></button>
+            ${isSuperAdmin ? `<button type="button" data-action="delete" data-id="${item.id}" aria-label="Delete ${item.title}" title="Delete" class="action-btn inline-flex size-10 items-center justify-center rounded-lg border border-red-900/50 bg-red-950/40 text-red-300 transition-colors hover:bg-red-900/60"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button>` : ""}`;
+
+                mobileCards.push(`
+        <article class="rounded-xl border border-zinc-800 bg-zinc-900/70 p-4 text-left shadow-sm">
+          <div class="flex min-w-0 items-start gap-3">
+            <div class="size-24 shrink-0">${previewHtml}</div>
+            <div class="min-w-0 flex-1">
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <h3 class="min-w-0 break-words text-sm font-bold leading-5 text-white">${item.title}</h3>
+                ${countBadge}
+              </div>
+              <p class="mt-1 break-words text-[11px] font-mono leading-4 text-zinc-400">${item.category || "General"}${hashtagsStr ? ` <span class="px-1 text-zinc-600">·</span> ${hashtagsStr}` : ""}</p>
+              ${item.description ? `<p class="mt-2 line-clamp-2 text-xs leading-5 text-zinc-400">${item.description}</p>` : ""}
+              <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-mono text-zinc-300">${assets.length} ${assets.length === 1 ? "file" : "files"}</span>
+                ${statusBadge}
+                <time class="text-[11px] font-mono text-zinc-500">${createdDate}</time>
+              </div>
+            </div>
+            <div class="flex h-24 shrink-0 self-center flex-col items-center justify-between gap-1" aria-label="Media actions">${actionsHtml.replaceAll("size-10", "size-7")}</div>
+          </div>
+        </article>`);
+
                 return `
         <tr class="hover:bg-zinc-800/30 transition-colors">
-          <td class="py-3 px-4">${previewHtml}</td>
-          <td class="py-3 px-4">
+          <td data-label="Preview" class="py-3 px-4">${previewHtml}</td>
+          <td data-label="Title and info" class="py-3 px-4">
             <div class="font-bold text-white">${item.title} ${countBadge}</div>
             <div class="text-[11px] text-zinc-400 font-mono">${item.category || "General"} ${hashtagsStr ? "• " + hashtagsStr : ""}</div>
           </td>
-          <td class="py-3 px-4 font-mono text-zinc-300 text-xs">
+          <td data-label="Assets" class="py-3 px-4 font-mono text-zinc-300 text-xs">
             ${assets.length} file(s)
           </td>
-          <td class="py-3 px-4">${statusBadge}</td>
-          <td class="py-3 px-4 text-zinc-400 font-mono text-xs">${createdDate}</td>
-          <td class="py-3 px-4 text-right">
+          <td data-label="Status" class="py-3 px-4">${statusBadge}</td>
+          <td data-label="Date" class="py-3 px-4 text-zinc-400 font-mono text-xs">${createdDate}</td>
+          <td data-label="Actions" class="py-3 px-4 text-right">
             <div class="flex items-center justify-end gap-2">
-              <button data-action="edit" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded transition-colors cursor-pointer">Edit</button>
-              <button data-action="archive" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer">${item.isArchived ? "Unarchive" : "Archive"}</button>
-              ${isSuperAdmin ? `<button data-action="delete" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer">Delete</button>` : ""}
+              ${actionsHtml}
             </div>
           </td>
         </tr>`;
             })
             .join("");
 
-        document.querySelectorAll(".preview-thumb").forEach((thumb) => {
+        if (cardList) cardList.innerHTML = mobileCards.join("");
+
+        [tableBody, cardList].forEach((host) => host?.querySelectorAll(".preview-thumb").forEach((thumb) => {
             thumb.addEventListener("click", (e) => {
                 const el = e.currentTarget as HTMLElement;
                 const itemId = el.dataset.itemId;
@@ -1539,9 +1959,9 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                     openMediaGallery(item.media, 0, item.title || "");
                 }
             });
-        });
+        }));
 
-        document.querySelectorAll(".action-btn").forEach((btn) => {
+        [tableBody, cardList].forEach((host) => host?.querySelectorAll(".action-btn").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
                 const el = e.currentTarget as HTMLElement;
                 const action = el.dataset.action;
@@ -1551,15 +1971,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                 if (action === "edit") {
                     const item = allMediaItems.find((m) => m.id === id);
                     if (!item) return;
-
-                    (document.getElementById("edit-id") as HTMLInputElement).value = item.id;
-                    (document.getElementById("edit-title") as HTMLInputElement).value = item.title || "";
-                    (document.getElementById("edit-category") as HTMLInputElement).value = item.category || "";
-                    (document.getElementById("edit-hashtags") as HTMLInputElement).value = item.hashtags?.join(", ") || "";
-                    (document.getElementById("edit-description") as HTMLTextAreaElement).value = item.description || "";
-
-                    renderEditAssets(item);
-                    editModal?.classList.remove("hidden");
+                    openEditScreen(item);
                 } else if (action === "archive") {
                     await fetch(`${API_URL}/media/${id}/archive`, {
                         method: "PATCH",
@@ -1573,8 +1985,18 @@ const isSuperAdmin = userRole === 'SuperAdmin';
                     await fetchMediaList();
                 }
             });
-        });
+        }));
     }
 
-    fetchMediaList();
+    async function initializeArchiveView() {
+        await fetchMediaList();
+        if (requestedEditId) {
+            const item = allMediaItems.find((media) => media.id === requestedEditId);
+            requestedEditId = null;
+            if (item) openEditScreen(item, false);
+            else setArchiveView("list", undefined, false);
+        }
+    }
+
+    void initializeArchiveView();
 </script>

@@ -1,0 +1,16 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PagesManager from '../../components/admin/PagesManager.astro';
+
+if (!Astro.locals.user || Astro.locals.user.role !== 'Admin') return Astro.redirect('/admin');
+---
+
+<Layout title="Page Management | Underground Vandals">
+  <div class="space-y-5 pb-12">
+    <header class="border-b border-zinc-800/80 pb-4">
+      <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Public page settings</h1>
+      <p class="mt-1 max-w-2xl text-sm text-zinc-400">Manage Home, Archive, Gallery, and Shop without editing the application code.</p>
+    </header>
+    <PagesManager />
+  </div>
+</Layout>

@@ -11,6 +11,8 @@ public class CreatePostDto
 
     public string Category { get; set; } = "General";
 
+    public bool IsArchived { get; set; } = false;
+
     public List<string>? Hashtags { get; set; }
 
     [Required]

@@ -20,6 +20,7 @@ public record CreateGalleryArticleDto
 
     public bool IsFeatured { get; init; } = false;
     public bool IsPublished { get; init; } = true;
+    public bool IsArchived { get; init; } = false;
 
     // Optional E-Shop Integration
     public string? ShopCollectionSlug { get; init; }
@@ -49,6 +50,7 @@ public record UpdateGalleryArticleDto
 
     public bool IsFeatured { get; init; } = false;
     public bool IsPublished { get; init; } = true;
+    public bool IsArchived { get; init; } = false;
 
     // Optional E-Shop Integration
     public string? ShopCollectionSlug { get; init; }
@@ -79,6 +81,7 @@ public record GalleryArticleResponseDto
 
     public bool IsFeatured { get; init; }
     public bool IsPublished { get; init; }
+    public bool IsArchived { get; init; }
 
     // Optional E-Shop Integration
     public string? ShopCollectionSlug { get; init; }

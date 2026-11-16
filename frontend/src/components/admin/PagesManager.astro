@@ -1,0 +1,136 @@
+<section id="pages-manager" class="space-y-6" aria-labelledby="pages-manager-title">
+  <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-xl sm:p-8">
+    <div class="flex flex-col gap-4 border-b border-zinc-800 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-[10px] font-mono uppercase tracking-[0.2em] text-orange-500">Site controls</p>
+        <h2 id="pages-manager-title" class="mt-2 text-xl font-bold text-white sm:text-2xl">Manage public pages</h2>
+        <p class="mt-1 max-w-2xl text-sm text-zinc-400">Set a page live, show a coming soon notice, or temporarily disable it. Add announcements without publishing a code change.</p>
+      </div>
+      <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-page-select">
+        Page
+        <select id="site-page-select" class="min-w-52 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm normal-case tracking-normal text-white">
+          <option value="home">Home</option><option value="archive">Archive</option><option value="gallery">Gallery</option><option value="shop">Shop</option>
+        </select>
+      </label>
+    </div>
+
+    <form id="site-page-form" class="mt-6 space-y-5">
+      <div class="grid gap-5 md:grid-cols-2">
+        <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-page-status">Page status
+          <select id="site-page-status" name="status" class="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm normal-case tracking-normal text-white">
+            <option value="Live">Live</option><option value="ComingSoon">Coming soon</option><option value="Disabled">Disabled</option>
+          </select>
+        </label>
+        <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-page-title">Page title
+          <input id="site-page-title" name="title" maxlength="120" required class="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm normal-case tracking-normal text-white" />
+        </label>
+      </div>
+      <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-page-message">Page message / coming soon description
+        <textarea id="site-page-message" name="message" maxlength="1000" rows="3" class="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm normal-case tracking-normal text-white"></textarea>
+      </label>
+      <div class="border-t border-zinc-800 pt-5">
+        <h3 class="font-bold text-white">Live page announcement</h3>
+        <p class="mt-1 text-xs text-zinc-400">Leave these fields blank to hide the announcement.</p>
+      </div>
+      <div class="grid gap-5 md:grid-cols-2">
+        <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-announcement-title">Announcement title
+          <input id="site-announcement-title" name="announcementTitle" maxlength="120" class="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm normal-case tracking-normal text-white" />
+        </label>
+        <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-announcement-message">Announcement message
+          <input id="site-announcement-message" name="announcementMessage" maxlength="1000" class="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm normal-case tracking-normal text-white" />
+        </label>
+      </div>
+      <div class="grid gap-5 md:grid-cols-2">
+        <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-cta-label">Optional button label
+          <input id="site-cta-label" name="ctaLabel" maxlength="60" class="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm normal-case tracking-normal text-white" />
+        </label>
+        <label class="grid gap-2 text-xs font-mono uppercase tracking-wider text-zinc-400" for="site-cta-url">Button destination (local path)
+          <input id="site-cta-url" name="ctaUrl" maxlength="500" placeholder="/shop" class="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm normal-case tracking-normal text-white placeholder:text-zinc-600" />
+        </label>
+      </div>
+      <div class="flex flex-col gap-3 border-t border-zinc-800 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p id="site-page-feedback" class="min-h-5 text-sm text-zinc-400" role="status" aria-live="polite"></p>
+        <button id="site-page-save" type="submit" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-orange-500 px-5 py-3 text-xs font-bold uppercase tracking-wider text-zinc-950 transition-colors hover:bg-orange-400 disabled:cursor-wait disabled:opacity-60">Save page settings</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  type PageSetting = { pageKey: string; status: string; title: string; message: string; announcementTitle: string; announcementMessage: string; ctaLabel: string; ctaUrl: string };
+  const select = document.getElementById('site-page-select') as HTMLSelectElement | null;
+  const form = document.getElementById('site-page-form') as HTMLFormElement | null;
+  const feedback = document.getElementById('site-page-feedback');
+  const save = document.getElementById('site-page-save') as HTMLButtonElement | null;
+  const fields = {
+    status: document.getElementById('site-page-status') as HTMLSelectElement,
+    title: document.getElementById('site-page-title') as HTMLInputElement,
+    message: document.getElementById('site-page-message') as HTMLTextAreaElement,
+    announcementTitle: document.getElementById('site-announcement-title') as HTMLInputElement,
+    announcementMessage: document.getElementById('site-announcement-message') as HTMLInputElement,
+    ctaLabel: document.getElementById('site-cta-label') as HTMLInputElement,
+    ctaUrl: document.getElementById('site-cta-url') as HTMLInputElement,
+  };
+  let pages: PageSetting[] = [];
+
+  const fill = (key: string) => {
+    const page = pages.find(item => item.pageKey.toLowerCase() === key);
+    if (!page) return;
+    fields.status.value = page.status;
+    fields.title.value = page.title;
+    fields.message.value = page.message;
+    fields.announcementTitle.value = page.announcementTitle;
+    fields.announcementMessage.value = page.announcementMessage;
+    fields.ctaLabel.value = page.ctaLabel;
+    fields.ctaUrl.value = page.ctaUrl;
+  };
+
+  const load = async () => {
+    if (!select || !feedback) return;
+    feedback.textContent = 'Loading page settings…';
+    try {
+      const response = await fetch('/api/admin/content/pages', { headers: { Accept: 'application/json' } });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.message || 'Could not load page settings.');
+      pages = body;
+      const requestedPage = new URLSearchParams(window.location.search).get('page')?.toLowerCase();
+      if (requestedPage && Array.from(select.options).some(option => option.value === requestedPage)) {
+        select.value = requestedPage;
+      }
+      fill(select.value);
+      feedback.textContent = '';
+    } catch (error) {
+      feedback.textContent = error instanceof Error ? error.message : 'Could not load page settings.';
+      feedback.className = 'min-h-5 text-sm text-red-300';
+    }
+  };
+
+  select?.addEventListener('change', () => fill(select.value));
+  form?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!select || !feedback || !save) return;
+    feedback.className = 'min-h-5 text-sm text-zinc-400';
+    feedback.textContent = 'Saving page settings…';
+    save.disabled = true;
+    try {
+      const payload = Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field.value.trim()]));
+      const response = await fetch(`/api/admin/content/pages/${select.value}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.message || 'Could not save page settings.');
+      const index = pages.findIndex(item => item.pageKey.toLowerCase() === select.value);
+      if (index >= 0) pages[index] = body;
+      window.dispatchEvent(new CustomEvent('site-page-settings-updated'));
+      feedback.textContent = 'Saved. The public page will use these settings on its next request.';
+      feedback.className = 'min-h-5 text-sm text-emerald-300';
+    } catch (error) {
+      feedback.textContent = error instanceof Error ? error.message : 'Could not save page settings.';
+      feedback.className = 'min-h-5 text-sm text-red-300';
+    } finally {
+      save.disabled = false;
+    }
+  });
+
+  void load();
+</script>

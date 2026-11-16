@@ -41,7 +41,7 @@ const formattedPrice = `Q${product.price.toFixed(2)}`;
     </span>
   </div>
 
-  <div class="p-4 flex flex-col grow">
+  <div class="p-3 sm:p-4 flex flex-col grow">
     <h3 class="text-white font-bold text-sm leading-snug line-clamp-2 group-hover:text-orange-400 transition-colors">
       {product.name}
     </h3>
@@ -56,7 +56,7 @@ const formattedPrice = `Q${product.price.toFixed(2)}`;
       <span class="text-orange-500 font-black text-base font-mono">
         {formattedPrice}
       </span>
-      <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider group-hover:text-orange-400 transition-colors">
+      <span class="text-[11px] sm:text-xs font-mono text-zinc-500 uppercase tracking-wide sm:tracking-wider group-hover:text-orange-400 transition-colors">
         View details →
       </span>
     </div>

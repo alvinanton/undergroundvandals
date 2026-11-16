@@ -4,6 +4,9 @@ import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/shop/ProductCard.astro';
 import { getProducts } from '../../services/ecommerce/productService';
 import { getCategories } from '../../services/ecommerce/categoryService';
+import SitePageState from '../../components/SitePageState.astro';
+import { getSitePageSetting } from '../../lib/sitePages';
+const pageSettings = await getSitePageSetting('shop');
 
 // ?category=<id> filters the grid. Invalid/missing values just show everything.
 const categoryParam = Astro.url.searchParams.get('category');
@@ -11,23 +14,25 @@ const categoryId = categoryParam && !Number.isNaN(Number(categoryParam))
   ? Number(categoryParam)
   : undefined;
 
-const [products, categories] = await Promise.all([
-  getProducts(categoryId),
-  getCategories(),
-]);
+const [products, categories] = pageSettings.status === 'Live'
+  ? await Promise.all([getProducts(categoryId), getCategories()])
+  : [[], []];
 
 const activeCategories = categories.filter((c) => c.isActive);
 ---
 
 <Layout title="Shop | Underground Vandals">
+  {pageSettings.status === 'Live' ? <>
+  <SitePageState page={pageSettings} compact />
   <div class="space-y-8">
     <div class="border-b border-zinc-800/80 pb-6">
       <span class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-2">
-        Shop
+        {pageSettings.title}
       </span>
       <h1 class="text-3xl font-black uppercase tracking-tight text-white">
-        Shop <span class="text-orange-500">Underground Vandals</span>
+        {pageSettings.title}
       </h1>
+      <p class="mt-2 max-w-2xl text-sm text-zinc-400">{pageSettings.message}</p>
     </div>
 
     {activeCategories.length > 0 && (
@@ -66,11 +71,12 @@ const activeCategories = categories.filter((c) => c.isActive);
         </p>
       </div>
     ) : (
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div class="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
         {products.map((product) => (
           <ProductCard product={product} />
         ))}
       </div>
     )}
   </div>
+  </> : <SitePageState page={pageSettings} />}
 </Layout>

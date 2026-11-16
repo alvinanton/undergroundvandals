@@ -1,4 +1,6 @@
 ---
+import AdminFileDropzone from "./AdminFileDropzone.astro";
+
 interface Props {
     isAdmin?: boolean;
 }
@@ -26,6 +28,7 @@ const apiKey =
 >
     {/* Section: Products Management List */}
     <div
+        id="products-list-view"
         class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6"
     >
         <div
@@ -44,15 +47,17 @@ const apiKey =
             <div class="flex items-center gap-2">
                 <button
                     id="open-create-modal-btn"
-                    class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black uppercase text-xs rounded-lg shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer font-mono"
+                    type="button"
+                    class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-orange-500 px-3 text-xs font-bold font-mono uppercase tracking-wider text-zinc-950 transition-colors hover:bg-orange-400"
                 >
-                    + New Product
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>New product</span>
                 </button>
                 <button
                     id="refresh-btn"
-                    class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    type="button"
+                    class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-zinc-800 px-3 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-700 disabled:opacity-50"
                 >
-                    ↻ Refresh
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5"/><path d="M19 12a7 7 0 1 1-2-4.9L20 12"/></svg><span>Refresh</span>
                 </button>
             </div>
         </div>
@@ -62,7 +67,7 @@ const apiKey =
             <div
                 class="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60 items-center"
             >
-                <div class="sm:col-span-4">
+                <div class="min-w-0 sm:col-span-4">
                     <input
                         type="text"
                         id="search-input"
@@ -70,7 +75,7 @@ const apiKey =
                         class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 text-xs focus:outline-none focus:border-orange-500 font-mono"
                     />
                 </div>
-                <div class="sm:col-span-2">
+                <div class="min-w-0 sm:col-span-2">
                     <select
                         id="filter-type"
                         class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
@@ -80,7 +85,7 @@ const apiKey =
                         <option value="PHYSICAL">Physical Items</option>
                     </select>
                 </div>
-                <div class="sm:col-span-2">
+                <div class="min-w-0 sm:col-span-2">
                     <select
                         id="filter-status"
                         class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
@@ -90,7 +95,7 @@ const apiKey =
                         <option value="INACTIVE">Inactive Only</option>
                     </select>
                 </div>
-                <div class="sm:col-span-2">
+                <div class="min-w-0 sm:col-span-2">
                     <select
                         id="filter-stock"
                         class="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-orange-500 font-mono cursor-pointer"
@@ -101,7 +106,7 @@ const apiKey =
                         <option value="OUT_OF_STOCK">Out of Stock (0)</option>
                     </select>
                 </div>
-                <div class="sm:col-span-2 flex justify-end">
+                <div class="min-w-0 sm:col-span-2 flex justify-end">
                     <button
                         id="clear-filters-btn"
                         class="w-full py-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer border border-zinc-700/60 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -114,17 +119,32 @@ const apiKey =
         </div>
 
         {/* Products Table */}
-        <div class="overflow-x-auto custom-scrollbar">
+        <div>
+            <div class="xl:hidden flex items-center gap-2 mb-3">
+                <label class="sr-only" for="products-mobile-sort">Sort products by</label>
+                <select id="products-mobile-sort" class="min-w-0 grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 text-xs font-mono">
+                    <option value="createdAt">Created</option>
+                    <option value="name">Name</option>
+                    <option value="price">Price</option>
+                    <option value="stockQuantity">Stock</option>
+                    <option value="isActive">Status</option>
+                </select>
+                <button id="products-mobile-sort-direction" type="button" aria-label="Change sort direction" class="shrink-0 px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-300 text-xs font-mono">Descending</button>
+            </div>
+            <div id="products-card-list" class="xl:hidden grid gap-3" aria-live="polite">
+                <p class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center text-sm text-zinc-500">Loading products...</p>
+            </div>
+            <div class="hidden xl:block">
             <table
-                class="w-full text-left border-collapse table-fixed min-w-[750px]"
+                class="w-full table-fixed border-collapse text-left"
             >
                 <thead>
                     <tr
                         class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400 select-none"
                     >
-                        <th class="py-3 px-3 w-16 text-center">Media</th>
+                        <th class="py-3 px-3 w-32 text-center">Media</th>
                         <th
-                            class="py-3 px-3 cursor-pointer hover:text-white transition-colors sort-header min-w-0"
+                            class="w-[30%] py-3 px-3 cursor-pointer hover:text-white transition-colors sort-header min-w-0"
                             data-sort="name"
                         >
                             Product Info <span
@@ -133,7 +153,7 @@ const apiKey =
                             >
                         </th>
                         <th
-                            class="py-3 px-3 w-24 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap"
+                            class="py-3 px-3 w-20 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap"
                             data-sort="price"
                         >
                             Price <span
@@ -142,7 +162,7 @@ const apiKey =
                             >
                         </th>
                         <th
-                            class="py-3 px-3 w-28 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap"
+                            class="py-3 px-3 w-24 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap"
                             data-sort="stockQuantity"
                         >
                             Stock <span
@@ -151,7 +171,7 @@ const apiKey =
                             >
                         </th>
                         <th
-                            class="py-3 px-3 w-32 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap text-orange-500"
+                            class="py-3 px-3 w-28 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap text-orange-500"
                             data-sort="createdAt"
                         >
                             Created <span
@@ -160,7 +180,7 @@ const apiKey =
                             >
                         </th>
                         <th
-                            class="py-3 px-3 w-24 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap text-center"
+                            class="py-3 px-3 w-20 cursor-pointer hover:text-white transition-colors sort-header whitespace-nowrap text-center"
                             data-sort="isActive"
                         >
                             Status <span
@@ -168,7 +188,7 @@ const apiKey =
                                 >↕</span
                             >
                         </th>
-                        <th class="py-3 px-3 w-20 text-right whitespace-nowrap"
+                        <th class="py-3 px-3 w-16 text-right whitespace-nowrap"
                             >Actions</th
                         >
                     </tr>
@@ -186,6 +206,7 @@ const apiKey =
                     </tr>
                 </tbody>
             </table>
+            </div>
         </div>
 
         {/* Server-Side Pagination Bar */}
@@ -335,34 +356,16 @@ const apiKey =
         </div>
     </div>
 
-    {/* Unified Product Form Modal */}
-    <div
-        id="product-modal"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4"
-    >
-        <div
-            class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
-        >
-            <div
-                class="flex justify-between items-center border-b border-zinc-800/80 pb-4"
-            >
-                <div>
-                    <h3
-                        id="modal-header-title"
-                        class="text-base font-bold text-white uppercase tracking-wide"
-                    >
-                        Add New Product
-                    </h3>
-                    <p id="modal-header-subtitle" class="text-xs text-zinc-400">
-                        Create a digital or physical store product
-                    </p>
-                </div>
-                <button
-                    id="product-modal-close"
-                    class="text-zinc-400 hover:text-orange-500 font-mono text-sm cursor-pointer transition-colors"
-                    >✕</button
-                >
+    {/* Dedicated product create/edit screen */}
+    <section id="product-modal" aria-labelledby="modal-header-title" class="hidden space-y-6">
+        <header class="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h2 id="modal-header-title" tabindex="-1" class="text-2xl font-bold tracking-tight text-white focus:outline-none sm:text-3xl">New product</h2>
+                <p id="modal-header-subtitle" class="mt-1 text-sm text-zinc-400">Create a digital or physical store product</p>
             </div>
+            <button id="product-modal-close" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-4 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-800"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/><path d="M9 12h12"/></svg><span>Back to products</span></button>
+        </header>
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-xl sm:p-7">
 
             <form id="product-form" class="space-y-4">
                 <input type="hidden" id="prod-id" value="" />
@@ -527,49 +530,17 @@ const apiKey =
                             Digital Download File (Private Asset) *
                         </label>
 
-                        <div class="flex items-center gap-2">
-                            <input
-                                type="file"
-                                id="prod-digital-file-input"
-                                class="block w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-mono file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700 cursor-pointer bg-zinc-900 rounded-lg border border-zinc-800 p-1"
-                            />
-                            <button
-                                type="button"
-                                id="upload-digital-btn"
-                                class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold uppercase rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-50"
-                            >
-                                Upload
-                            </button>
-                        </div>
-
-                        <div id="digital-upload-progress" class="hidden mt-2">
-                            <div
-                                class="flex justify-between text-[10px] font-mono text-zinc-400 mb-1"
-                            >
-                                <span id="digital-upload-status"
-                                    >Uploading to secure storage...</span
-                                >
-                                <span id="digital-upload-pct">0%</span>
-                            </div>
-                            <div
-                                class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden"
-                            >
-                                <div
-                                    id="digital-upload-bar"
-                                    class="bg-blue-500 h-1.5 transition-all duration-150"
-                                    style="width: 0%"
-                                >
-                                </div>
-                            </div>
-                        </div>
+                        <AdminFileDropzone id="product-digital-dropzone" inputId="prod-digital-file-input" label="Drop a private product file here or browse" browseButtonId="browse-digital-file-btn" browseLabel="Browse file" selectionId="digital-file-selection" selectionText="No file selected" feedbackId="product-digital-drop-feedback">
+                        </AdminFileDropzone>
 
                         <input type="hidden" id="prod-file-url" value="" />
                         <input type="hidden" id="prod-file-size" value="" />
                         <p
                             id="prod-file-name-preview"
-                            class="text-[11px] font-mono text-emerald-400 mt-1.5 hidden"
+                            class="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3 text-[11px] font-mono text-emerald-400 hidden"
                         >
                         </p>
+                        <button id="prod-digital-remove-btn" type="button" class="hidden mt-2 rounded-md border border-zinc-700 px-3 py-1.5 text-[10px] font-mono uppercase text-zinc-300 hover:border-red-700 hover:text-red-300">Remove selected file</button>
                     </div>
                 </div>
 
@@ -581,48 +552,25 @@ const apiKey =
                         Product Gallery Images (Public Storefront)
                     </label>
 
-                    <div class="flex items-center gap-2">
-                        <input
-                            type="file"
-                            id="gallery-file-input"
-                            accept="image/*"
-                            multiple
-                            class="block w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-mono file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700 cursor-pointer bg-zinc-950 rounded-lg border border-zinc-800 p-1"
-                        />
-                        <button
-                            type="button"
-                            id="upload-images-btn"
-                            class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-orange-400 font-mono text-xs font-bold uppercase rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-50"
-                        >
-                            + Upload
-                        </button>
-                    </div>
-
-                    <div id="images-upload-progress" class="hidden">
-                        <div
-                            class="flex justify-between text-[10px] font-mono text-zinc-400 mb-1"
-                        >
-                            <span id="images-upload-status"
-                                >Compressing & Uploading...</span
-                            >
-                            <span id="images-upload-pct">0%</span>
-                        </div>
-                        <div
-                            class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden"
-                        >
-                            <div
-                                id="images-upload-bar"
-                                class="bg-orange-500 h-1.5 transition-all duration-150"
-                                style="width: 0%"
-                            >
-                            </div>
-                        </div>
-                    </div>
+                    <AdminFileDropzone id="product-gallery-dropzone" inputId="gallery-file-input" accept="image/*" multiple label="Drop product images here or browse multiple images" browseButtonId="browse-gallery-files-btn" browseLabel="Browse images" selectionId="gallery-files-selection" selectionText="No images selected" feedbackId="product-gallery-drop-feedback">
+                    </AdminFileDropzone>
 
                     <div
                         id="gallery-items-list"
-                        class="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pt-1"
+                        class="flex max-h-72 flex-wrap gap-3 overflow-y-auto custom-scrollbar pt-1"
                     >
+                    </div>
+                    <p id="product-gallery-reorder-hint" class="hidden text-[11px] font-mono text-zinc-500">Drag images by the grip to change their order. Focus a grip and use the arrow keys to reorder.</p>
+                    <p id="product-gallery-reorder-announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+                </div>
+
+                <div id="product-upload-progress" class="hidden space-y-2 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3" aria-live="polite">
+                    <div class="flex items-center justify-between gap-3 text-[11px] font-mono text-zinc-300">
+                        <span id="product-upload-progress-label" class="min-w-0 truncate">Preparing uploads...</span>
+                        <span id="product-upload-progress-percent" class="shrink-0 text-orange-400">0%</span>
+                    </div>
+                    <div id="product-upload-progress-track" role="progressbar" aria-label="File upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" class="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+                        <div id="product-upload-progress-bar" class="h-full w-0 rounded-full bg-orange-500 transition-[width] duration-200 ease-out"></div>
                     </div>
                 </div>
 
@@ -638,23 +586,17 @@ const apiKey =
                 >
                 </div>
 
-                <div class="flex justify-end gap-3 pt-2">
-                    <button
-                        type="button"
-                        id="product-modal-cancel"
-                        class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer"
-                        >Cancel</button
-                    >
+                <div class="flex justify-end pt-2">
                     <button
                         type="submit"
                         id="product-submit-btn"
-                        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black font-mono text-xs uppercase rounded-lg transition-colors cursor-pointer"
+                        class="flex min-h-14 w-full items-center justify-center rounded-lg bg-orange-500 px-6 text-xs font-bold font-mono uppercase tracking-wider text-zinc-950 transition-colors hover:bg-orange-400 cursor-pointer"
                         >Create Product</button
                     >
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
 
 <style>
@@ -671,6 +613,8 @@ const apiKey =
 
 <script>
     import { uploadEcommerceMedia } from "../../lib/ecommerceStorage";
+    import { attachFileDropzone } from "../../lib/fileDropzone";
+    import { attachQuantityStepper } from "../../lib/quantityStepper";
 
     interface GalleryImage {
         id?: number;
@@ -680,6 +624,7 @@ const apiKey =
         fileSize?: number;
         isMain: boolean;
         displayOrder: number;
+        pendingFile?: File;
     }
 
     // Context & Base Configuration from dataset
@@ -699,6 +644,9 @@ const apiKey =
 
     let fetchedProductsList: any[] = [];
     let currentFormImages: GalleryImage[] = [];
+    let stagedDigitalFile: File | null = null;
+    const productImageKeys = new WeakMap<GalleryImage, string>();
+    let touchProductImageDrag: { pointerId: number; from: number; x: number; y: number; activated: boolean; timer: number } | null = null;
 
     // Lightbox state
     let lightboxGallery: GalleryImage[] = [];
@@ -706,6 +654,9 @@ const apiKey =
 
     // Modal Elements
     const productModal = document.getElementById("product-modal");
+    const productListView = document.getElementById("products-list-view");
+    const dashboardHeader = document.getElementById("dashboard-root");
+    const pageContent = dashboardHeader?.parentElement;
     const modalHeaderTitle = document.getElementById("modal-header-title");
     const modalHeaderSubtitle = document.getElementById("modal-header-subtitle");
     const modalAuditInfo = document.getElementById("modal-audit-info");
@@ -713,7 +664,54 @@ const apiKey =
 
     const openCreateModalBtn = document.getElementById("open-create-modal-btn");
     const closeModalBtn = document.getElementById("product-modal-close");
-    const cancelModalBtn = document.getElementById("product-modal-cancel");
+    const requestedProductView = new URLSearchParams(window.location.search).get("product");
+    let currentProductView: "list" | "create" | "edit" = "list";
+    let initialProductRouteHandled = false;
+
+    function setProductView(view: "list" | "create" | "edit", productId?: string, updateUrl = true) {
+        currentProductView = view;
+        productListView?.classList.toggle("hidden", view !== "list");
+        productModal?.classList.toggle("hidden", view === "list");
+        if (productListView) productListView.style.display = view === "list" ? "block" : "none";
+        if (productModal) productModal.style.display = view === "list" ? "none" : "block";
+        dashboardHeader?.classList.toggle("hidden", view === "list");
+        if (dashboardHeader) dashboardHeader.style.display = view === "list" ? "flex" : "none";
+        pageContent?.classList.toggle("space-y-5", view === "list");
+        pageContent?.classList.toggle("space-y-0", view !== "list");
+        rootEl?.classList.toggle("space-y-6", view === "list");
+        rootEl?.classList.toggle("space-y-0", view !== "list");
+        if (updateUrl) {
+            const url = new URL(window.location.href);
+            if (view === "list") {
+                url.searchParams.delete("product");
+                url.searchParams.delete("id");
+            } else {
+                url.searchParams.set("product", view);
+                if (view === "edit" && productId) url.searchParams.set("id", productId);
+                else url.searchParams.delete("id");
+            }
+            window.history.pushState({ productView: view, productId }, "", url);
+        }
+        if (view !== "list") modalHeaderTitle?.focus();
+        else openCreateModalBtn?.focus();
+    }
+
+    window.addEventListener("popstate", () => {
+        const url = new URL(window.location.href);
+        const view = url.searchParams.get("product");
+        const productId = url.searchParams.get("id");
+        if (view === "create") setProductView("create", undefined, false);
+        else if (view === "edit" && productId) {
+            const product = fetchedProductsList.find((entry) => String(entry.id) === productId);
+            if (product) openEditModal(product, false);
+            else setProductView("list", undefined, false);
+        } else setProductView("list", undefined, false);
+    });
+
+    if (requestedProductView === "create") {
+        setProductView("create", undefined, false);
+        initialProductRouteHandled = true;
+    }
 
     const productForm = document.getElementById("product-form") as HTMLFormElement;
     const prodIdInput = document.getElementById("prod-id") as HTMLInputElement;
@@ -727,21 +725,85 @@ const apiKey =
 
     // Media & Gallery Form Elements
     const galleryFileInput = document.getElementById("gallery-file-input") as HTMLInputElement;
-    const uploadImagesBtn = document.getElementById("upload-images-btn") as HTMLButtonElement;
-    const imagesProgress = document.getElementById("images-upload-progress");
-    const imagesProgressBar = document.getElementById("images-upload-bar") as HTMLDivElement;
-    const imagesProgressPct = document.getElementById("images-upload-pct") as HTMLSpanElement;
+    const galleryFilesSelection = document.getElementById("gallery-files-selection");
+    const digitalFilesSelection = document.getElementById("digital-file-selection");
     const galleryItemsList = document.getElementById("gallery-items-list");
+    const productReorderHint = document.getElementById("product-gallery-reorder-hint");
+    const productReorderAnnouncement = document.getElementById("product-gallery-reorder-announcement");
+    const productUploadProgress = document.getElementById("product-upload-progress");
+    const productUploadProgressLabel = document.getElementById("product-upload-progress-label");
+    const productUploadProgressPercent = document.getElementById("product-upload-progress-percent");
+    const productUploadProgressTrack = document.getElementById("product-upload-progress-track");
+    const productUploadProgressBar = document.getElementById("product-upload-progress-bar");
 
     // Digital File Form Elements
     const digitalFileInput = document.getElementById("prod-digital-file-input") as HTMLInputElement;
-    const uploadDigitalBtn = document.getElementById("upload-digital-btn") as HTMLButtonElement;
-    const digitalProgress = document.getElementById("digital-upload-progress");
-    const digitalProgressBar = document.getElementById("digital-upload-bar") as HTMLDivElement;
-    const digitalProgressPct = document.getElementById("digital-upload-pct") as HTMLSpanElement;
     const prodFileUrl = document.getElementById("prod-file-url") as HTMLInputElement;
     const prodFileSize = document.getElementById("prod-file-size") as HTMLInputElement;
     const prodFileNamePreview = document.getElementById("prod-file-name-preview");
+
+    document.getElementById("browse-gallery-files-btn")?.addEventListener("click", () => galleryFileInput?.click());
+    document.getElementById("browse-digital-file-btn")?.addEventListener("click", () => digitalFileInput?.click());
+    attachFileDropzone(
+        document.getElementById("product-gallery-dropzone"),
+        galleryFileInput,
+        { feedback: document.getElementById("product-gallery-drop-feedback"), nextStep: "submit" },
+    );
+    attachFileDropzone(
+        document.getElementById("product-digital-dropzone"),
+        digitalFileInput,
+        { feedback: document.getElementById("product-digital-drop-feedback"), nextStep: "submit" },
+    );
+    galleryFileInput?.addEventListener("change", () => {
+        const files = Array.from(galleryFileInput.files || []);
+        if (!files.length) return;
+        for (const file of files) {
+            const mediaUrl = URL.createObjectURL(file);
+            const isMain = currentFormImages.length === 0;
+            currentFormImages.push({
+                mediaUrl,
+                storageKey: "",
+                mimeType: file.type || "image/webp",
+                fileSize: file.size,
+                isMain,
+                displayOrder: currentFormImages.length + 1,
+                pendingFile: file,
+            });
+        }
+        galleryFileInput.value = "";
+        if (galleryFilesSelection) galleryFilesSelection.textContent = `${currentFormImages.length} image(s) selected`;
+        const feedback = document.getElementById("product-gallery-drop-feedback");
+        if (feedback) feedback.textContent = "Previews added. Save the product to start the upload.";
+        renderFormGallery();
+    });
+    digitalFileInput?.addEventListener("change", () => {
+        const file = digitalFileInput.files?.[0];
+        if (!file) return;
+        stagedDigitalFile = file;
+        digitalFileInput.value = "";
+        if (digitalFilesSelection) digitalFilesSelection.textContent = `${file.name} · ready to upload`;
+        if (prodFileNamePreview) {
+            prodFileNamePreview.textContent = `Ready to upload: ${file.name} (${formatBytes(file.size)})`;
+            prodFileNamePreview.classList.remove("text-emerald-400");
+            prodFileNamePreview.classList.add("text-orange-300");
+            prodFileNamePreview.classList.remove("hidden");
+        }
+        const feedback = document.getElementById("product-digital-drop-feedback");
+        if (feedback) feedback.textContent = "File selected. Save the product to start the upload.";
+        document.getElementById("prod-digital-remove-btn")?.classList.remove("hidden");
+    });
+    document.getElementById("prod-digital-remove-btn")?.addEventListener("click", () => {
+        stagedDigitalFile = null;
+        if (digitalFileInput) digitalFileInput.value = "";
+        if (digitalFilesSelection) digitalFilesSelection.textContent = "No file selected";
+        if (prodFileNamePreview) {
+            prodFileNamePreview.textContent = "";
+            prodFileNamePreview.classList.add("hidden");
+        }
+        document.getElementById("prod-digital-remove-btn")?.classList.add("hidden");
+        const feedback = document.getElementById("product-digital-drop-feedback");
+        if (feedback) feedback.textContent = "";
+    });
 
     // Filter & Search Controls
     const searchInput = document.getElementById("search-input") as HTMLInputElement;
@@ -768,109 +830,16 @@ const apiKey =
     const lightboxNextBtn = document.getElementById("lightbox-next-btn");
     const lightboxThumbnailsStrip = document.getElementById("lightbox-thumbnails-strip");
 
-    const PHYSICAL_ICON_SVG = `<svg class="w-5 h-5 text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
-    const DIGITAL_ICON_SVG = `<svg class="w-5 h-5 text-blue-400/80" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
+    const PHYSICAL_ICON_SVG = `<svg class="size-10 text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
+    const DIGITAL_ICON_SVG = `<svg class="size-10 text-blue-400/80" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
 
-    stockBtnMinus?.addEventListener("click", () => {
-        if (!stockInput) return;
-        const currentVal = parseInt(stockInput.value, 10) || 0;
-        if (currentVal > 0) stockInput.value = (currentVal - 1).toString();
-    });
-
-    stockBtnPlus?.addEventListener("click", () => {
-        if (!stockInput) return;
-        const currentVal = parseInt(stockInput.value, 10) || 0;
-        stockInput.value = (currentVal + 1).toString();
-    });
-
-    // Upload Public Gallery Images to Azure Blob Storage
-    uploadImagesBtn?.addEventListener("click", async () => {
-        const files = galleryFileInput?.files;
-        if (!files || files.length === 0) return;
-
-        uploadImagesBtn.disabled = true;
-        imagesProgress?.classList.remove("hidden");
-
-        try {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const isFirst = currentFormImages.length === 0;
-
-                const res = await uploadEcommerceMedia(
-                    file,
-                    "products", // Public products folder
-                    false,      // Public container
-                    API_KEY,
-                    API_URL,
-                    (pct) => {
-                        if (imagesProgressBar && imagesProgressPct) {
-                            imagesProgressBar.style.width = `${pct}%`;
-                            imagesProgressPct.innerText = `${pct}%`;
-                        }
-                    },
-                );
-
-                currentFormImages.push({
-                    mediaUrl: res.fileUrl,
-                    storageKey: res.storageKey,
-                    mimeType: "image/webp",
-                    fileSize: file.size,
-                    isMain: isFirst,
-                    displayOrder: currentFormImages.length + 1,
-                });
-
-                renderFormGallery();
-            }
-
-            if (galleryFileInput) galleryFileInput.value = "";
-        } catch (err: any) {
-            alert("Error uploading images: " + err.message);
-        } finally {
-            uploadImagesBtn.disabled = false;
-            imagesProgress?.classList.add("hidden");
-        }
-    });
-
-    // Upload Private Digital File to Azure Blob Storage
-    uploadDigitalBtn?.addEventListener("click", async () => {
-        const file = digitalFileInput?.files?.[0];
-        if (!file) return;
-
-        uploadDigitalBtn.disabled = true;
-        digitalProgress?.classList.remove("hidden");
-
-        try {
-            const res = await uploadEcommerceMedia(
-                file,
-                "digital", // Private digital folder
-                true,      // Private container
-                API_KEY,
-                API_URL,
-                (pct) => {
-                    if (digitalProgressBar && digitalProgressPct) {
-                        digitalProgressBar.style.width = `${pct}%`;
-                        digitalProgressPct.innerText = `${pct}%`;
-                    }
-                },
-            );
-
-            if (prodFileUrl) prodFileUrl.value = res.storageKey;
-            if (prodFileSize) prodFileSize.value = file.size.toString();
-
-            if (prodFileNamePreview) {
-                prodFileNamePreview.innerText = `✓ Uploaded: ${file.name} (${formatBytes(file.size)})`;
-                prodFileNamePreview.classList.remove("hidden");
-            }
-        } catch (err: any) {
-            alert("Error uploading digital asset: " + err.message);
-        } finally {
-            uploadDigitalBtn.disabled = false;
-            digitalProgress?.classList.add("hidden");
-        }
-    });
+    attachQuantityStepper(stockInput, stockBtnMinus, stockBtnPlus);
 
     function renderFormGallery() {
         if (!galleryItemsList) return;
+        if (galleryFilesSelection) galleryFilesSelection.textContent = currentFormImages.length ? `${currentFormImages.length} image(s) selected` : "No images selected";
+        const previousRects = new Map(Array.from(galleryItemsList.querySelectorAll<HTMLElement>("[data-product-image-key]"), (tile) => [tile.dataset.productImageKey!, tile.getBoundingClientRect()]));
+        productReorderHint?.classList.toggle("hidden", currentFormImages.length < 2);
 
         if (currentFormImages.length === 0) {
             galleryItemsList.innerHTML = `<p class="text-zinc-500 font-mono text-[11px] italic">No images added to gallery yet.</p>`;
@@ -878,47 +847,95 @@ const apiKey =
         }
 
         galleryItemsList.innerHTML = currentFormImages
-            .map(
-                (img, idx) => `
-            <div class="flex items-center justify-between gap-2 bg-zinc-950 p-2 rounded-lg border border-zinc-800/80 text-xs font-mono">
-                <div class="flex items-center gap-2 truncate">
-                    <img src="${img.mediaUrl}" alt="Preview" class="w-8 h-8 object-cover rounded bg-zinc-900 border border-zinc-800 shrink-0" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' fill=\\'none\\' stroke=\\'%2371717a\\' viewBox=\\'0 0 24 24\\'><rect width=\\'18\\' height=\\'18\\' x=\\'3\\' y=\\'3\\' rx=\\'2\\'/></svg>'" />
-                    <span class="text-zinc-300 truncate max-w-[200px]" title="${img.mediaUrl}">${img.storageKey || img.mediaUrl}</span>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" data-main-idx="${idx}" class="set-main-btn px-2 py-0.5 rounded text-[10px] uppercase font-mono transition-colors ${img.isMain ? "bg-orange-500/20 text-orange-400 border border-orange-500/40 font-bold" : "bg-zinc-800 hover:bg-zinc-700 text-zinc-400"}">
-                        ${img.isMain ? "★ Main" : "Set Main"}
+            .map((img, idx) => {
+                let key = productImageKeys.get(img);
+                if (!key) { key = crypto.randomUUID(); productImageKeys.set(img, key); }
+                const filename = img.pendingFile?.name || img.storageKey || "Product image";
+                return `
+                <div data-product-image-key="${key}" data-product-image-index="${idx}" class="group relative size-24 shrink-0 overflow-hidden rounded-lg border ${img.pendingFile ? "border-orange-500/60" : "border-zinc-700"} bg-black transition-[border-color,box-shadow,transform] duration-150">
+                    <img src="${escapeHtml(img.mediaUrl)}" alt="Product image ${idx + 1}" title="${escapeHtml(filename)}" class="size-full object-cover" />
+                    <span class="absolute bottom-0 left-0 right-0 truncate bg-zinc-950/90 px-1 py-0.5 text-center text-[9px] font-mono ${img.pendingFile ? "text-orange-300" : "text-zinc-300"}">${img.pendingFile ? "Ready" : "Image"}</span>
+                    <button type="button" draggable="true" data-product-image-handle="${idx}" aria-label="Drag image ${idx + 1} to reorder" title="Drag to reorder" class="absolute left-1 top-1 inline-flex size-7 touch-none cursor-grab items-center justify-center rounded bg-zinc-950/90 text-zinc-100 hover:text-orange-400 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400">
+                      <svg aria-hidden="true" viewBox="0 0 16 16" class="size-4" fill="currentColor"><circle cx="5" cy="3" r="1"/><circle cx="11" cy="3" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="5" cy="13" r="1"/><circle cx="11" cy="13" r="1"/></svg>
                     </button>
-                    <button type="button" data-remove-idx="${idx}" class="remove-img-btn text-zinc-500 hover:text-red-400 px-1 py-0.5 transition-colors">
-                        ✕
-                    </button>
-                </div>
-            </div>
-        `,
-            )
+                    <button type="button" data-main-idx="${idx}" aria-label="${img.isMain ? "Main image" : "Set as main image"}" class="absolute bottom-5 left-1 rounded px-1.5 py-0.5 text-[9px] font-mono transition-colors ${img.isMain ? "bg-orange-500 text-zinc-950 font-bold" : "bg-zinc-950/90 text-zinc-300 hover:text-orange-400"}">${img.isMain ? "Main" : "Set main"}</button>
+                    <button type="button" data-remove-idx="${idx}" aria-label="Remove image ${idx + 1}" class="absolute right-1 top-1 flex size-6 items-center justify-center rounded bg-zinc-950/90 text-xs text-zinc-200 hover:text-orange-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400">×</button>
+                </div>`;
+            })
             .join("");
 
-        galleryItemsList.querySelectorAll(".set-main-btn").forEach((btn) => {
+        galleryItemsList.querySelectorAll<HTMLElement>("[data-product-image-key]").forEach((tile) => {
+            const previous = previousRects.get(tile.dataset.productImageKey!);
+            if (previous) {
+                const current = tile.getBoundingClientRect();
+                const dx = previous.left - current.left;
+                const dy = previous.top - current.top;
+                if (dx || dy) tile.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 180, easing: "ease-out" });
+            }
+            tile.addEventListener("dragover", (event) => { event.preventDefault(); tile.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10"); });
+            tile.addEventListener("dragleave", () => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+            tile.addEventListener("drop", (event) => {
+                event.preventDefault();
+                moveProductImage(Number((event as DragEvent).dataTransfer?.getData("text/plain")), Number(tile.dataset.productImageIndex));
+            });
+        });
+
+        galleryItemsList.querySelectorAll<HTMLButtonElement>("[data-product-image-handle]").forEach((handle) => {
+            handle.addEventListener("keydown", (event) => {
+                const keyboardEvent = event as KeyboardEvent;
+                const earlier = keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowUp";
+                const later = keyboardEvent.key === "ArrowRight" || keyboardEvent.key === "ArrowDown";
+                if (!earlier && !later) return;
+                keyboardEvent.preventDefault();
+                const from = Number(handle.dataset.productImageHandle);
+                const to = from + (earlier ? -1 : 1);
+                if (moveProductImage(from, to)) galleryItemsList?.querySelector<HTMLButtonElement>(`[data-product-image-handle="${to}"]`)?.focus();
+            });
+            handle.addEventListener("pointerdown", (event) => {
+                const pointer = event as PointerEvent;
+                if (pointer.pointerType !== "touch") return;
+                const from = Number(handle.dataset.productImageHandle);
+                touchProductImageDrag = { pointerId: pointer.pointerId, from, x: pointer.clientX, y: pointer.clientY, activated: false, timer: window.setTimeout(() => {
+                    if (touchProductImageDrag?.pointerId !== pointer.pointerId) return;
+                    touchProductImageDrag.activated = true;
+                    handle.closest<HTMLElement>("[data-product-image-key]")?.classList.add("opacity-40");
+                }, 160) };
+            });
+            handle.addEventListener("pointermove", (event) => {
+                const pointer = event as PointerEvent;
+                if (touchProductImageDrag?.pointerId === pointer.pointerId && !touchProductImageDrag.activated && Math.hypot(pointer.clientX - touchProductImageDrag.x, pointer.clientY - touchProductImageDrag.y) > 7) {
+                    window.clearTimeout(touchProductImageDrag.timer);
+                    touchProductImageDrag = null;
+                }
+            });
+            handle.addEventListener("dragstart", (event) => {
+                const from = Number(handle.dataset.productImageHandle);
+                (event as DragEvent).dataTransfer?.setData("text/plain", String(from));
+                if ((event as DragEvent).dataTransfer) (event as DragEvent).dataTransfer!.effectAllowed = "move";
+                handle.closest<HTMLElement>("[data-product-image-key]")?.classList.add("opacity-40");
+            });
+        });
+
+        galleryItemsList.querySelectorAll("[data-main-idx]").forEach((btn) => {
             btn.addEventListener("click", (e) => {
                 const idx = parseInt(
                     (e.currentTarget as HTMLElement).dataset.mainIdx || "0",
                     10,
                 );
-                currentFormImages.forEach(
-                    (item, i) => (item.isMain = i === idx),
-                );
+                currentFormImages.forEach((item, i) => (item.isMain = i === idx));
                 renderFormGallery();
             });
         });
 
-        galleryItemsList.querySelectorAll(".remove-img-btn").forEach((btn) => {
+        galleryItemsList.querySelectorAll("[data-remove-idx]").forEach((btn) => {
             btn.addEventListener("click", (e) => {
                 const idx = parseInt(
                     (e.currentTarget as HTMLElement).dataset.removeIdx || "0",
                     10,
                 );
                 const wasMain = currentFormImages[idx].isMain;
-                currentFormImages.splice(idx, 1);
+                const [removedImage] = currentFormImages.splice(idx, 1);
+                if (removedImage?.pendingFile) URL.revokeObjectURL(removedImage.mediaUrl);
 
                 if (wasMain && currentFormImages.length > 0) {
                     currentFormImages[0].isMain = true;
@@ -927,9 +944,46 @@ const apiKey =
                 currentFormImages.forEach(
                     (img, i) => (img.displayOrder = i + 1),
                 );
+                if (galleryFilesSelection) galleryFilesSelection.textContent = `${currentFormImages.length} image(s) selected`;
                 renderFormGallery();
             });
         });
+    }
+
+    function moveProductImage(from: number, to: number) {
+        if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= currentFormImages.length || to >= currentFormImages.length || from === to) return false;
+        const [moved] = currentFormImages.splice(from, 1);
+        currentFormImages.splice(to, 0, moved);
+        currentFormImages.forEach((image, index) => image.displayOrder = index + 1);
+        renderFormGallery();
+        if (productReorderAnnouncement) productReorderAnnouncement.textContent = `Image moved to position ${to + 1} of ${currentFormImages.length}.`;
+        return true;
+    }
+
+    galleryItemsList?.addEventListener("dragend", () => galleryItemsList.querySelectorAll("[data-product-image-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10")));
+    window.addEventListener("pointermove", (event) => {
+        if (!touchProductImageDrag?.activated || touchProductImageDrag.pointerId !== event.pointerId) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#gallery-items-list [data-product-image-key]");
+        galleryItemsList?.querySelectorAll("[data-product-image-key]").forEach((tile) => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+        target?.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10");
+    });
+    window.addEventListener("pointerup", (event) => {
+        if (!touchProductImageDrag || touchProductImageDrag.pointerId !== event.pointerId) return;
+        window.clearTimeout(touchProductImageDrag.timer);
+        const drag = touchProductImageDrag;
+        touchProductImageDrag = null;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#gallery-items-list [data-product-image-index]");
+        if (drag.activated) moveProductImage(drag.from, target ? Number(target.dataset.productImageIndex) : -1);
+        galleryItemsList?.querySelectorAll("[data-product-image-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+    });
+    window.addEventListener("pointercancel", () => {
+        if (touchProductImageDrag) window.clearTimeout(touchProductImageDrag.timer);
+        touchProductImageDrag = null;
+        galleryItemsList?.querySelectorAll("[data-product-image-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+    });
+
+    function escapeHtml(value: string) {
+        return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
     }
 
     function formatBytes(bytes?: number): string {
@@ -1056,13 +1110,35 @@ const apiKey =
         }
     });
 
+    function clearPendingProductFiles() {
+        currentFormImages.forEach((image) => {
+            if (image.pendingFile) URL.revokeObjectURL(image.mediaUrl);
+        });
+        stagedDigitalFile = null;
+        if (galleryFileInput) galleryFileInput.value = "";
+        if (digitalFileInput) digitalFileInput.value = "";
+        if (galleryFilesSelection) galleryFilesSelection.textContent = "No images selected";
+        if (digitalFilesSelection) digitalFilesSelection.textContent = "No file selected";
+        document.getElementById("prod-digital-remove-btn")?.classList.add("hidden");
+        productUploadProgress?.classList.add("hidden");
+        if (productUploadProgressBar) productUploadProgressBar.style.width = "0%";
+        if (productUploadProgressPercent) productUploadProgressPercent.textContent = "0%";
+        if (prodFileNamePreview) {
+            prodFileNamePreview.classList.remove("text-orange-300");
+            prodFileNamePreview.classList.add("text-emerald-400");
+        }
+        document.getElementById("product-gallery-drop-feedback")?.replaceChildren();
+        document.getElementById("product-digital-drop-feedback")?.replaceChildren();
+    }
+
     function openCreateModal() {
         productForm.reset();
+        clearPendingProductFiles();
         prodIdInput.value = "";
         currentFormImages = [];
         renderFormGallery();
 
-        if (modalHeaderTitle) modalHeaderTitle.innerText = "Add New Product";
+        if (modalHeaderTitle) modalHeaderTitle.innerText = "New product";
         if (modalHeaderSubtitle)
             modalHeaderSubtitle.innerText =
                 "Create a digital or physical store product";
@@ -1083,11 +1159,12 @@ const apiKey =
         if (statusMsg)
             statusMsg.className =
                 "hidden text-xs font-mono text-center rounded-lg p-2.5";
-        productModal?.classList.remove("hidden");
+        setProductView("create");
     }
 
-    function openEditModal(product: any) {
+    function openEditModal(product: any, updateUrl = true) {
         productForm.reset();
+        clearPendingProductFiles();
         prodIdInput.value = product.id;
 
         (document.getElementById("prod-name") as HTMLInputElement).value =
@@ -1156,7 +1233,7 @@ const apiKey =
             if (stockInput) stockInput.required = true;
         }
 
-        if (modalHeaderTitle) modalHeaderTitle.innerText = "Edit Product";
+        if (modalHeaderTitle) modalHeaderTitle.innerText = "Edit product";
         if (modalHeaderSubtitle)
             modalHeaderSubtitle.innerText = `Update specs for #${product.id} - ${product.name}`;
 
@@ -1176,23 +1253,18 @@ const apiKey =
         if (statusMsg)
             statusMsg.className =
                 "hidden text-xs font-mono text-center rounded-lg p-2.5";
-        productModal?.classList.remove("hidden");
+        setProductView("edit", String(product.id), updateUrl);
     }
 
     function closeModal() {
-        productModal?.classList.add("hidden");
+        setProductView("list");
     }
 
     openCreateModalBtn?.addEventListener("click", openCreateModal);
     closeModalBtn?.addEventListener("click", closeModal);
-    cancelModalBtn?.addEventListener("click", closeModal);
-    productModal?.addEventListener("click", (e) => {
-        if (e.target === productModal) closeModal();
-    });
-
     window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
-            closeModal();
+            if (currentProductView !== "list") closeModal();
             closeLightbox();
         } else if (
             lightboxModal &&
@@ -1208,9 +1280,10 @@ const apiKey =
     ) as HTMLButtonElement;
     refreshBtn?.addEventListener("click", async () => {
         refreshBtn.disabled = true;
-        refreshBtn.innerText = "↻ Refreshing...";
+        const label = refreshBtn.querySelector("span");
+        if (label) label.innerText = "Refreshing...";
         await fetchProducts();
-        refreshBtn.innerText = "↻ Refresh";
+        if (label) label.innerText = "Refresh";
         refreshBtn.disabled = false;
     });
 
@@ -1289,6 +1362,26 @@ const apiKey =
         }
     });
 
+    const mobileSortSelect = document.getElementById("products-mobile-sort") as HTMLSelectElement;
+    const mobileSortDirectionBtn = document.getElementById("products-mobile-sort-direction") as HTMLButtonElement;
+
+    mobileSortSelect?.addEventListener("change", () => {
+        currentSortColumn = mobileSortSelect.value;
+        sortDirection = ["createdAt", "price", "stockQuantity"].includes(currentSortColumn)
+            ? "desc"
+            : "asc";
+        updateSortHeadersUI();
+        currentPage = 1;
+        fetchProducts();
+    });
+
+    mobileSortDirectionBtn?.addEventListener("click", () => {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+        updateSortHeadersUI();
+        currentPage = 1;
+        fetchProducts();
+    });
+
     document.querySelectorAll(".sort-header").forEach((header) => {
         header.addEventListener("click", (e) => {
             const target = e.currentTarget as HTMLElement;
@@ -1337,63 +1430,125 @@ const apiKey =
                 }
             }
         });
+
+        if (mobileSortSelect) mobileSortSelect.value = currentSortColumn;
+        if (mobileSortDirectionBtn) {
+            mobileSortDirectionBtn.innerText = sortDirection === "asc" ? "Ascending" : "Descending";
+        }
     }
 
     // Submit handler - Creates CreateProductDto payload for backend
     productForm?.addEventListener("submit", async (e) => {
         e.preventDefault();
-        if (submitBtn) submitBtn.disabled = true;
-
         const prodId = prodIdInput.value;
         const isEditMode = Boolean(prodId);
         const isDigital = isDigitalCheckbox.checked;
         const stockVal = stockInput.value;
 
-        const mainImageObj =
-            currentFormImages.find((img) => img.isMain) || currentFormImages[0];
-        const primaryThumbUrl = mainImageObj ? mainImageObj.mediaUrl : null;
-
-        const payload = {
-            id: isEditMode
-                ? isNaN(Number(prodId))
-                    ? prodId
-                    : Number(prodId)
-                : undefined,
-            name: (document.getElementById("prod-name") as HTMLInputElement).value,
-            description: (document.getElementById("prod-desc") as HTMLTextAreaElement).value,
-            shortDescription: (document.getElementById("prod-short-desc") as HTMLInputElement).value,
-            price: parseFloat((document.getElementById("prod-price") as HTMLInputElement).value),
-            categoryId: parseInt((document.getElementById("prod-category") as HTMLInputElement).value, 10),
-            isDigital: isDigital,
-            stockQuantity: isDigital
-                ? null
-                : stockVal !== ""
-                  ? parseInt(stockVal, 10)
-                  : 0,
-            fileUrl: isDigital ? prodFileUrl.value : null,
-            fileSize:
-                isDigital && prodFileSize.value
-                    ? parseInt(prodFileSize.value, 10)
-                    : null,
-            thumbnailUrl: primaryThumbUrl,
-            isActive: (document.getElementById("prod-is-active") as HTMLInputElement).checked,
-            media: currentFormImages.map((img) => ({
-                mediaUrl: img.mediaUrl,
-                storageKey: img.storageKey,
-                mediaType: 1, // MediaType.Image
-                mimeType: img.mimeType || "image/webp",
-                fileSize: img.fileSize || 0,
-                isMain: img.isMain,
-                displayOrder: img.displayOrder,
-            })),
-        };
-
-        const targetUrl = isEditMode
-            ? `${API_URL}/api/product/${prodId}`
-            : `${API_URL}/api/product`;
-        const targetMethod = isEditMode ? "PUT" : "POST";
+        if (isDigital && !prodFileUrl.value && !stagedDigitalFile) {
+            if (statusMsg) {
+                statusMsg.textContent = "Choose a digital file before saving this product.";
+                statusMsg.className = "block rounded-lg border border-red-800 bg-red-950/80 p-2.5 text-center text-xs font-mono text-red-400";
+            }
+            return;
+        }
+        if (submitBtn) submitBtn.disabled = true;
+        const originalSubmitLabel = submitBtn?.textContent || "Save Product";
+        let uploadFailed = false;
 
         try {
+            const pendingImages = currentFormImages.filter((img) => img.pendingFile);
+            const filesToUpload = [...pendingImages.map((image) => image.pendingFile!), ...(isDigital && stagedDigitalFile ? [stagedDigitalFile] : [])];
+            const fileWeights = filesToUpload.map((file) => Math.max(file.size, 1));
+            const totalUploadBytes = fileWeights.reduce((total, size) => total + size, 0);
+            let completedUploadBytes = 0;
+            const updateUploadProgress = (file: File, filePercent: number, label: string) => {
+                const fileIndex = filesToUpload.indexOf(file);
+                const totalPercent = totalUploadBytes ? ((completedUploadBytes + fileWeights[fileIndex] * filePercent / 100) / totalUploadBytes) * 95 : 0;
+                const value = Math.max(0, Math.min(95, Math.round(totalPercent)));
+                productUploadProgress?.classList.remove("hidden");
+                if (productUploadProgressLabel) productUploadProgressLabel.textContent = label;
+                if (productUploadProgressPercent) productUploadProgressPercent.textContent = `${value}%`;
+                if (productUploadProgressTrack) productUploadProgressTrack.setAttribute("aria-valuenow", String(value));
+                if (productUploadProgressBar) productUploadProgressBar.style.width = `${value}%`;
+            };
+            const uploadWithProgress = async <T,>(file: File, label: string, upload: (onProgress: (percent: number) => void) => Promise<T>) => {
+                updateUploadProgress(file, 0, label);
+                const result = await upload((percent) => updateUploadProgress(file, percent, label));
+                const fileIndex = filesToUpload.indexOf(file);
+                completedUploadBytes += fileWeights[fileIndex];
+                updateUploadProgress(file, 100, `${label} uploaded`);
+                return result;
+            };
+
+            if (filesToUpload.length) {
+                if (submitBtn) submitBtn.textContent = "Uploading files...";
+                productUploadProgress?.classList.remove("hidden");
+                if (productUploadProgressLabel) productUploadProgressLabel.textContent = `Preparing ${filesToUpload.length} file(s)...`;
+                if (productUploadProgressPercent) productUploadProgressPercent.textContent = "0%";
+                if (productUploadProgressTrack) productUploadProgressTrack.setAttribute("aria-valuenow", "0");
+                if (productUploadProgressBar) productUploadProgressBar.style.width = "0%";
+            } else {
+                productUploadProgress?.classList.add("hidden");
+            }
+            if (pendingImages.length) {
+                for (let index = 0; index < pendingImages.length; index++) {
+                    const image = pendingImages[index];
+                    const file = image.pendingFile!;
+                    const oldPreviewUrl = image.mediaUrl;
+                    const result = await uploadWithProgress(file, `Uploading product image ${index + 1} of ${pendingImages.length}: ${file.name}`, (onProgress) => uploadEcommerceMedia(file, "products", false, API_KEY, API_URL, onProgress));
+                    image.mediaUrl = result.fileUrl;
+                    image.storageKey = result.storageKey;
+                    image.mimeType = "image/webp";
+                    delete image.pendingFile;
+                    URL.revokeObjectURL(oldPreviewUrl);
+                    renderFormGallery();
+                    if (galleryFilesSelection) galleryFilesSelection.textContent = `${currentFormImages.length} image(s) selected`;
+                }
+            }
+
+            if (isDigital && stagedDigitalFile) {
+                const file = stagedDigitalFile;
+                const result = await uploadWithProgress(file, `Uploading private product file: ${file.name}`, (onProgress) => uploadEcommerceMedia(file, "digital", true, API_KEY, API_URL, onProgress));
+                if (prodFileUrl) prodFileUrl.value = result.storageKey;
+                if (prodFileSize) prodFileSize.value = String(file.size);
+                if (prodFileNamePreview) {
+                    prodFileNamePreview.textContent = `Uploaded: ${file.name} (${formatBytes(file.size)})`;
+                    prodFileNamePreview.classList.remove("text-orange-300");
+                    prodFileNamePreview.classList.add("text-emerald-400");
+                    prodFileNamePreview.classList.remove("hidden");
+                }
+                stagedDigitalFile = null;
+                if (digitalFilesSelection) digitalFilesSelection.textContent = "No file selected";
+                document.getElementById("prod-digital-remove-btn")?.classList.add("hidden");
+            }
+
+            const mainImageObj = currentFormImages.find((img) => img.isMain) || currentFormImages[0];
+            const payload = {
+                id: isEditMode ? (isNaN(Number(prodId)) ? prodId : Number(prodId)) : undefined,
+                name: (document.getElementById("prod-name") as HTMLInputElement).value,
+                description: (document.getElementById("prod-desc") as HTMLTextAreaElement).value,
+                shortDescription: (document.getElementById("prod-short-desc") as HTMLInputElement).value,
+                price: parseFloat((document.getElementById("prod-price") as HTMLInputElement).value),
+                categoryId: parseInt((document.getElementById("prod-category") as HTMLInputElement).value, 10),
+                isDigital,
+                stockQuantity: isDigital ? null : stockVal !== "" ? parseInt(stockVal, 10) : 0,
+                fileUrl: isDigital ? prodFileUrl.value : null,
+                fileSize: isDigital && prodFileSize.value ? parseInt(prodFileSize.value, 10) : null,
+                thumbnailUrl: mainImageObj?.mediaUrl || null,
+                isActive: (document.getElementById("prod-is-active") as HTMLInputElement).checked,
+                media: currentFormImages.map((img) => ({
+                    mediaUrl: img.mediaUrl,
+                    storageKey: img.storageKey,
+                    mediaType: 1,
+                    mimeType: img.mimeType || "image/webp",
+                    fileSize: img.fileSize || 0,
+                    isMain: img.isMain,
+                    displayOrder: img.displayOrder,
+                })),
+            };
+            const targetUrl = isEditMode ? `${API_URL}/api/product/${prodId}` : `${API_URL}/api/product`;
+            const targetMethod = isEditMode ? "PUT" : "POST";
             const headers: Record<string, string> = {
                 "Content-Type": "application/json",
             };
@@ -1413,15 +1568,26 @@ const apiKey =
                 );
             }
 
+            if (filesToUpload.length) {
+                if (productUploadProgressLabel) productUploadProgressLabel.textContent = "Saving product details...";
+                if (productUploadProgressPercent) productUploadProgressPercent.textContent = "98%";
+                if (productUploadProgressTrack) productUploadProgressTrack.setAttribute("aria-valuenow", "98");
+                if (productUploadProgressBar) productUploadProgressBar.style.width = "98%";
+            }
+
             closeModal();
             await fetchProducts();
         } catch (err: any) {
+            uploadFailed = true;
+            if (productUploadProgress && !productUploadProgress.classList.contains("hidden") && productUploadProgressLabel) productUploadProgressLabel.textContent = "Upload paused. Resolve the issue and save again to continue.";
             if (statusMsg) {
                 statusMsg.innerText = err.message || "An error occurred.";
                 statusMsg.className =
                     "text-xs font-mono text-center rounded-lg p-2.5 bg-red-950/80 text-red-400 border border-red-800 block";
             }
         } finally {
+            if (!uploadFailed) productUploadProgress?.classList.add("hidden");
+            if (submitBtn) submitBtn.textContent = originalSubmitLabel;
             if (submitBtn) submitBtn.disabled = false;
         }
     });
@@ -1429,6 +1595,7 @@ const apiKey =
     // Main API Fetch Function
     async function fetchProducts() {
         const tableBody = document.getElementById("products-table-body");
+        const cardList = document.getElementById("products-card-list");
         if (!tableBody) return;
 
         const params = new URLSearchParams();
@@ -1477,6 +1644,15 @@ const apiKey =
 
             updatePaginationUI(pagedResult);
             renderProductsTable();
+            const initialUrl = new URL(window.location.href);
+            if (!initialProductRouteHandled && requestedProductView === "create") setProductView("create", undefined, false);
+            else if (!initialProductRouteHandled && requestedProductView === "edit") {
+                const requestedId = initialUrl.searchParams.get("id");
+                const requestedProduct = fetchedProductsList.find((entry) => String(entry.id) === requestedId);
+                if (requestedProduct) openEditModal(requestedProduct, false);
+                else setProductView("list", undefined, false);
+            }
+            initialProductRouteHandled = true;
         } catch (err: any) {
             console.error("Fetch error details:", err);
             tableBody.innerHTML = `
@@ -1485,6 +1661,9 @@ const apiKey =
                 ${err.message || "Error loading products catalog."}
               </td>
             </tr>`;
+            if (cardList) cardList.innerHTML = `<p class="rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-center text-sm text-red-300">${err.message || "Error loading products catalog."}</p>`;
+            if (!initialProductRouteHandled && requestedProductView === "edit") setProductView("list", undefined, false);
+            initialProductRouteHandled = true;
         }
     }
 
@@ -1516,6 +1695,7 @@ const apiKey =
 
     function renderProductsTable() {
         const tableBody = document.getElementById("products-table-body");
+        const cardList = document.getElementById("products-card-list");
         if (!tableBody) return;
 
         if (!fetchedProductsList || fetchedProductsList.length === 0) {
@@ -1523,9 +1703,11 @@ const apiKey =
             <tr>
               <td colspan="7" class="py-8 text-center text-zinc-500 font-mono">No matching products found.</td>
             </tr>`;
+            if (cardList) cardList.innerHTML = `<p class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center text-sm text-zinc-400">No matching products found.</p>`;
             return;
         }
 
+        const mobileCards: string[] = [];
         tableBody.innerHTML = fetchedProductsList
             .map((item: any) => {
                 const priceFormatted = `$${Number(item.price).toFixed(2)}`;
@@ -1544,7 +1726,7 @@ const apiKey =
 
                 const testLinkBtn =
                     item.isDigital && item.fileUrl
-                        ? `<a href="${item.fileUrl}" target="_blank" rel="noopener noreferrer" class="no-row-click inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono text-orange-400/90 hover:text-orange-300 bg-orange-950/30 hover:bg-orange-950/60 border border-orange-900/50 rounded-md transition-colors shrink-0" title="Test File Download">📥 Test File</a>`
+                        ? `<a href="${item.fileUrl}" target="_blank" rel="noopener noreferrer" class="no-row-click inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono text-orange-400/90 hover:text-orange-300 bg-orange-950/30 hover:bg-orange-950/60 border border-orange-900/50 rounded-md transition-colors shrink-0" title="Test File Download"><svg class="size-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 5-5m-5 5-5-5"/><path d="M5 17v3h14v-3"/></svg>Test File</a>`
                         : "";
 
                 const statusBadge = item.isActive
@@ -1593,7 +1775,7 @@ const apiKey =
                     item.thumbnailUrl && item.thumbnailUrl.trim() !== "";
 
                 const thumb = `
-                <div class="w-10 h-10 rounded-lg border border-zinc-800/80 overflow-hidden bg-zinc-950 flex items-center justify-center shrink-0 group-hover/media:border-orange-500/80 transition-colors">
+                <div class="size-24 rounded-lg border border-zinc-800/80 overflow-hidden bg-zinc-950 flex items-center justify-center shrink-0 group-hover/media:border-orange-500/80 transition-colors">
                     ${
                         hasValidThumb
                             ? `
@@ -1611,44 +1793,69 @@ const apiKey =
                         ? `<span class="text-[10px] font-mono text-zinc-400 leading-none mt-1 select-none" title="${imagesCount} images in gallery">${imagesCount} photos</span>`
                         : "";
 
+                const actionsHtml = `<button type="button" data-action="edit" data-id="${item.id}" aria-label="Edit ${item.name}" title="Edit" class="prod-action-btn no-row-click inline-flex size-7 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200 transition-colors hover:bg-zinc-700"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg></button>${isAdmin ? `<button type="button" data-action="delete" data-id="${item.id}" aria-label="Delete ${item.name}" title="Delete" class="prod-action-btn no-row-click inline-flex size-7 items-center justify-center rounded-lg border border-red-900/50 bg-red-950/40 text-red-300 transition-colors hover:bg-red-900/60"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button>` : ""}`;
+                const tableActionsHtml = actionsHtml.replaceAll("size-7", "size-9");
+
+                mobileCards.push(`
+                <article data-product-id="${item.id}" class="product-row cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/70 p-4 text-left shadow-sm transition-colors hover:border-zinc-700">
+                  <div class="flex min-w-0 items-start gap-3">
+                    <button type="button" class="media-cell block shrink-0 cursor-pointer" data-product-id="${item.id}" aria-label="View ${item.name} media">${thumb}${photoBadgeBelow}</button>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex min-w-0 flex-wrap items-center gap-2">
+                        <h3 class="min-w-0 break-words text-sm font-bold leading-5 text-white">${item.name}</h3>
+                        <span class="shrink-0 text-[10px] font-mono text-zinc-500">#${item.id}</span>
+                      </div>
+                      <p class="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">${item.shortDescription || item.description || ""}</p>
+                      <div class="mt-2 flex flex-wrap items-center gap-2">${typeBadge}${sizeBadge}${testLinkBtn}</div>
+                      <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <span class="font-mono text-base font-bold text-orange-400">${priceFormatted}</span>
+                        ${statusBadge}
+                      </div>
+                      <div class="mt-2 flex flex-wrap items-center gap-2">${stockBadge}<span class="text-[11px] font-mono text-zinc-500">${createdDate}</span></div>
+                    </div>
+                    <div class="flex h-24 shrink-0 self-center flex-col items-center justify-between gap-1" aria-label="Product actions">${actionsHtml}</div>
+                  </div>
+                </article>`);
+
                 return `
                 <tr data-product-id="${item.id}" class="product-row hover:bg-zinc-800/40 transition-colors cursor-pointer group">
-                  <td class="media-cell py-3 px-3 align-middle text-center w-16 cursor-pointer no-row-click group/media" data-product-id="${item.id}" title="Click to open gallery viewer">
+                  <td data-label="Media" class="media-cell py-3 px-3 align-middle text-center w-32 cursor-pointer no-row-click group/media" data-product-id="${item.id}" title="Click to open gallery viewer">
                     <div class="flex flex-col items-center justify-center">
                         ${thumb}
                         ${photoBadgeBelow}
                     </div>
                   </td>
-                  <td class="py-3 px-3 align-middle min-w-0">
+                  <td data-label="Product" class="w-[30%] py-3 px-3 align-middle min-w-0">
                     <div class="space-y-0.5 min-w-0">
                         <div class="flex items-center gap-2 min-w-0">
-                            <span class="text-[10px] font-mono bg-zinc-950 border border-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded shrink-0">#${item.id}</span>
+                            <span class="shrink-0 text-[10px] font-mono text-zinc-500">#${item.id}</span>
                             <span class="font-bold text-white group-hover:text-orange-400 transition-colors truncate min-w-0">${item.name}</span>
                         </div>
                         <div class="text-[11px] text-zinc-400 font-mono truncate min-w-0">${item.shortDescription || item.description || ""}</div>
                         <div class="pt-0.5 flex flex-wrap items-center gap-1.5 min-w-0">${typeBadge} ${sizeBadge} ${testLinkBtn}</div>
                     </div>
                   </td>
-                  <td class="py-3 px-3 font-mono font-bold text-orange-400 text-sm whitespace-nowrap align-middle w-24">${priceFormatted}</td>
-                  <td class="py-3 px-3 whitespace-nowrap align-middle w-28">${stockBadge}</td>
-                  <td class="py-3 px-3 text-zinc-400 font-mono text-xs whitespace-nowrap align-middle w-32">
+                  <td data-label="Price" class="py-3 px-3 font-mono font-bold text-orange-400 text-sm whitespace-nowrap align-middle w-20">${priceFormatted}</td>
+                  <td data-label="Stock" class="py-3 px-3 whitespace-nowrap align-middle w-24">${stockBadge}</td>
+                  <td data-label="Created" class="py-3 px-3 text-zinc-400 font-mono text-xs whitespace-nowrap align-middle w-28">
                     <div class="space-y-0.5 font-mono text-[11px]">
                         <div class="text-zinc-400">${createdDate}</div>
                         ${createdTime ? `<div class="text-[10px] text-zinc-500">${createdTime}</div>` : ""}
                     </div>
                   </td>
-                  <td class="py-3 px-3 whitespace-nowrap align-middle text-center w-24">${statusBadge}</td>
-                  <td class="py-3 px-3 text-right whitespace-nowrap align-middle w-20">
+                  <td data-label="Status" class="py-3 px-3 whitespace-nowrap align-middle text-center w-20">${statusBadge}</td>
+                  <td data-label="Actions" class="py-3 px-3 text-right whitespace-nowrap align-middle w-16">
                     <div class="flex flex-col items-end gap-1.5">
-                        <button data-action="edit" data-id="${item.id}" class="prod-action-btn no-row-click px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded transition-colors cursor-pointer w-16 text-center">Edit</button>
-                        ${isAdmin ? `<button data-action="delete" data-id="${item.id}" class="prod-action-btn no-row-click px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer w-16 text-center">Delete</button>` : ""}
+                        ${tableActionsHtml}
                     </div>
                   </td>
                 </tr>`;
             })
             .join("");
 
-        tableBody.querySelectorAll(".filter-type-badge").forEach((badge) => {
+        if (cardList) cardList.innerHTML = mobileCards.join("");
+
+        document.querySelectorAll(".filter-type-badge").forEach((badge) => {
             badge.addEventListener("click", (e) => {
                 e.stopPropagation();
                 const targetType = (e.currentTarget as HTMLElement).dataset
@@ -1662,7 +1869,7 @@ const apiKey =
             });
         });
 
-        tableBody.querySelectorAll(".media-cell").forEach((cell) => {
+        document.querySelectorAll(".media-cell").forEach((cell) => {
             cell.addEventListener("click", (e) => {
                 e.stopPropagation();
                 const el = e.currentTarget as HTMLElement;
@@ -1692,7 +1899,7 @@ const apiKey =
             });
         });
 
-        tableBody.querySelectorAll(".product-row").forEach((row) => {
+        document.querySelectorAll(".product-row").forEach((row) => {
             row.addEventListener("click", (e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest(".no-row-click")) return;
@@ -1705,7 +1912,7 @@ const apiKey =
             });
         });
 
-        tableBody.querySelectorAll(".quick-status-btn").forEach((btn) => {
+        document.querySelectorAll(".quick-status-btn").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
                 e.stopPropagation();
                 const targetBtn = e.currentTarget as HTMLButtonElement;
@@ -1746,7 +1953,7 @@ const apiKey =
             });
         });
 
-        tableBody.querySelectorAll(".prod-action-btn").forEach((btn) => {
+        document.querySelectorAll(".prod-action-btn").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
                 e.stopPropagation();
                 const el = e.currentTarget as HTMLElement;

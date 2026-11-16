@@ -47,7 +47,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return adminApi ? authResponse('Authentication required.', 401) : redirect('/admin/login');
     }
 
-    const requiresAdmin = path === '/admin/users' || path === '/admin/products' ||
+    const requiresAdmin = path === '/admin/users' || path === '/admin/products' || path === '/admin/pages' ||
       (adminApi && !path.startsWith('/api/admin/content/'));
     if (requiresAdmin && context.locals.user?.role !== 'Admin') {
       return adminApi ? authResponse('Administrator access required.', 403) : redirect('/admin');

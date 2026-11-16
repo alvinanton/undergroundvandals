@@ -1,10 +1,19 @@
 ---
 // src/pages/index.astro
 import Layout from '../layouts/Layout.astro';
+import SitePageState from '../components/SitePageState.astro';
+import { getSitePageSettings } from '../lib/sitePages';
+const pageSettings = await getSitePageSettings();
+const homePage = pageSettings.home;
+const archivePage = pageSettings.archive;
+const galleryPage = pageSettings.gallery;
+const shopPage = pageSettings.shop;
 ---
 
 <Layout title="Underground Vandals | Street Art, Archive & Shop">
+  {homePage.status === 'Live' ? (
   <div class="space-y-16 py-4">
+    <SitePageState page={homePage} compact />
     {/* HERO SECTION */}
     <section class="relative bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-8 sm:p-14 overflow-hidden text-center sm:text-left">
       <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -13,11 +22,9 @@ import Layout from '../layouts/Layout.astro';
         <span class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block">
           Official Collective
         </span>
-        <h1 class="text-4xl sm:text-6xl font-black uppercase tracking-tight text-white leading-none">
-          Underground <span class="text-orange-500">Vandals</span>
-        </h1>
+        <h1 class="text-4xl sm:text-6xl font-black uppercase tracking-tight text-white leading-none">{homePage.title}</h1>
         <p class="text-zinc-400 text-sm sm:text-base leading-relaxed">
-          Documenting street art culture, preserving underground graffiti archives, featuring exclusive interviews, and offering official merchandise.
+          {homePage.message}
         </p>
         <div class="flex flex-col sm:flex-row gap-4 pt-2 justify-center sm:justify-start">
           <a
@@ -46,14 +53,14 @@ import Layout from '../layouts/Layout.astro';
         <div class="space-y-3 relative z-10">
           <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">01 / Photo Archive</span>
           <h2 class="text-2xl font-black uppercase text-white group-hover:text-orange-400 transition-colors">
-            Street Archive
+            {archivePage.title}
           </h2>
           <p class="text-zinc-400 text-xs leading-relaxed">
-            High-resolution database of street art, train actions, and graffiti walls worldwide.
+            {archivePage.message}
           </p>
         </div>
         <span class="text-xs font-mono text-orange-500 uppercase tracking-wider font-bold relative z-10 flex items-center gap-1">
-          Open Archive <span class="group-hover:translate-x-1 transition-transform">→</span>
+          {archivePage.status === 'Live' ? 'Open Archive' : archivePage.status === 'ComingSoon' ? 'Coming soon' : 'Unavailable'} <span class="group-hover:translate-x-1 transition-transform">→</span>
         </span>
       </a>
 
@@ -65,14 +72,14 @@ import Layout from '../layouts/Layout.astro';
         <div class="space-y-3 relative z-10">
           <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">02 / Editorial Hub</span>
           <h2 class="text-2xl font-black uppercase text-white group-hover:text-orange-400 transition-colors">
-            Gallery & Exclusives
+            {galleryPage.title}
           </h2>
           <p class="text-zinc-400 text-xs leading-relaxed">
-            Exclusive artist spotlights, video premieres, and exhibition retrospectives.
+            {galleryPage.message}
           </p>
         </div>
         <span class="text-xs font-mono text-orange-500 uppercase tracking-wider font-bold relative z-10 flex items-center gap-1">
-          Explore Gallery <span class="group-hover:translate-x-1 transition-transform">→</span>
+          {galleryPage.status === 'Live' ? 'Explore Gallery' : galleryPage.status === 'ComingSoon' ? 'Coming soon' : 'Unavailable'} <span class="group-hover:translate-x-1 transition-transform">→</span>
         </span>
       </a>
 
@@ -84,16 +91,17 @@ import Layout from '../layouts/Layout.astro';
         <div class="space-y-3 relative z-10">
           <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">03 / Store</span>
           <h2 class="text-2xl font-black uppercase text-white group-hover:text-orange-400 transition-colors">
-            Official Shop
+            {shopPage.title}
           </h2>
           <p class="text-zinc-400 text-xs leading-relaxed">
-            Apparel, limited physical items, stickers, and digital assets from Underground Vandals.
+            {shopPage.message}
           </p>
         </div>
         <span class="text-xs font-mono text-orange-500 uppercase tracking-wider font-bold relative z-10 flex items-center gap-1">
-          Visit Store <span class="group-hover:translate-x-1 transition-transform">→</span>
+          {shopPage.status === 'Live' ? 'Visit Store' : shopPage.status === 'ComingSoon' ? 'Coming soon' : 'Unavailable'} <span class="group-hover:translate-x-1 transition-transform">→</span>
         </span>
       </a>
     </div>
   </div>
+  ) : <SitePageState page={homePage} />}
 </Layout>

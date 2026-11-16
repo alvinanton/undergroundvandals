@@ -64,8 +64,8 @@ const { isAdmin = false } = Astro.props;
         </div>
 
         {/* Users Table */}
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <div>
+            <table class="admin-responsive-table w-full xl:min-w-[640px] text-left border-collapse">
                 <thead>
                     <tr
                         class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400 select-none"
@@ -401,7 +401,7 @@ const { isAdmin = false } = Astro.props;
 
                 return `
                 <tr class="hover:bg-zinc-800/30 transition-colors">
-                  <td class="py-3 px-4">
+                  <td data-label="User profile" class="py-3 px-4">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-orange-400 font-mono font-bold text-xs">
                             ${initial}
@@ -412,12 +412,12 @@ const { isAdmin = false } = Astro.props;
                         </div>
                     </div>
                   </td>
-                  <td class="py-3 px-4 font-mono text-zinc-300 text-xs">${u.email}</td>
-                  <td class="py-3 px-4">${roleBadge}</td>
-                  <td class="py-3 px-4">
+                  <td data-label="Email" class="py-3 px-4 font-mono text-zinc-300 text-xs">${u.email}</td>
+                  <td data-label="Role" class="py-3 px-4">${roleBadge}</td>
+                  <td data-label="Status" class="py-3 px-4">
                     <span class="px-2 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-900/80 rounded-full">Active</span>
                   </td>
-                  <td class="py-3 px-4 text-right">
+                  <td data-label="Actions" class="py-3 px-4 text-right">
                     <div class="flex items-center justify-end gap-2">
                         <button data-action="edit" data-id="${u.id}" class="user-action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded transition-colors cursor-pointer">Edit</button>
                         ${isAdmin ? `<button data-action="delete" data-id="${u.id}" class="user-action-btn px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded transition-colors cursor-pointer">Delete</button>` : ""}

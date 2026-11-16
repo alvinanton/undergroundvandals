@@ -1,6 +1,9 @@
 ---
 // src/pages/gallery/index.astro
 import Layout from '../../layouts/Layout.astro';
+import SitePageState from '../../components/SitePageState.astro';
+import { getSitePageSetting } from '../../lib/sitePages';
+const pageSettings = await getSitePageSetting('gallery');
 
 // Type definition matching the backend response structure
 interface GalleryArticle {
@@ -29,6 +32,7 @@ let errorMessage = '';
 const origin = Astro.url.origin;
 
 try {
+  if (pageSettings.status === 'Live') {
   // Fetch articles from the Astro API proxy endpoint
   const response = await fetch(`${origin}/api/gallery`);
   if (response.ok) {
@@ -42,21 +46,25 @@ try {
   } else {
     errorMessage = 'Failed to load gallery articles from server.';
   }
+  }
 } catch (error: any) {
   errorMessage = error.message || 'Error connecting to backend service.';
 }
 ---
 
 <Layout title="Editorial Gallery | Underground Vandals">
+  {pageSettings.status === 'Live' ? <>
+  <SitePageState page={pageSettings} compact />
   <div class="space-y-10">
     <!-- Header -->
     <div class="border-b border-zinc-800/80 pb-6">
       <span class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-2">
-        Editorial & Exclusives
+        {pageSettings.title}
       </span>
       <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tight text-white">
-        Vandal <span class="text-orange-500">Gallery</span>
+        {pageSettings.title}
       </h1>
+      <p class="mt-2 text-sm text-zinc-400">{pageSettings.message}</p>
       <p class="text-zinc-400 text-xs sm:text-sm mt-2 max-w-xl">
         Curated space featuring artist spotlights, exclusive video premieres, and exhibition coverage.
       </p>
@@ -105,7 +113,7 @@ try {
                 </span>
                 {featuredArticle.location && (
                   <span class="bg-black/70 backdrop-blur-md text-zinc-300 border border-zinc-700/50 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md hidden sm:inline-block">
-                    📍 {featuredArticle.location}
+                    <svg class="inline-block size-4 align-[-2px]" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg> {featuredArticle.location}
                   </span>
                 )}
               </div>
@@ -222,4 +230,5 @@ try {
       )}
     </section>
   </div>
+  </> : <SitePageState page={pageSettings} />}
 </Layout>

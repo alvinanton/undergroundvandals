@@ -18,6 +18,7 @@ public class GalleryArticle
     public DateTime? EventDate { get; set; }
     public bool IsFeatured { get; set; } = false;
     public bool IsPublished { get; set; } = true;
+    public bool IsArchived { get; set; } = false;
     public string? ShopCollectionSlug { get; set; }
     public string? ShopCollectionTitle { get; set; }
     public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
