@@ -1,6 +1,5 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import AdminNav from "../../components/admin/AdminNav.astro";
 import UsersManager from "../../components/admin/UsersManager.astro";
 
 // SSR Verification & Role Guard
@@ -16,36 +15,21 @@ if (!isAdmin) {
     return Astro.redirect("/admin");
 }
 
-const username =
-    user?.username ||
-    user?.name ||
-    (user?.email ? user.email.split("@")[0] : "User");
 ---
 
 <Layout title="Users Management | Underground Vandals">
-    <div class="space-y-8 max-w-5xl mx-auto pb-12">
+    <div class="space-y-5 pb-12">
         {/* Header */}
         <div
-            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6"
+            class="flex flex-col gap-3 border-b border-zinc-800/80 pb-4"
             id="dashboard-root"
             data-is-admin="true"
         >
             <div>
-                <span
-                    class="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-orange-500 uppercase tracking-widest inline-block mb-2"
-                >
-                    Security Panel • {user?.role || "Admin"}
-                </span>
-                <h1
-                    class="text-3xl font-black uppercase tracking-tight text-white"
-                >
-                    Welcome, <span class="text-orange-500">{username}</span>
-                </h1>
+                <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">User management</h1>
+                <p class="mt-1 max-w-2xl text-sm text-zinc-400">Manage administrator and editor access.</p>
             </div>
         </div>
-
-        {/* Centralized Navigation Bar */}
-        <AdminNav activeTab="users" isAdmin={true} />
 
         {/* Users Manager Component */}
         <UsersManager isAdmin={true} />

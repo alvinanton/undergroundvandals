@@ -11,6 +11,8 @@ const routes = [
   { pattern: new RegExp(`^media/${guid}/archive$`), methods: ['PATCH'] },
   { pattern: new RegExp(`^media/assets/${guid}$`), methods: ['DELETE'] },
   { pattern: /^gallery$/, methods: ['GET', 'POST'] },
+  { pattern: /^pages$/, methods: ['GET'] },
+  { pattern: /^pages\/(home|archive|gallery|shop)$/, methods: ['PUT'] },
   { pattern: new RegExp(`^gallery/${guid}$`), methods: ['GET', 'PUT', 'DELETE'] },
   { pattern: new RegExp(`^gallery/${guid}/featured$`), methods: ['PATCH'] },
   { pattern: /^users$/, methods: ['GET', 'POST'] },
@@ -24,14 +26,19 @@ export const ALL: APIRoute = async ({ params, request, cookies, locals, url }) =
   const route = routes.find(candidate => candidate.pattern.test(path));
   if (!route) return authResponse('Not found.', 404);
   if (!route.methods.includes(request.method)) return authResponse('Method not allowed.', 405);
-  const requiresAdmin = path.startsWith('users') ||
+  const requiresAdmin = path.startsWith('users') || path.startsWith('pages') ||
     (request.method === 'DELETE' && !path.startsWith('media/assets/'));
   if (requiresAdmin && locals.user.role !== 'Admin') return authResponse('Administrator access required.', 403);
   try {
     const headers = new Headers({ Authorization: `Bearer ${cookies.get(SESSION_COOKIE)!.value}` });
     const contentType = request.headers.get('content-type');
     if (contentType) headers.set('Content-Type', contentType);
-    const upstream = await fetch(`${contentApiUrl()}/api/${path}${url.search}`, {
+    const upstreamPath = path === 'pages'
+      ? 'site-pages/admin'
+      : path.startsWith('pages/')
+        ? `site-pages/${path.slice('pages/'.length)}`
+        : path;
+    const upstream = await fetch(`${contentApiUrl()}/api/${upstreamPath}${url.search}`, {
       method: request.method,
       headers,
       body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer(),

@@ -33,7 +33,7 @@ public class GalleryController : ControllerBase
         var query = _context.GalleryArticles.AsQueryable();
 
         if (!includeUnpublished)
-            query = query.Where(a => a.IsPublished);
+            query = query.Where(a => a.IsPublished && !a.IsArchived);
 
         if (!string.IsNullOrWhiteSpace(category))
             query = query.Where(a => a.Category.ToLower() == category.ToLower());
@@ -59,14 +59,14 @@ public class GalleryController : ControllerBase
     public async Task<ActionResult<GalleryArticleResponseDto>> GetFeatured()
     {
         var featured = await _context.GalleryArticles
-            .Where(a => a.IsPublished && a.IsFeatured)
+            .Where(a => a.IsPublished && !a.IsArchived && a.IsFeatured)
             .OrderByDescending(a => a.PublishedAt)
             .FirstOrDefaultAsync();
 
         if (featured == null)
         {
             featured = await _context.GalleryArticles
-                .Where(a => a.IsPublished)
+                .Where(a => a.IsPublished && !a.IsArchived)
                 .OrderByDescending(a => a.PublishedAt)
                 .FirstOrDefaultAsync();
         }
@@ -86,7 +86,7 @@ public class GalleryController : ControllerBase
     {
         var article = await _context.GalleryArticles.FindAsync(id);
 
-        if (article == null)
+        if (article == null || article.IsArchived)
             return NotFound(new ApiMessageResponseDto("Gallery article not found."));
 
         return Ok(MapToDto(article));
@@ -102,7 +102,7 @@ public class GalleryController : ControllerBase
         var article = await _context.GalleryArticles
             .FirstOrDefaultAsync(a => a.Slug.ToLower() == slug.ToLower());
 
-        if (article == null)
+        if (article == null || article.IsArchived)
             return NotFound(new ApiMessageResponseDto("Gallery article not found."));
 
         return Ok(MapToDto(article));
@@ -128,7 +128,7 @@ public class GalleryController : ControllerBase
         if (await _context.GalleryArticles.AnyAsync(a => a.Slug == slug))
             return BadRequest(new ApiMessageResponseDto("An article with this slug already exists."));
 
-        if (dto.IsFeatured)
+        if (dto.IsFeatured && !dto.IsArchived)
         {
             await UnfeatureAllArticlesAsync();
         }
@@ -148,8 +148,9 @@ public class GalleryController : ControllerBase
             Location = dto.Location,
             ExternalUrl = dto.ExternalUrl,
             EventDate = dto.EventDate,
-            IsFeatured = dto.IsFeatured,
-            IsPublished = dto.IsPublished,
+            IsFeatured = dto.IsFeatured && !dto.IsArchived,
+            IsPublished = dto.IsPublished && !dto.IsArchived,
+            IsArchived = dto.IsArchived,
             ShopCollectionSlug = dto.ShopCollectionSlug,
             ShopCollectionTitle = dto.ShopCollectionTitle,
             PublishedAt = DateTime.UtcNow,
@@ -186,7 +187,7 @@ public class GalleryController : ControllerBase
         if (article.Slug != slug && await _context.GalleryArticles.AnyAsync(a => a.Slug == slug))
             return BadRequest(new ApiMessageResponseDto("An article with this slug already exists."));
 
-        if (dto.IsFeatured && !article.IsFeatured)
+        if (dto.IsFeatured && !dto.IsArchived && !article.IsFeatured)
         {
             await UnfeatureAllArticlesAsync();
         }
@@ -204,8 +205,9 @@ public class GalleryController : ControllerBase
         article.Location = dto.Location;
         article.ExternalUrl = dto.ExternalUrl;
         article.EventDate = dto.EventDate;
-        article.IsFeatured = dto.IsFeatured;
-        article.IsPublished = dto.IsPublished;
+        article.IsFeatured = dto.IsFeatured && !dto.IsArchived;
+        article.IsPublished = dto.IsPublished && !dto.IsArchived;
+        article.IsArchived = dto.IsArchived;
         article.ShopCollectionSlug = dto.ShopCollectionSlug;
         article.ShopCollectionTitle = dto.ShopCollectionTitle;
         article.UpdatedAt = DateTime.UtcNow;
@@ -231,6 +233,9 @@ public class GalleryController : ControllerBase
 
         if (article == null)
             return NotFound(new ApiMessageResponseDto("Gallery article not found."));
+
+        if (article.IsArchived)
+            return BadRequest(new ApiMessageResponseDto("Archived articles cannot be featured."));
 
         if (!article.IsFeatured)
         {
@@ -314,6 +319,7 @@ public class GalleryController : ControllerBase
             EventDate = article.EventDate,
             IsFeatured = article.IsFeatured,
             IsPublished = article.IsPublished,
+            IsArchived = article.IsArchived,
             ShopCollectionSlug = article.ShopCollectionSlug,
             ShopCollectionTitle = article.ShopCollectionTitle,
             PublishedAt = article.PublishedAt,

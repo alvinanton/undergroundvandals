@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
     public DbSet<WebsiteVisit> WebsiteVisits => Set<WebsiteVisit>();
     public DbSet<GalleryArticle> GalleryArticles => Set<GalleryArticle>();
+    public DbSet<SitePageSetting> SitePageSettings => Set<SitePageSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,5 +36,12 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<GalleryArticle>()
             .HasIndex(a => a.PublishedAt);
+
+        modelBuilder.Entity<SitePageSetting>()
+            .HasKey(page => page.PageKey);
+
+        modelBuilder.Entity<SitePageSetting>()
+            .Property(page => page.PageKey)
+            .HasMaxLength(24);
     }
 }

@@ -1,0 +1,22 @@
+---
+import type { SitePageSetting } from '../lib/sitePages';
+const { page, compact = false } = Astro.props as { page: SitePageSetting; compact?: boolean };
+const unavailable = page.status === 'Disabled';
+---
+
+{page.status !== 'Live' && (
+  <section class={`mx-auto max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-900/60 text-center ${compact ? 'my-8 p-8 sm:p-12' : 'my-12 p-10 sm:p-16'}`}>
+    <p class="text-xs font-mono uppercase tracking-[0.2em] text-orange-500">{unavailable ? 'Temporarily unavailable' : 'Coming soon'}</p>
+    <h1 class="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">{page.title}</h1>
+    <p class="mx-auto mt-4 max-w-xl text-sm leading-6 text-zinc-400 sm:text-base">{page.message}</p>
+    {page.ctaLabel && page.ctaUrl && <a href={page.ctaUrl} class="mt-7 inline-flex rounded-lg bg-orange-500 px-5 py-3 text-sm font-bold text-zinc-950 transition-colors hover:bg-orange-400">{page.ctaLabel}</a>}
+  </section>
+)}
+
+{page.status === 'Live' && (page.announcementTitle || page.announcementMessage) && (
+  <aside class="mb-6 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 sm:p-5" aria-label="Announcement">
+    {page.announcementTitle && <h2 class="font-bold text-orange-300">{page.announcementTitle}</h2>}
+    {page.announcementMessage && <p class="mt-1 text-sm leading-6 text-zinc-300">{page.announcementMessage}</p>}
+    {page.ctaLabel && page.ctaUrl && <a href={page.ctaUrl} class="mt-3 inline-flex text-sm font-semibold text-orange-300 underline underline-offset-4">{page.ctaLabel}</a>}
+  </aside>
+)}

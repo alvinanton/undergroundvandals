@@ -1,5 +1,7 @@
 ---
 // src/components/admin/AdminGalleryManager.astro
+import AdminPagination from "./AdminPagination.astro";
+import AdminFileDropzone from "./AdminFileDropzone.astro";
 export type UserRole = 'SuperAdmin' | 'ArchiveAdmin' | 'GalleryAdmin';
 
 interface Props {
@@ -13,41 +15,16 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
 <div class="space-y-8" id="gallery-manager-root" data-is-admin={isAdmin ? "true" : "false"} data-user-role={userRole}>
 
-  {/* SECTION 1: EDITORIAL ARTICLE CREATION FORM (ACCORDION) */}
-  <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl backdrop-blur-md shadow-xl overflow-hidden transition-all">
-    
-    {/* Accordion Toggle Header */}
-    <button
-      id="gallery-accordion-toggle-btn"
-      type="button"
-      class="w-full p-6 sm:p-7 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors cursor-pointer select-none"
-    >
+  {/* Dedicated article creation screen */}
+  <section id="gallery-create-view" aria-labelledby="gallery-create-title" class="hidden space-y-6">
+    <header class="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <span class="text-xs font-mono text-orange-500 uppercase tracking-widest block mb-1">
-          Editorial Action
-        </span>
-        <h2 class="text-lg font-bold text-white uppercase tracking-wide flex items-center gap-2">
-          📰 Create New Feature Article
-        </h2>
-        <p class="text-xs text-zinc-400 mt-0.5">
-          Publish essays, interviews, or exhibition documentation with e-shop integration
-        </p>
+        <h2 id="gallery-create-title" tabindex="-1" class="text-2xl font-bold tracking-tight text-white focus:outline-none sm:text-3xl">New article</h2>
+        <p class="mt-1 text-sm text-zinc-400">Publish essays, interviews, or exhibition documentation.</p>
       </div>
-      <div class="flex items-center gap-3">
-        <span
-          id="gallery-accordion-badge"
-          class="text-xs font-mono bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-lg text-zinc-300 transition-colors"
-        >
-          + Expand Form
-        </span>
-      </div>
-    </button>
-
-    {/* Accordion Content Body */}
-    <div
-      id="gallery-accordion-content"
-      class="hidden border-t border-zinc-800/80 p-6 sm:p-8 space-y-6 bg-zinc-950/40"
-    >
+      <button id="gallery-create-back" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-zinc-700 bg-zinc-900 px-4 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-800 sm:self-auto"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/><path d="M9 12h12"/></svg><span>Back to gallery</span></button>
+    </header>
+    <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-xl sm:p-7">
       <form id="gallery-create-form" class="space-y-6">
         <div id="gallery-draft-notice" class="hidden rounded-lg border border-amber-700/60 bg-amber-950/40 p-4 text-xs font-mono text-amber-200" role="status">
           <div class="flex items-start justify-between gap-4">
@@ -122,14 +99,11 @@ const isSuperAdmin = userRole === 'SuperAdmin';
               <label for="gallery-reading-time" class="block text-xs font-mono uppercase tracking-wider text-zinc-300 mb-1.5">
                 Reading Time (Minutes) *
               </label>
-              <input
-                type="number"
-                id="gallery-reading-time"
-                value="5"
-                min="1"
-                required
-                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 text-xs font-mono focus:outline-none focus:border-orange-500"
-              />
+              <div class="flex overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 focus-within:border-orange-500">
+                <button type="button" id="gallery-reading-time-minus" aria-label="Decrease reading time" class="border-r border-zinc-800 bg-zinc-900 px-3 text-sm font-bold text-zinc-300 hover:bg-zinc-800">−</button>
+                <input type="number" id="gallery-reading-time" value="5" min="1" step="1" required class="gallery-reading-time-input w-full bg-transparent px-3 py-2.5 text-center font-mono text-xs text-zinc-100 focus:outline-none" />
+                <button type="button" id="gallery-reading-time-plus" aria-label="Increase reading time" class="border-l border-zinc-800 bg-zinc-900 px-3 text-sm font-bold text-zinc-300 hover:bg-zinc-800">+</button>
+              </div>
             </div>
           </div>
         </div>
@@ -144,22 +118,13 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             <label class="block text-xs font-mono uppercase tracking-wider text-zinc-300">
               Hero Cover Image *
             </label>
-            <div class="flex items-center gap-3">
-              <input
-                type="text"
-                id="gallery-hero-url"
-                required
-                class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-orange-500 text-xs font-mono"
-                placeholder="https://... or upload image to Azure"
-              />
-              <input type="file" id="hero-file-input" accept="image/*" class="hidden" />
-              <button
-                type="button"
-                id="upload-hero-btn"
-                class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-mono text-xs rounded-lg transition-colors cursor-pointer shrink-0"
-              >
-                📷 Upload Hero
-              </button>
+            <AdminFileDropzone id="gallery-hero-dropzone" inputId="hero-file-input" accept="image/*" label="Drop an image here or choose one" browseButtonId="upload-hero-btn" browseLabel="Browse hero image" selectionId="hero-file-selection" selectionText="No image selected" feedbackId="gallery-hero-drop-feedback">
+            </AdminFileDropzone>
+            <input type="hidden" id="gallery-hero-url" />
+            <div id="gallery-hero-preview" class="hidden items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2 text-left">
+              <img id="gallery-hero-preview-image" alt="Selected hero preview" class="size-16 rounded-md border border-zinc-800 object-cover" />
+              <div class="min-w-0 flex-1"><p class="text-[10px] font-mono uppercase tracking-wider text-orange-400">Ready to upload</p><p id="gallery-hero-preview-name" class="truncate text-xs text-zinc-300"></p></div>
+              <button type="button" id="gallery-hero-remove-file" class="rounded-md border border-zinc-700 px-3 py-2 text-xs font-mono text-zinc-300 hover:bg-zinc-800">Remove</button>
             </div>
           </div>
 
@@ -299,39 +264,41 @@ const isSuperAdmin = userRole === 'SuperAdmin';
           </h3>
 
           <div class="space-y-3">
-            <div class="flex items-center gap-3">
-              <input type="file" id="shots-file-input" accept="image/*" multiple class="hidden" />
-              <button
-                type="button"
-                id="upload-shots-btn"
-                class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-mono text-xs rounded-lg transition-colors cursor-pointer"
-              >
-                🖼 Upload Exhibition Photos
-              </button>
-              <span id="shots-count-label" class="text-xs font-mono text-zinc-400">
-                0 photos attached
-              </span>
-            </div>
+            <AdminFileDropzone id="gallery-shots-dropzone" inputId="shots-file-input" accept="image/*" multiple label="Drop exhibition images here or choose multiple photos" browseButtonId="upload-shots-btn" browseLabel="Browse exhibition photos" selectionId="shots-count-label" selectionText="0 photos attached" feedbackId="gallery-shots-drop-feedback" />
 
             {/* Shots Preview Container */}
             <div id="shots-preview-list" class="flex flex-wrap gap-3 empty:hidden custom-scrollbar max-h-48 overflow-y-auto p-2 bg-zinc-950/60 rounded-xl border border-zinc-800"></div>
+            <p id="gallery-shots-reorder-hint" class="hidden text-[11px] font-mono text-zinc-500">Drag images by the grip to change their order. Focus a grip and use the arrow keys to reorder.</p>
+            <p id="gallery-shots-reorder-announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p>
           </div>
 
           {/* Publishing Flags */}
-          <div class="flex flex-wrap items-center gap-6 pt-4 border-t border-zinc-800/80">
+          <div class="flex flex-wrap gap-x-6 gap-y-3 border-t border-zinc-800/80 pt-4">
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" id="gallery-is-published" checked class="w-4 h-4 accent-orange-500 rounded bg-zinc-950 border-zinc-800 cursor-pointer" />
-              <span class="text-xs font-mono uppercase tracking-wider text-zinc-200">Publish Immediately</span>
+              <input type="checkbox" id="gallery-is-published" checked class="size-4 cursor-pointer rounded border-zinc-700 bg-zinc-950 accent-orange-500" />
+              <span class="text-xs font-mono uppercase tracking-wider text-zinc-300">Publish immediately</span>
             </label>
-
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" id="gallery-is-featured" class="w-4 h-4 accent-orange-500 rounded bg-zinc-950 border-zinc-800 cursor-pointer" />
+              <input type="checkbox" id="gallery-is-archived" class="size-4 cursor-pointer rounded border-zinc-700 bg-zinc-950 accent-orange-500" />
+              <span class="text-xs font-mono uppercase tracking-wider text-zinc-300">Create as archived</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="gallery-is-featured" class="size-4 cursor-pointer rounded border-zinc-700 bg-zinc-950 accent-orange-500" />
               <span class="text-xs font-mono uppercase tracking-wider text-zinc-200">Feature on Hero</span>
             </label>
           </div>
         </div>
 
         {/* Status & Action Button */}
+        <div id="gallery-upload-progress" class="hidden space-y-2 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3" aria-live="polite">
+          <div class="flex items-center justify-between gap-3 text-[11px] font-mono text-zinc-300">
+            <span id="gallery-upload-progress-label" class="min-w-0 truncate">Preparing uploads...</span>
+            <span id="gallery-upload-progress-percent" class="shrink-0 text-orange-400">0%</span>
+          </div>
+          <div id="gallery-upload-progress-track" role="progressbar" aria-label="File upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" class="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+            <div id="gallery-upload-progress-bar" class="h-full w-0 rounded-full bg-orange-500 transition-[width] duration-200 ease-out"></div>
+          </div>
+        </div>
         <div id="gallery-create-status" class="hidden text-xs font-mono text-center rounded-lg p-3"></div>
 
         <button
@@ -343,11 +310,11 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         </button>
       </form>
     </div>
-  </div>
+  </section>
 
   {/* SECTION 2: EDITORIAL ARTICLES MANAGEMENT TABLE */}
-  <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
-    <div class="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+  <section id="gallery-list-view" class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
+    <div class="flex flex-col gap-3 border-b border-zinc-800/80 pb-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="text-lg font-bold text-white uppercase tracking-wide">
           Manage Editorial Features
@@ -356,16 +323,20 @@ const isSuperAdmin = userRole === 'SuperAdmin';
           View, edit, toggle status or remove gallery articles
         </p>
       </div>
+      <div class="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+      <button id="gallery-create-btn" type="button" class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-orange-500 px-3 text-xs font-bold font-mono uppercase tracking-wider text-zinc-950 transition-colors hover:bg-orange-400"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>New article</span></button>
       <button
         id="gallery-refresh-btn"
-        class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+        type="button"
+        class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-zinc-800 px-3 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-700"
       >
-        ↻ Refresh
+        <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5"/><path d="M19 12a7 7 0 1 1-2-4.9L20 12"/></svg><span>Refresh</span>
       </button>
+      </div>
     </div>
 
     {/* Table Filters */}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/60">
       <div class="sm:col-span-2">
         <input
           type="text"
@@ -382,21 +353,41 @@ const isSuperAdmin = userRole === 'SuperAdmin';
           <option value="ALL">All Statuses</option>
           <option value="PUBLISHED">Published Only</option>
           <option value="DRAFT">Drafts Only</option>
+          <option value="ARCHIVED">Archived Only</option>
           <option value="FEATURED">Featured Only</option>
         </select>
       </div>
+      <div class="flex justify-end">
+        <button id="clear-gallery-filters-btn" type="button" disabled class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700/60 bg-zinc-800/80 px-3 py-2 text-xs font-mono uppercase tracking-wider text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
+          <svg aria-hidden="true" class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Reset</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="xl:hidden flex items-center gap-2">
+      <label class="sr-only" for="gallery-mobile-sort">Sort articles by</label>
+      <select id="gallery-mobile-sort" class="min-w-0 grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 text-xs font-mono">
+        <option value="publishedAt">Date</option>
+        <option value="title">Title</option>
+        <option value="isPublished">Status</option>
+      </select>
+      <button id="gallery-mobile-sort-direction" type="button" aria-label="Change sort direction" class="shrink-0 px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-300 text-xs font-mono">Newest first</button>
     </div>
 
     {/* Table Container */}
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+    <div>
+      <div id="gallery-card-list" class="xl:hidden grid gap-3" aria-live="polite">
+        <p class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center text-sm text-zinc-500">Loading editorial articles...</p>
+      </div>
+      <div class="hidden xl:block overflow-x-auto">
+      <table class="w-full min-w-[680px] text-left border-collapse">
         <thead>
           <tr class="border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400 select-none">
             <th class="py-3 px-4">Hero Cover</th>
-            <th class="py-3 px-4">Title & Details</th>
+            <th class="sort-header cursor-pointer py-3 px-4" data-sort="title">Title & Details <span class="sort-icon ml-1 opacity-40">↕</span></th>
             <th class="py-3 px-4">Shots</th>
-            <th class="py-3 px-4">Status</th>
-            <th class="py-3 px-4">Date</th>
+            <th class="sort-header cursor-pointer py-3 px-4" data-sort="isPublished">Status <span class="sort-icon ml-1 opacity-40">↕</span></th>
+            <th class="sort-header cursor-pointer py-3 px-4" data-sort="publishedAt">Date <span class="sort-icon ml-1 text-orange-500">↓</span></th>
             <th class="py-3 px-4 text-right">Actions</th>
           </tr>
         </thead>
@@ -406,19 +397,21 @@ const isSuperAdmin = userRole === 'SuperAdmin';
           </tr>
         </tbody>
       </table>
-    </div>
-  </div>
-
-  {/* EDIT ARTICLE MODAL */}
-  <div id="edit-gallery-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 max-w-2xl w-full space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-      <div class="flex justify-between items-center border-b border-zinc-800/80 pb-4">
-        <div>
-          <h3 class="text-base font-bold text-white uppercase tracking-wide">Edit Editorial Article</h3>
-          <p class="text-xs text-zinc-400">Update article content, exhibition photos, or publication status</p>
-        </div>
-        <button id="edit-gallery-modal-close" class="text-zinc-400 hover:text-orange-500 font-mono text-sm cursor-pointer">✕</button>
       </div>
+      </div>
+      <AdminPagination id="gallery" itemLabel="articles" />
+  </section>
+
+  {/* Dedicated article editing screen */}
+  <section id="edit-gallery-modal" aria-labelledby="edit-gallery-title-heading" class="hidden space-y-6">
+    <header class="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 id="edit-gallery-title-heading" tabindex="-1" class="text-2xl font-bold tracking-tight text-white focus:outline-none sm:text-3xl">Edit article</h2>
+          <p class="mt-1 text-sm text-zinc-400">Update article content or publication status.</p>
+        </div>
+        <button id="edit-gallery-modal-close" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-4 text-xs font-mono uppercase tracking-wider text-zinc-300 transition-colors hover:bg-zinc-800"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/><path d="M9 12h12"/></svg><span>Back to gallery</span></button>
+    </header>
+    <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-xl sm:p-7">
 
       <form id="edit-gallery-form" class="space-y-4">
         <input type="hidden" id="edit-gallery-id" />
@@ -438,56 +431,184 @@ const isSuperAdmin = userRole === 'SuperAdmin';
           <textarea id="edit-gallery-markdown" rows="8" required class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 font-mono text-xs focus:outline-none focus:border-orange-500 resize-y custom-scrollbar"></textarea>
         </div>
 
-        <div class="flex items-center gap-4 pt-2">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="edit-gallery-is-published" class="w-4 h-4 accent-orange-500 rounded bg-zinc-950" />
-            <span class="text-xs font-mono text-zinc-300">Published</span>
-          </label>
+        <div class="grid gap-4 pt-2 sm:grid-cols-2 sm:items-end">
+          <div class="flex flex-wrap gap-x-6 gap-y-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="edit-gallery-is-published" class="size-4 rounded border-zinc-700 bg-zinc-950 accent-orange-500" />
+              <span class="text-xs font-mono text-zinc-300">Published</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="edit-gallery-is-archived" class="size-4 rounded border-zinc-700 bg-zinc-950 accent-orange-500" />
+              <span class="text-xs font-mono text-zinc-300">Archived</span>
+            </label>
+          </div>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" id="edit-gallery-is-featured" class="w-4 h-4 accent-orange-500 rounded bg-zinc-950" />
             <span class="text-xs font-mono text-zinc-300">Featured</span>
           </label>
         </div>
 
+        <p id="edit-gallery-status" class="hidden rounded-lg border p-3 text-center text-xs font-mono" role="status"></p>
+
         <div class="flex justify-end gap-3 pt-3 border-t border-zinc-800">
-          <button type="button" id="edit-gallery-cancel-btn" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase rounded-lg">Cancel</button>
+          <button type="button" id="edit-gallery-cancel-btn" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs uppercase rounded-lg"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/><path d="M9 12h12"/></svg><span>Back to gallery</span></button>
           <button type="submit" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-zinc-950 font-black font-mono text-xs uppercase rounded-lg">Save Article</button>
         </div>
       </form>
     </div>
-  </div>
+  </section>
 
 </div>
+
+<style>
+  .gallery-reading-time-input {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .gallery-reading-time-input::-webkit-inner-spin-button,
+  .gallery-reading-time-input::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+</style>
 
 <!-- CLIENT-SIDE SCRIPT FOR GALLERY EDITORIAL MANAGER -->
 <script>
   import { uploadFileToAzure } from "../../lib/azureStorage";
   import { clearAdminDraft, readAdminDraft, saveAdminDraft } from "../../lib/adminDraft";
+  import { attachFileDropzone } from "../../lib/fileDropzone";
+  import { createAdminPagination } from "../../lib/adminPagination";
+  import { attachQuantityStepper } from "../../lib/quantityStepper";
 
   const API_URL = "/api/admin/content";
 
   const rootEl = document.getElementById("gallery-manager-root");
   const userRole = rootEl?.dataset.userRole || "SuperAdmin";
   const isSuperAdmin = userRole === "SuperAdmin";
+  const galleryEditModal = document.getElementById("edit-gallery-modal");
+  const dashboardHeader = document.getElementById("dashboard-root");
+  const pageContent = dashboardHeader?.parentElement;
+  const galleryListView = document.getElementById("gallery-list-view");
+  const galleryCreateView = document.getElementById("gallery-create-view");
+  const galleryCreateButton = document.getElementById("gallery-create-btn");
+  const galleryCreateBackButton = document.getElementById("gallery-create-back");
+  const contentManagerRoot = document.getElementById("content-manager-root");
+  const contentTabBar = contentManagerRoot?.querySelector<HTMLElement>("[role='tablist']");
+  const archiveTabPanel = document.getElementById("subtab-content-archive");
+  const galleryEditForm = document.getElementById("edit-gallery-form") as HTMLFormElement | null;
+  const galleryEditStatus = document.getElementById("edit-gallery-status");
 
   let allArticles: any[] = [];
-  let attachedExhibitionUrls: string[] = [];
+  type ExhibitionImage = { key: string; file?: File; previewUrl: string; url?: string };
+  let exhibitionImages: ExhibitionImage[] = [];
+  let stagedHeroFile: File | null = null;
+  let heroPreviewUrl: string | null = null;
+  let currentSortColumn = "publishedAt";
+  let sortDirection: "asc" | "desc" = "desc";
+  const galleryPagination = createAdminPagination("gallery", "articles", renderArticlesTable);
+  attachQuantityStepper(
+    document.getElementById("gallery-reading-time") as HTMLInputElement | null,
+    document.getElementById("gallery-reading-time-minus"),
+    document.getElementById("gallery-reading-time-plus"),
+  );
+  const syncPublicationControls = (archivedId: string, featuredId: string, publishedId: string) => {
+    const archived = document.getElementById(archivedId) as HTMLInputElement | null;
+    const featured = document.getElementById(featuredId) as HTMLInputElement | null;
+    const published = document.getElementById(publishedId) as HTMLInputElement | null;
+    if (!archived || !featured || !published) return;
+    featured.disabled = archived.checked;
+    published.disabled = archived.checked;
+    if (archived.checked) published.checked = false;
+    if (archived.checked) featured.checked = false;
+  };
+  for (const [archivedId, featuredId, publishedId] of [["gallery-is-archived", "gallery-is-featured", "gallery-is-published"], ["edit-gallery-is-archived", "edit-gallery-is-featured", "edit-gallery-is-published"]]) {
+    const archived = document.getElementById(archivedId);
+    archived?.addEventListener("change", () => syncPublicationControls(archivedId, featuredId, publishedId));
+    syncPublicationControls(archivedId, featuredId, publishedId);
+  }
+  const updateGallerySubmitLabel = () => {
+    const button = document.getElementById("gallery-submit-btn");
+    const archived = (document.getElementById("gallery-is-archived") as HTMLInputElement | null)?.checked;
+    const published = (document.getElementById("gallery-is-published") as HTMLInputElement | null)?.checked;
+    if (button) button.textContent = archived ? "Save as Archived" : published ? "Publish Article" : "Save as Draft";
+  };
+  document.getElementById("gallery-is-archived")?.addEventListener("change", updateGallerySubmitLabel);
+  document.getElementById("gallery-is-published")?.addEventListener("change", updateGallerySubmitLabel);
+  let currentGalleryView: "list" | "create" | "edit" = "list";
 
-  // ACCORDION TOGGLE
-  const accordionBtn = document.getElementById("gallery-accordion-toggle-btn");
-  const accordionContent = document.getElementById("gallery-accordion-content");
-  const accordionBadge = document.getElementById("gallery-accordion-badge");
-
-  accordionBtn?.addEventListener("click", () => {
-    const isHidden = accordionContent?.classList.contains("hidden");
-    if (isHidden) {
-      accordionContent?.classList.remove("hidden");
-      if (accordionBadge) accordionBadge.innerText = "- Collapse Form";
-    } else {
-      accordionContent?.classList.add("hidden");
-      if (accordionBadge) accordionBadge.innerText = "+ Expand Form";
+  function setGalleryView(view: "list" | "create" | "edit", editId?: string, updateUrl = true) {
+    currentGalleryView = view;
+    galleryListView?.classList.toggle("hidden", view !== "list");
+    galleryCreateView?.classList.toggle("hidden", view !== "create");
+    galleryEditModal?.classList.toggle("hidden", view !== "edit");
+    if (galleryListView) galleryListView.style.display = view === "list" ? "block" : "none";
+    if (galleryCreateView) galleryCreateView.style.display = view === "create" ? "block" : "none";
+    if (galleryEditModal) galleryEditModal.style.display = view === "edit" ? "block" : "none";
+    dashboardHeader?.classList.toggle("hidden", view !== "list");
+    if (dashboardHeader) dashboardHeader.style.display = view === "list" ? "flex" : "none";
+    pageContent?.classList.toggle("space-y-5", view === "list");
+    pageContent?.classList.toggle("space-y-0", view !== "list");
+    rootEl?.classList.toggle("space-y-8", view === "list");
+    rootEl?.classList.toggle("space-y-0", view !== "list");
+    contentTabBar?.classList.toggle("hidden", view !== "list");
+    if (contentTabBar) contentTabBar.style.display = view === "list" ? "" : "none";
+    if (archiveTabPanel) {
+      const archiveIsActive = document.getElementById("subtab-btn-archive")?.getAttribute("aria-selected") === "true";
+      archiveTabPanel.classList.toggle("hidden", view !== "list" || !archiveIsActive);
+        archiveTabPanel.style.display = view === "list" && archiveIsActive ? "block" : "none";
     }
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      if (view === "list") {
+        url.searchParams.delete("gallery");
+        url.searchParams.delete("id");
+      } else {
+        url.searchParams.set("gallery", view);
+        if (view === "edit" && editId) url.searchParams.set("id", editId);
+        else url.searchParams.delete("id");
+      }
+      window.history.pushState({ galleryView: view, editId }, "", url);
+    }
+    if (view === "create") document.getElementById("gallery-create-title")?.focus();
+    else if (view === "edit") document.getElementById("edit-gallery-title-heading")?.focus();
+    else galleryCreateButton?.focus();
+  }
+
+  function openGalleryEditScreen(article: any, updateUrl = true) {
+    if (!galleryEditModal) return;
+    (document.getElementById("edit-gallery-id") as HTMLInputElement).value = String(article.id);
+    (document.getElementById("edit-gallery-title") as HTMLInputElement).value = article.title || "";
+    (document.getElementById("edit-gallery-subtitle") as HTMLTextAreaElement).value = article.subtitle || "";
+    (document.getElementById("edit-gallery-markdown") as HTMLTextAreaElement).value = article.contentMarkdown || "";
+    (document.getElementById("edit-gallery-is-published") as HTMLInputElement).checked = Boolean(article.isPublished);
+    (document.getElementById("edit-gallery-is-archived") as HTMLInputElement).checked = Boolean(article.isArchived);
+    (document.getElementById("edit-gallery-is-featured") as HTMLInputElement).checked = Boolean(article.isFeatured);
+    syncPublicationControls("edit-gallery-is-archived", "edit-gallery-is-featured", "edit-gallery-is-published");
+    galleryEditStatus?.classList.add("hidden");
+    setGalleryView("edit", String(article.id), updateUrl);
+  }
+
+  galleryCreateButton?.addEventListener("click", () => setGalleryView("create"));
+  galleryCreateBackButton?.addEventListener("click", () => setGalleryView("list"));
+  window.addEventListener("popstate", () => {
+    const url = new URL(window.location.href);
+    const view = url.searchParams.get("gallery");
+    const editId = url.searchParams.get("id") || undefined;
+    if (view === "create") setGalleryView("create", undefined, false);
+    else if (view === "edit" && editId) {
+      const article = allArticles.find((entry) => String(entry.id) === editId);
+      if (article) openGalleryEditScreen(article, false);
+      else setGalleryView("list", undefined, false);
+    } else setGalleryView("list", undefined, false);
   });
+
+  // Begin loading before the form's draft-restoration setup. That setup is
+  // independent from the article list and should never prevent it from loading.
+  void fetchArticles();
+
+  const initialGalleryView = new URLSearchParams(window.location.search).get("gallery");
+  if (initialGalleryView === "create") setGalleryView("create", undefined, false);
 
   // AUTO-GENERATE SLUG FROM TITLE
   const titleInput = document.getElementById("gallery-title") as HTMLInputElement;
@@ -503,89 +624,227 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       .replace(/-+/g, "-");
   });
 
-  // UPLOAD HERO IMAGE TO AZURE BLOB STORAGE
+  // Stage the hero image and show a local preview; the final form submit uploads it.
   const heroUrlInput = document.getElementById("gallery-hero-url") as HTMLInputElement;
   const heroFileInput = document.getElementById("hero-file-input") as HTMLInputElement;
   const uploadHeroBtn = document.getElementById("upload-hero-btn");
+  const heroFileSelection = document.getElementById("hero-file-selection");
+  const heroPreview = document.getElementById("gallery-hero-preview");
+  const heroPreviewImage = document.getElementById("gallery-hero-preview-image") as HTMLImageElement | null;
+  const heroPreviewName = document.getElementById("gallery-hero-preview-name");
+  const heroDropFeedback = document.getElementById("gallery-hero-drop-feedback");
+  const renderHeroPreview = () => {
+    if (!heroPreview || !heroPreviewImage || !heroPreviewName || !heroFileSelection) return;
+    const selected = Boolean(stagedHeroFile && heroPreviewUrl);
+    heroPreview.classList.toggle("hidden", !selected);
+    heroPreview.classList.toggle("flex", selected);
+    heroFileSelection.textContent = stagedHeroFile?.name || "No image selected";
+    if (selected) {
+      heroPreviewImage.src = heroPreviewUrl!;
+      heroPreviewName.textContent = stagedHeroFile!.name;
+    } else {
+      heroPreviewImage.removeAttribute("src");
+      heroPreviewName.textContent = "";
+    }
+  };
+  attachFileDropzone(
+    document.getElementById("gallery-hero-dropzone"),
+    heroFileInput,
+    { feedback: heroDropFeedback, nextStep: "submit" },
+  );
 
   uploadHeroBtn?.addEventListener("click", () => heroFileInput?.click());
 
-  heroFileInput?.addEventListener("change", async (e) => {
+  heroFileInput?.addEventListener("change", (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
-
-    try {
-      if (uploadHeroBtn) uploadHeroBtn.innerText = "Uploading...";
-      galleryUploadInterrupted = true;
-      persistGalleryDraft();
-      const upload = await uploadFileToAzure(file, "gallery-media/gallery-heroes");
-      if (heroUrlInput) heroUrlInput.value = upload.url;
-      galleryUploadInterrupted = false;
-      persistGalleryDraft();
-    } catch (err: any) {
-      alert("Error uploading Hero image: " + err.message);
-    } finally {
-      if (uploadHeroBtn) uploadHeroBtn.innerText = "📷 Upload Hero";
-    }
+    if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
+    stagedHeroFile = file;
+    heroPreviewUrl = URL.createObjectURL(file);
+    heroFileInput.value = "";
+    renderHeroPreview();
+    if (heroDropFeedback) heroDropFeedback.textContent = "Hero image ready. Save the article to start the upload.";
+    galleryUploadInterrupted = true;
+    persistGalleryDraft();
+  });
+  document.getElementById("gallery-hero-remove-file")?.addEventListener("click", () => {
+    if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
+    stagedHeroFile = null;
+    heroPreviewUrl = null;
+    renderHeroPreview();
+    if (heroDropFeedback) heroDropFeedback.textContent = "";
+    galleryUploadInterrupted = exhibitionImages.some((item) => item.file);
+    persistGalleryDraft();
   });
 
-  // UPLOAD EXHIBITION SHOTS TO AZURE BLOB STORAGE
+  // Stage exhibition images and preview them; the final form submit uploads them.
   const shotsFileInput = document.getElementById("shots-file-input") as HTMLInputElement;
   const uploadShotsBtn = document.getElementById("upload-shots-btn");
   const shotsCountLabel = document.getElementById("shots-count-label");
   const shotsPreviewList = document.getElementById("shots-preview-list");
+  const shotsReorderHint = document.getElementById("gallery-shots-reorder-hint");
+  let touchShotDrag: { pointerId: number; from: number; x: number; y: number; activated: boolean; target: number; timer: number } | null = null;
+  const shotReorderAnnouncement = document.getElementById("gallery-shots-reorder-announcement");
+  attachFileDropzone(
+    document.getElementById("gallery-shots-dropzone"),
+    shotsFileInput,
+    { feedback: document.getElementById("gallery-shots-drop-feedback"), nextStep: "submit" },
+  );
 
   uploadShotsBtn?.addEventListener("click", () => shotsFileInput?.click());
 
-  shotsFileInput?.addEventListener("change", async (e) => {
-    const files = Array.from((e.target as HTMLInputElement).files || []);
+  shotsFileInput?.addEventListener("change", (e) => {
+    const input = e.target as HTMLInputElement;
+    const files = Array.from(input.files || []);
+    input.value = "";
     if (files.length === 0) return;
-
-    try {
-      if (uploadShotsBtn) uploadShotsBtn.innerText = "Uploading...";
-      galleryUploadInterrupted = true;
-      persistGalleryDraft();
-      for (const file of files) {
-        const upload = await uploadFileToAzure(file, "gallery-media/exhibitions");
-        attachedExhibitionUrls.push(upload.url);
-        persistGalleryDraft();
-      }
-      renderShotsPreview();
-      galleryUploadInterrupted = false;
-      persistGalleryDraft();
-    } catch (err: any) {
-      alert("Error uploading exhibition photos: " + err.message);
-    } finally {
-      if (uploadShotsBtn) uploadShotsBtn.innerText = "🖼 Upload Exhibition Photos";
-    }
+    for (const file of files) exhibitionImages.push({ key: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file) });
+    if (document.getElementById("gallery-shots-drop-feedback")) document.getElementById("gallery-shots-drop-feedback")!.textContent = `${files.length} photo(s) added. Save the article to start the upload.`;
+    galleryUploadInterrupted = true;
+    renderShotsPreview();
+    persistGalleryDraft();
   });
 
   function renderShotsPreview() {
     if (!shotsPreviewList || !shotsCountLabel) return;
-    shotsCountLabel.innerText = `${attachedExhibitionUrls.length} photos attached`;
+    const previousRects = new Map(Array.from(shotsPreviewList.querySelectorAll<HTMLElement>("[data-shot-key]"), (tile) => [tile.dataset.shotKey!, tile.getBoundingClientRect()]));
+    const uploadedCount = exhibitionImages.filter((item) => item.url).length;
+    const pendingCount = exhibitionImages.filter((item) => item.file).length;
+    shotsCountLabel.textContent = `${uploadedCount} uploaded · ${pendingCount} ready to upload`;
+    shotsReorderHint?.classList.toggle("hidden", exhibitionImages.length < 2);
+    shotsPreviewList.innerHTML = exhibitionImages.map((item, idx) => `
+      <div class="group relative size-24 overflow-hidden rounded-lg border ${item.url ? "border-emerald-700/70" : "border-orange-500/60"} bg-black transition-[border-color,box-shadow,transform] duration-150" data-shot-key="${item.key}" data-shot-index="${idx}" aria-label="Exhibition image ${idx + 1} of ${exhibitionImages.length}">
+        <img src="${item.previewUrl}" alt="Exhibition image ${idx + 1}" class="h-full w-full object-cover" />
+        <span class="absolute bottom-0 left-0 right-0 truncate bg-zinc-950/90 px-1 py-0.5 text-center text-[9px] font-mono ${item.url ? "text-emerald-300" : "text-orange-300"}">${item.url ? "Uploaded" : "Ready"}</span>
+        <button type="button" draggable="true" data-shot-drag-handle="${idx}" aria-label="Drag image ${idx + 1} to reorder" title="Drag to reorder" class="absolute left-1 top-1 inline-flex size-7 touch-none cursor-grab items-center justify-center rounded bg-zinc-950/90 text-zinc-100 hover:text-orange-400 active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400">
+          <svg aria-hidden="true" viewBox="0 0 16 16" class="size-4" fill="currentColor"><circle cx="5" cy="3" r="1"/><circle cx="11" cy="3" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="5" cy="13" r="1"/><circle cx="11" cy="13" r="1"/></svg>
+        </button>
+        <button type="button" data-remove-shot="${idx}" aria-label="Remove image ${idx + 1}" class="absolute right-1 top-1 rounded bg-zinc-950/90 px-1.5 py-1 text-xs text-zinc-200 hover:text-orange-400">×</button>
+      </div>`).join("");
 
-    shotsPreviewList.innerHTML = attachedExhibitionUrls.map((url, idx) => `
-      <div class="relative group w-16 h-16 rounded-lg overflow-hidden border border-zinc-800 bg-black shrink-0">
-        <img src="${url}" class="w-full h-full object-cover" />
-        <button type="button" data-remove-shot="${idx}" class="remove-shot-btn absolute top-0.5 right-0.5 bg-zinc-950/80 text-zinc-400 hover:text-orange-500 rounded p-0.5 text-[9px] font-mono">✕</button>
-      </div>
-    `).join("");
+    shotsPreviewList.querySelectorAll<HTMLElement>("[data-shot-key]").forEach((tile) => {
+      const previous = previousRects.get(tile.dataset.shotKey!);
+      if (!previous) return;
+      const current = tile.getBoundingClientRect();
+      const dx = previous.left - current.left;
+      const dy = previous.top - current.top;
+      if (dx || dy) tile.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 180, easing: "ease-out" });
+    });
 
-    shotsPreviewList.querySelectorAll(".remove-shot-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const idx = parseInt((e.currentTarget as HTMLElement).dataset.removeShot || "-1", 10);
-        if (idx > -1) {
-          attachedExhibitionUrls.splice(idx, 1);
-          renderShotsPreview();
+    shotsPreviewList.querySelectorAll<HTMLButtonElement>("[data-remove-shot]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        const index = Number((event.currentTarget as HTMLButtonElement).dataset.removeShot);
+        const [removed] = exhibitionImages.splice(index, 1);
+        if (removed?.file) URL.revokeObjectURL(removed.previewUrl);
+        galleryUploadInterrupted = Boolean(stagedHeroFile || exhibitionImages.some((item) => item.file));
+        renderShotsPreview();
+        persistGalleryDraft();
+      });
+    });
+    shotsPreviewList.querySelectorAll<HTMLButtonElement>("[data-shot-drag-handle]").forEach((handle) => {
+      handle.addEventListener("keydown", (event) => {
+        const keyboardEvent = event as KeyboardEvent;
+        const from = Number(handle.dataset.shotDragHandle);
+        const earlier = keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowUp";
+        const later = keyboardEvent.key === "ArrowRight" || keyboardEvent.key === "ArrowDown";
+        if (!earlier && !later) return;
+        keyboardEvent.preventDefault();
+        const to = from + (earlier ? -1 : 1);
+        if (!moveShot(from, to)) return;
+        shotsPreviewList?.querySelector<HTMLButtonElement>(`[data-shot-drag-handle="${to}"]`)?.focus();
+      });
+      handle.addEventListener("pointerdown", (event) => {
+        const pointer = event as PointerEvent;
+        if (pointer.pointerType !== "touch") return;
+        const from = Number(handle.dataset.shotDragHandle);
+        const tile = handle.closest<HTMLElement>("[data-shot-key]");
+        if (!tile) return;
+        touchShotDrag = { pointerId: pointer.pointerId, from, x: pointer.clientX, y: pointer.clientY, activated: false, target: from, timer: window.setTimeout(() => {
+          if (!touchShotDrag || touchShotDrag.pointerId !== pointer.pointerId) return;
+          touchShotDrag.activated = true;
+          tile.classList.add("opacity-40");
+        }, 160) };
+      });
+      handle.addEventListener("pointermove", (event) => {
+        const pointer = event as PointerEvent;
+        if (!touchShotDrag || touchShotDrag.pointerId !== pointer.pointerId) return;
+        if (!touchShotDrag.activated && Math.hypot(pointer.clientX - touchShotDrag.x, pointer.clientY - touchShotDrag.y) > 7) {
+          window.clearTimeout(touchShotDrag.timer);
+          touchShotDrag = null;
         }
+      });
+      handle.addEventListener("dragstart", (event) => {
+        const dragEvent = event as DragEvent;
+        const from = Number(handle.dataset.shotDragHandle);
+        dragEvent.dataTransfer?.setData("text/plain", String(from));
+        if (dragEvent.dataTransfer) dragEvent.dataTransfer.effectAllowed = "move";
+        handle.closest<HTMLElement>("[data-shot-key]")?.classList.add("opacity-40");
+      });
+    });
+    shotsPreviewList.querySelectorAll<HTMLElement>("[data-shot-key]").forEach((tile) => {
+      tile.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        tile.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10");
+      });
+      tile.addEventListener("dragleave", () => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+      tile.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const from = Number((event as DragEvent).dataTransfer?.getData("text/plain"));
+        const to = Number(tile.dataset.shotIndex);
+        moveShot(from, to);
       });
     });
   }
+
+  function moveShot(from: number, to: number) {
+    if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= exhibitionImages.length || to >= exhibitionImages.length || from === to) return false;
+    const [moved] = exhibitionImages.splice(from, 1);
+    exhibitionImages.splice(to, 0, moved);
+    renderShotsPreview();
+    persistGalleryDraft();
+    if (shotReorderAnnouncement) shotReorderAnnouncement.textContent = `Image moved to position ${to + 1} of ${exhibitionImages.length}.`;
+    return true;
+  }
+
+  window.addEventListener("pointerup", (event) => {
+    if (!touchShotDrag || touchShotDrag.pointerId !== event.pointerId) return;
+    window.clearTimeout(touchShotDrag.timer);
+    const drag = touchShotDrag;
+    touchShotDrag = null;
+    const targetTile = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#shots-preview-list [data-shot-key]");
+    const to = targetTile ? Number(targetTile.dataset.shotIndex) : -1;
+    if (drag.activated) moveShot(drag.from, to);
+    shotsPreviewList?.querySelectorAll("[data-shot-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+  });
+  window.addEventListener("pointermove", (event) => {
+    if (!touchShotDrag || !touchShotDrag.activated || touchShotDrag.pointerId !== event.pointerId) return;
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("#shots-preview-list [data-shot-key]");
+    const targetIndex = target ? Number(target.dataset.shotIndex) : -1;
+    if (targetIndex === touchShotDrag.target) return;
+    shotsPreviewList?.querySelectorAll("[data-shot-key]").forEach((tile) => tile.classList.remove("ring-2", "ring-orange-400", "scale-105", "z-10"));
+    target?.classList.add("ring-2", "ring-orange-400", "scale-105", "z-10");
+    touchShotDrag.target = targetIndex;
+  });
+  window.addEventListener("pointercancel", (event) => {
+    if (touchShotDrag && touchShotDrag.pointerId !== event.pointerId) return;
+    if (touchShotDrag) window.clearTimeout(touchShotDrag.timer);
+    touchShotDrag = null;
+    shotsPreviewList?.querySelectorAll("[data-shot-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+  });
+
+  shotsPreviewList?.addEventListener("dragend", () => {
+    shotsPreviewList.querySelectorAll("[data-shot-key]").forEach((tile) => tile.classList.remove("opacity-40", "ring-2", "ring-orange-400", "scale-105", "z-10"));
+  });
 
   // CREATE ARTICLE SUBMIT
   const createForm = document.getElementById("gallery-create-form") as HTMLFormElement;
   const submitBtn = document.getElementById("gallery-submit-btn") as HTMLButtonElement;
   const createStatus = document.getElementById("gallery-create-status");
+  const uploadProgress = document.getElementById("gallery-upload-progress");
+  const uploadProgressLabel = document.getElementById("gallery-upload-progress-label");
+  const uploadProgressPercent = document.getElementById("gallery-upload-progress-percent");
+  const uploadProgressTrack = document.getElementById("gallery-upload-progress-track");
+  const uploadProgressBar = document.getElementById("gallery-upload-progress-bar");
   const galleryDraftKey = "uv.admin.gallery-create-draft.v1";
   const galleryDraftNotice = document.getElementById("gallery-draft-notice");
   const galleryDraftNoticeText = document.getElementById("gallery-draft-notice-text");
@@ -609,7 +868,11 @@ const isSuperAdmin = userRole === 'SuperAdmin';
     shopCollectionTitle: string;
     tags: string;
     galleryImageUrls: string[];
-    isPublished: boolean;
+    heroFileName?: string;
+    exhibitionFileNames?: string[];
+    publicationStatus?: string;
+    isPublished?: boolean;
+    isArchived?: boolean;
     isFeatured: boolean;
   };
 
@@ -631,8 +894,11 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       shopCollectionSlug: value("gallery-shop-slug"),
       shopCollectionTitle: value("gallery-shop-title"),
       tags: value("gallery-tags"),
-      galleryImageUrls: [...attachedExhibitionUrls],
+      galleryImageUrls: exhibitionImages.flatMap((item) => item.url ? [item.url] : []),
+      heroFileName: stagedHeroFile?.name,
+      exhibitionFileNames: exhibitionImages.flatMap((item) => item.file ? [item.file.name] : []),
       isPublished: (document.getElementById("gallery-is-published") as HTMLInputElement).checked,
+      isArchived: (document.getElementById("gallery-is-archived") as HTMLInputElement).checked,
       isFeatured: (document.getElementById("gallery-is-featured") as HTMLInputElement).checked,
     };
   }
@@ -665,19 +931,27 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       const field = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
       if (field && savedValue !== undefined) field.value = savedValue;
     }
-    (document.getElementById("gallery-is-published") as HTMLInputElement).checked = values.isPublished;
+    (document.getElementById("gallery-is-published") as HTMLInputElement).checked = values.isArchived || values.publicationStatus === "ARCHIVED" ? false : values.isPublished ?? values.publicationStatus !== "DRAFT";
+    (document.getElementById("gallery-is-archived") as HTMLInputElement).checked = Boolean(values.isArchived || values.publicationStatus === "ARCHIVED");
     (document.getElementById("gallery-is-featured") as HTMLInputElement).checked = values.isFeatured;
-    attachedExhibitionUrls = values.galleryImageUrls || [];
-    galleryUploadInterrupted = savedGalleryDraft.uploadInterrupted;
+    syncPublicationControls("gallery-is-archived", "gallery-is-featured", "gallery-is-published");
+    updateGallerySubmitLabel();
+    exhibitionImages = (values.galleryImageUrls || []).map((url) => ({ key: crypto.randomUUID(), url, previewUrl: url }));
+    galleryUploadInterrupted = savedGalleryDraft.uploadInterrupted || Boolean(values.heroFileName || values.exhibitionFileNames?.length);
+    if (values.heroFileName && heroFileSelection) heroFileSelection.textContent = `Reselect ${values.heroFileName}`;
+    if (values.heroFileName && heroDropFeedback) heroDropFeedback.textContent = "Browsers cannot restore selected files. Choose the hero image again to continue.";
     renderShotsPreview();
 
     if (galleryDraftNotice && galleryDraftNoticeText) {
-      galleryDraftNoticeText.textContent = savedGalleryDraft.uploadInterrupted
-        ? "An upload was interrupted. Your article details were restored. Re-select the same image(s) to resume any interrupted upload."
+      const missingFiles = [values.heroFileName, ...(values.exhibitionFileNames || [])].filter(Boolean);
+      galleryDraftNoticeText.textContent = missingFiles.length
+        ? `Your article details were restored. Re-select these file(s) to continue: ${missingFiles.join(", ")}.`
+        : savedGalleryDraft.uploadInterrupted
+          ? "An upload was interrupted. Your article details were restored. Re-select the same image(s) to resume any interrupted upload."
         : "Your saved article draft was restored. Re-select the same image(s) if you need to resume an interrupted upload.";
       galleryDraftNotice.classList.remove("hidden");
-      accordionContent?.classList.remove("hidden");
-      if (accordionBadge) accordionBadge.innerText = "- Collapse Form";
+      const galleryPanelIsActive = document.getElementById("subtab-content-gallery")?.style.display !== "none";
+      if (galleryPanelIsActive) setGalleryView("create", undefined, false);
     }
   }
 
@@ -695,32 +969,90 @@ const isSuperAdmin = userRole === 'SuperAdmin';
   createForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    if (submitBtn) submitBtn.disabled = true;
-    galleryUploadInterrupted = false;
-    persistGalleryDraft();
+    if (!heroUrlInput.value.trim() && !stagedHeroFile) {
+      if (createStatus) {
+        createStatus.textContent = "Choose a hero image before saving the article.";
+        createStatus.className = "block rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-center text-xs font-mono text-red-300";
+      }
+      return;
+    }
 
-    const payload = {
-      title: titleInput.value,
-      slug: slugInput.value,
-      subtitle: (document.getElementById("gallery-subtitle") as HTMLTextAreaElement).value,
-      category: (document.getElementById("gallery-category") as HTMLSelectElement).value,
-      readingTimeMinutes: parseInt((document.getElementById("gallery-reading-time") as HTMLInputElement).value || "5", 10),
-      heroImageUrl: heroUrlInput.value,
-      videoSource: (document.getElementById("gallery-video-source") as HTMLSelectElement).value,
-      videoUrl: (document.getElementById("gallery-video-url") as HTMLInputElement).value || undefined,
-      contentMarkdown: (document.getElementById("gallery-content-markdown") as HTMLTextAreaElement).value,
-      subjectName: (document.getElementById("gallery-subject") as HTMLInputElement).value || undefined,
-      location: (document.getElementById("gallery-location") as HTMLInputElement).value || undefined,
-      externalUrl: (document.getElementById("gallery-external-url") as HTMLInputElement).value || undefined,
-      shopCollectionSlug: (document.getElementById("gallery-shop-slug") as HTMLInputElement).value || undefined,
-      shopCollectionTitle: (document.getElementById("gallery-shop-title") as HTMLInputElement).value || undefined,
-      tags: (document.getElementById("gallery-tags") as HTMLInputElement).value.split(",").map(t => t.trim()).filter(Boolean),
-      galleryImageUrls: attachedExhibitionUrls,
-      isPublished: (document.getElementById("gallery-is-published") as HTMLInputElement).checked,
-      isFeatured: (document.getElementById("gallery-is-featured") as HTMLInputElement).checked,
+    if (submitBtn) submitBtn.disabled = true;
+    galleryUploadInterrupted = Boolean(stagedHeroFile || exhibitionImages.some((item) => item.file));
+    persistGalleryDraft();
+    const totalFilesToUpload = Number(Boolean(stagedHeroFile)) + exhibitionImages.filter((item) => item.file).length;
+    let completedFiles = 0;
+    const setUploadProgress = (percentage: number, label: string) => {
+      const value = Math.max(0, Math.min(100, Math.round(percentage)));
+      uploadProgress?.classList.remove("hidden");
+      if (uploadProgressLabel) uploadProgressLabel.textContent = label;
+      if (uploadProgressPercent) uploadProgressPercent.textContent = `${value}%`;
+      if (uploadProgressTrack) uploadProgressTrack.setAttribute("aria-valuenow", String(value));
+      if (uploadProgressBar) uploadProgressBar.style.width = `${value}%`;
     };
+    const uploadWithProgress = async (file: File, path: string, description: string) => {
+      setUploadProgress((completedFiles / totalFilesToUpload) * 100, `Uploading ${description}: ${file.name}`);
+      const result = await uploadFileToAzure(file, path, (fileProgress) => {
+        setUploadProgress(((completedFiles + fileProgress / 100) / totalFilesToUpload) * 100, `Uploading ${description}: ${file.name}`);
+      });
+      completedFiles++;
+      setUploadProgress((completedFiles / totalFilesToUpload) * 100, `${description} uploaded: ${file.name}`);
+      return result;
+    };
+    if (totalFilesToUpload > 0) setUploadProgress(0, `Preparing ${totalFilesToUpload} file(s)...`);
+    else uploadProgress?.classList.add("hidden");
 
     try {
+      if (stagedHeroFile) {
+        if (submitBtn) submitBtn.textContent = "Uploading hero image...";
+        const upload = await uploadWithProgress(stagedHeroFile, "gallery-media/gallery-heroes", "hero image");
+        heroUrlInput.value = upload.url;
+        if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
+        stagedHeroFile = null;
+        heroPreviewUrl = null;
+        renderHeroPreview();
+        if (heroDropFeedback) heroDropFeedback.textContent = "Hero image uploaded.";
+        persistGalleryDraft();
+      }
+
+      const pendingCount = exhibitionImages.filter((item) => item.file).length;
+      let uploadedCount = 0;
+      for (let index = 0; index < exhibitionImages.length; index++) {
+        const pending = exhibitionImages[index];
+        if (!pending.file) continue;
+        if (submitBtn) submitBtn.textContent = `Uploading exhibition photos (${++uploadedCount}/${pendingCount})...`;
+        const upload = await uploadWithProgress(pending.file, "gallery-media/exhibitions", `photo ${uploadedCount} of ${pendingCount}`);
+        URL.revokeObjectURL(pending.previewUrl);
+        pending.url = upload.url;
+        pending.previewUrl = upload.url;
+        delete pending.file;
+        renderShotsPreview();
+        persistGalleryDraft();
+      }
+
+      galleryUploadInterrupted = false;
+      persistGalleryDraft();
+      const payload = {
+        title: titleInput.value,
+        slug: slugInput.value,
+        subtitle: (document.getElementById("gallery-subtitle") as HTMLTextAreaElement).value,
+        category: (document.getElementById("gallery-category") as HTMLSelectElement).value,
+        readingTimeMinutes: parseInt((document.getElementById("gallery-reading-time") as HTMLInputElement).value || "5", 10),
+        heroImageUrl: heroUrlInput.value,
+        videoSource: (document.getElementById("gallery-video-source") as HTMLSelectElement).value,
+        videoUrl: (document.getElementById("gallery-video-url") as HTMLInputElement).value || undefined,
+        contentMarkdown: (document.getElementById("gallery-content-markdown") as HTMLTextAreaElement).value,
+        subjectName: (document.getElementById("gallery-subject") as HTMLInputElement).value || undefined,
+        location: (document.getElementById("gallery-location") as HTMLInputElement).value || undefined,
+        externalUrl: (document.getElementById("gallery-external-url") as HTMLInputElement).value || undefined,
+        shopCollectionSlug: (document.getElementById("gallery-shop-slug") as HTMLInputElement).value || undefined,
+        shopCollectionTitle: (document.getElementById("gallery-shop-title") as HTMLInputElement).value || undefined,
+        tags: (document.getElementById("gallery-tags") as HTMLInputElement).value.split(",").map(t => t.trim()).filter(Boolean),
+        galleryImageUrls: exhibitionImages.flatMap((item) => item.url ? [item.url] : []),
+        isPublished: (document.getElementById("gallery-is-published") as HTMLInputElement).checked && !(document.getElementById("gallery-is-archived") as HTMLInputElement).checked,
+        isArchived: (document.getElementById("gallery-is-archived") as HTMLInputElement).checked,
+        isFeatured: (document.getElementById("gallery-is-featured") as HTMLInputElement).checked && !(document.getElementById("gallery-is-archived") as HTMLInputElement).checked,
+      };
       const res = await fetch(`${API_URL}/gallery`, {
         method: "POST",
         headers: {
@@ -732,12 +1064,21 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       if (!res.ok) throw new Error("Failed to create article.");
 
       if (createStatus) {
-        createStatus.innerText = "Article published successfully!";
+        const isArchived = (document.getElementById("gallery-is-archived") as HTMLInputElement).checked;
+        const isPublished = (document.getElementById("gallery-is-published") as HTMLInputElement).checked;
+        createStatus.innerText = isArchived ? "Article saved as archived." : isPublished ? "Article published successfully!" : "Article saved as a draft.";
         createStatus.className = "text-xs font-mono text-center rounded-lg p-3 bg-emerald-950/80 text-emerald-400 border border-emerald-800 block";
       }
 
       createForm.reset();
-      attachedExhibitionUrls = [];
+      updateGallerySubmitLabel();
+      stagedHeroFile = null;
+      if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
+      heroPreviewUrl = null;
+      heroFileInput.value = "";
+      renderHeroPreview();
+      exhibitionImages.forEach((item) => { if (item.file) URL.revokeObjectURL(item.previewUrl); });
+      exhibitionImages = [];
       renderShotsPreview();
       clearAdminDraft(galleryDraftKey);
       galleryDraftNotice?.classList.add("hidden");
@@ -745,8 +1086,7 @@ const isSuperAdmin = userRole === 'SuperAdmin';
 
       setTimeout(() => {
         createStatus?.classList.add("hidden");
-        accordionContent?.classList.add("hidden");
-        if (accordionBadge) accordionBadge.innerText = "+ Expand Form";
+        setGalleryView("list");
       }, 1500);
 
     } catch (err: any) {
@@ -757,36 +1097,57 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       }
     } finally {
       if (submitBtn) submitBtn.disabled = false;
+      updateGallerySubmitLabel();
     }
   });
 
   // FETCH & RENDER ARTICLES
   async function fetchArticles() {
     const tableBody = document.getElementById("gallery-table-body");
+    const cardList = document.getElementById("gallery-card-list");
     if (!tableBody) return;
 
     try {
-      const response = await fetch(`${API_URL}/gallery?includeUnpublished=true`);
-      if (!response.ok) throw new Error("Failed to load articles.");
+      const response = await fetch(`${API_URL}/gallery?includeUnpublished=true`, {
+        signal: AbortSignal.timeout(15000),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const detail = (await response.text()).slice(0, 240);
+        throw new Error(`Gallery request failed (${response.status})${detail ? `: ${detail}` : "."}`);
+      }
 
       allArticles = await response.json();
       renderArticlesTable();
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("gallery") === "edit") {
+        const requestedId = url.searchParams.get("id");
+        const requestedArticle = allArticles.find((article) => String(article.id) === requestedId);
+        if (requestedArticle && currentGalleryView === "list") openGalleryEditScreen(requestedArticle, false);
+        else if (!requestedArticle) setGalleryView("list", undefined, false);
+      }
     } catch (err) {
-      tableBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-400 font-mono">Error loading articles. Check API status.</td></tr>`;
+      console.error("Gallery articles request failed:", err);
+      const message = err instanceof Error ? err.message : "Could not load gallery articles.";
+      tableBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-400 font-mono">${message}</td></tr>`;
+      if (cardList) cardList.innerHTML = `<p class="rounded-xl border border-red-900/60 bg-red-950/20 p-4 text-center text-sm text-red-300">${message}</p>`;
+      if (new URLSearchParams(window.location.search).get("gallery") === "edit") setGalleryView("list", undefined, false);
     }
   }
 
   function renderArticlesTable() {
     const tableBody = document.getElementById("gallery-table-body");
+    const cardList = document.getElementById("gallery-card-list");
     if (!tableBody) return;
 
     const query = (document.getElementById("gallery-search-input") as HTMLInputElement)?.value.toLowerCase().trim() || "";
     const filterStatus = (document.getElementById("gallery-filter-status") as HTMLSelectElement)?.value || "ALL";
 
     const filtered = allArticles.filter((item) => {
-      if (filterStatus === "PUBLISHED" && !item.isPublished) return false;
-      if (filterStatus === "DRAFT" && item.isPublished) return false;
-      if (filterStatus === "FEATURED" && !item.isFeatured) return false;
+      if (filterStatus === "PUBLISHED" && (!item.isPublished || item.isArchived)) return false;
+      if (filterStatus === "DRAFT" && (item.isPublished || item.isArchived)) return false;
+      if (filterStatus === "ARCHIVED" && !item.isArchived) return false;
+      if (filterStatus === "FEATURED" && (!item.isFeatured || item.isArchived)) return false;
 
       if (query) {
         const matchTitle = item.title?.toLowerCase().includes(query);
@@ -797,14 +1158,42 @@ const isSuperAdmin = userRole === 'SuperAdmin';
       return true;
     });
 
+    filtered.sort((a, b) => {
+      let left: string | number = a[currentSortColumn] ?? "";
+      let right: string | number = b[currentSortColumn] ?? "";
+      if (currentSortColumn === "publishedAt") {
+        left = Date.parse(String(left)) || 0;
+        right = Date.parse(String(right)) || 0;
+      } else if (currentSortColumn === "title") {
+        left = String(left).toLowerCase();
+        right = String(right).toLowerCase();
+      } else if (currentSortColumn === "isPublished") {
+        left = a.isArchived ? 2 : a.isPublished ? 1 : 0;
+        right = b.isArchived ? 2 : b.isPublished ? 1 : 0;
+      } else {
+        left = left ? 1 : 0;
+        right = right ? 1 : 0;
+      }
+      if (left < right) return sortDirection === "asc" ? -1 : 1;
+      if (left > right) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    updateSortHeaders();
+
     if (filtered.length === 0) {
+      galleryPagination.slice(filtered);
       tableBody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-zinc-500 font-mono">No articles found.</td></tr>`;
+      if (cardList) cardList.innerHTML = `<p class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center text-sm text-zinc-400">No articles match these filters.</p>`;
       return;
     }
 
-    tableBody.innerHTML = filtered.map((item) => {
+    const pageItems = galleryPagination.slice(filtered);
+    const mobileCards: string[] = [];
+    tableBody.innerHTML = pageItems.map((item) => {
       const shotsCount = item.galleryImageUrls?.length || 0;
-      const statusBadge = item.isPublished
+      const statusBadge = item.isArchived
+        ? `<span class="rounded-full border border-amber-900/80 bg-amber-950/60 px-2 py-0.5 font-mono text-[10px] text-amber-400">Archived</span>`
+        : item.isPublished
         ? `<span class="px-2 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-900/80 rounded-full">Published</span>`
         : `<span class="px-2 py-0.5 text-[10px] font-mono bg-amber-950/60 text-amber-400 border border-amber-900/80 rounded-full">Draft</span>`;
       
@@ -813,34 +1202,59 @@ const isSuperAdmin = userRole === 'SuperAdmin';
         : "";
 
       const shopBadge = item.shopCollectionSlug
-        ? `<span class="text-[10px] font-mono text-orange-400 block mt-0.5">🛒 ${item.shopCollectionSlug}</span>`
+        ? `<span class="text-[10px] font-mono text-orange-400 block mt-0.5">${item.shopCollectionSlug}</span>`
         : "";
+
+      const publishedDate = item.publishedAt && !Number.isNaN(Date.parse(item.publishedAt))
+        ? new Date(item.publishedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+        : "Unscheduled";
+      const actionsHtml = `
+        ${!item.isArchived ? `<button type="button" data-action="toggle-featured" data-id="${item.id}" aria-label="${item.isFeatured ? "Remove from featured" : "Feature"}: ${item.title}" title="${item.isFeatured ? "Remove from featured" : "Feature"}" class="action-btn inline-flex size-10 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200 transition-colors hover:bg-zinc-700"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg></button>` : ""}
+        <button type="button" data-action="edit" data-id="${item.id}" aria-label="Edit ${item.title}" title="Edit" class="action-btn inline-flex size-10 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200 transition-colors hover:bg-zinc-700"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg></button>
+        ${isSuperAdmin ? `<button type="button" data-action="delete" data-id="${item.id}" aria-label="Delete ${item.title}" title="Delete" class="action-btn inline-flex size-10 items-center justify-center rounded-lg border border-red-900/50 bg-red-950/40 text-red-300 transition-colors hover:bg-red-900/60"><svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button>` : ""}`;
+
+      mobileCards.push(`
+        <article class="rounded-xl border border-zinc-800 bg-zinc-900/70 p-4 text-left shadow-sm">
+          <div class="flex min-w-0 items-start gap-3">
+            <img src="${item.heroImageUrl || "/placeholder-gallery.jpg"}" alt="${item.title || "Gallery article cover"}" class="size-24 shrink-0 rounded-lg border border-zinc-800 object-cover" />
+            <div class="min-w-0 flex-1">
+              <h3 class="break-words text-sm font-bold leading-5 text-white">${item.title}</h3>
+              <p class="mt-1 break-words text-[11px] font-mono text-zinc-400">${item.category || "Uncategorized"}${item.subjectName ? ` · ${item.subjectName}` : ""}</p>
+              ${shopBadge}
+              <div class="mt-3 flex flex-wrap items-center justify-start gap-2">
+                <span class="text-[11px] font-mono text-zinc-400">${shotsCount} ${shotsCount === 1 ? "image" : "images"}</span>
+                ${statusBadge}${featuredBadge}
+                <time class="text-[11px] font-mono text-zinc-500">${publishedDate}</time>
+              </div>
+            </div>
+            <div class="flex h-24 shrink-0 self-center flex-col items-center justify-between gap-1" aria-label="Article actions">${actionsHtml.replaceAll("size-10", "size-7")}</div>
+          </div>
+        </article>`);
 
       return `
         <tr class="hover:bg-zinc-800/30 transition-colors">
-          <td class="py-3 px-4">
-            <img src="${item.heroImageUrl || '/placeholder-gallery.jpg'}" class="w-12 h-12 object-cover rounded-md border border-zinc-800" />
+          <td data-label="Hero cover" class="py-3 px-4">
+            <img src="${item.heroImageUrl || '/placeholder-gallery.jpg'}" alt="${item.title || "Gallery article cover"}" class="size-24 object-cover rounded-lg border border-zinc-800" />
           </td>
-          <td class="py-3 px-4">
+          <td data-label="Title and details" class="py-3 px-4">
             <div class="font-bold text-white">${item.title}</div>
             <div class="text-[11px] text-zinc-400 font-mono">${item.category} • ${item.readingTimeMinutes} min read ${shopBadge}</div>
           </td>
-          <td class="py-3 px-4 font-mono text-zinc-300 text-xs">${shotsCount} shots</td>
-          <td class="py-3 px-4">${statusBadge} ${featuredBadge}</td>
-          <td class="py-3 px-4 font-mono text-zinc-400 text-xs">${new Date(item.publishedAt).toLocaleDateString()}</td>
-          <td class="py-3 px-4 text-right">
+          <td data-label="Images" class="py-3 px-4 font-mono text-zinc-300 text-xs">${shotsCount} shots</td>
+          <td data-label="Status" class="py-3 px-4">${statusBadge} ${featuredBadge}</td>
+          <td data-label="Date" class="py-3 px-4 font-mono text-zinc-400 text-xs">${publishedDate}</td>
+          <td data-label="Actions" class="py-3 px-4 text-right">
             <div class="flex items-center justify-end gap-2">
-              <button data-action="toggle-featured" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[11px] rounded">${item.isFeatured ? "★ Unfeature" : "☆ Feature"}</button>
-              <button data-action="edit" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono text-[11px] rounded">Edit</button>
-              ${isSuperAdmin ? `<button data-action="delete" data-id="${item.id}" class="action-btn px-2.5 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-900/50 font-mono text-[11px] rounded">Delete</button>` : ""}
+              ${actionsHtml}
             </div>
           </td>
         </tr>
       `;
     }).join("");
+    if (cardList) cardList.innerHTML = mobileCards.join("");
 
     // ATTACH ACTION LISTENERS
-    tableBody.querySelectorAll(".action-btn").forEach((btn) => {
+    [tableBody, cardList].forEach((host) => host?.querySelectorAll(".action-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const el = e.currentTarget as HTMLElement;
         const action = el.dataset.action;
@@ -858,15 +1272,143 @@ const isSuperAdmin = userRole === 'SuperAdmin';
             method: "DELETE",
           });
           await fetchArticles();
+        } else if (action === "edit") {
+          const article = allArticles.find((entry) => String(entry.id) === String(id));
+          if (!article) return;
+          openGalleryEditScreen(article);
         }
       });
+    }));
+  }
+
+  const closeGalleryEditModal = () => setGalleryView("list");
+  document.getElementById("edit-gallery-modal-close")?.addEventListener("click", closeGalleryEditModal);
+  document.getElementById("edit-gallery-cancel-btn")?.addEventListener("click", closeGalleryEditModal);
+  galleryEditForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const id = (document.getElementById("edit-gallery-id") as HTMLInputElement).value;
+    const article = allArticles.find((entry) => String(entry.id) === String(id));
+    if (!article) return;
+    const submitButton = galleryEditForm.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+    if (galleryEditStatus) galleryEditStatus.classList.add("hidden");
+    const payload = {
+      title: (document.getElementById("edit-gallery-title") as HTMLInputElement).value,
+      slug: article.slug,
+      subtitle: (document.getElementById("edit-gallery-subtitle") as HTMLTextAreaElement).value,
+      category: article.category,
+      heroImageUrl: article.heroImageUrl,
+      videoUrl: article.videoUrl,
+      videoSource: article.videoSource,
+      contentMarkdown: (document.getElementById("edit-gallery-markdown") as HTMLTextAreaElement).value,
+      readingTimeMinutes: article.readingTimeMinutes,
+      subjectName: article.subjectName,
+      location: article.location,
+      externalUrl: article.externalUrl,
+      eventDate: article.eventDate,
+      isFeatured: (document.getElementById("edit-gallery-is-featured") as HTMLInputElement).checked && !(document.getElementById("edit-gallery-is-archived") as HTMLInputElement).checked,
+      isPublished: (document.getElementById("edit-gallery-is-published") as HTMLInputElement).checked && !(document.getElementById("edit-gallery-is-archived") as HTMLInputElement).checked,
+      isArchived: (document.getElementById("edit-gallery-is-archived") as HTMLInputElement).checked,
+      shopCollectionSlug: article.shopCollectionSlug,
+      shopCollectionTitle: article.shopCollectionTitle,
+      tags: article.tags || [],
+      galleryImageUrls: article.galleryImageUrls || [],
+    };
+    try {
+      const response = await fetch(`${API_URL}/gallery/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const detail = (await response.text()).slice(0, 240);
+        throw new Error(`Update failed (${response.status})${detail ? `: ${detail}` : "."}`);
+      }
+      setGalleryView("list");
+      await fetchArticles();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not update this article.";
+      if (galleryEditStatus) {
+        galleryEditStatus.textContent = message;
+        galleryEditStatus.className = "block rounded-lg border border-red-900/60 bg-red-950/20 p-3 text-center text-xs font-mono text-red-300";
+      }
+      console.error("Gallery article update failed:", error);
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+
+  function updateSortHeaders() {
+    document.querySelectorAll<HTMLTableCellElement>("#gallery-manager-root .sort-header").forEach((header) => {
+      const active = header.dataset.sort === currentSortColumn;
+      const icon = header.querySelector(".sort-icon");
+      header.classList.toggle("text-orange-500", active);
+      header.classList.toggle("text-zinc-400", !active);
+      if (icon) {
+        icon.textContent = active ? (sortDirection === "asc" ? "↑" : "↓") : "↕";
+        icon.classList.toggle("opacity-100", active);
+        icon.classList.toggle("opacity-40", !active);
+      }
     });
+    const selector = document.getElementById("gallery-mobile-sort") as HTMLSelectElement | null;
+    const direction = document.getElementById("gallery-mobile-sort-direction") as HTMLButtonElement | null;
+    if (selector) selector.value = currentSortColumn;
+    if (direction) direction.textContent = sortDirection === "desc" ? "Descending" : "Ascending";
   }
 
   // REFRESH & SEARCH
-  document.getElementById("gallery-refresh-btn")?.addEventListener("click", fetchArticles);
-  document.getElementById("gallery-search-input")?.addEventListener("input", renderArticlesTable);
-  document.getElementById("gallery-filter-status")?.addEventListener("change", renderArticlesTable);
+  const galleryRefreshButton = document.getElementById("gallery-refresh-btn") as HTMLButtonElement | null;
+  galleryRefreshButton?.addEventListener("click", async () => {
+    const label = galleryRefreshButton.querySelector("span");
+    galleryRefreshButton.disabled = true;
+    if (label) label.textContent = "Refreshing...";
+    try {
+      await fetchArticles();
+    } finally {
+      if (label) label.textContent = "Refresh";
+      galleryRefreshButton.disabled = false;
+    }
+  });
+  document.addEventListener("uv:gallery-tab-selected", fetchArticles);
+  document.getElementById("gallery-search-input")?.addEventListener("input", () => { galleryPagination.reset(); renderArticlesTable(); });
+  document.getElementById("gallery-filter-status")?.addEventListener("change", () => { galleryPagination.reset(); renderArticlesTable(); });
+  const gallerySearchInput = document.getElementById("gallery-search-input") as HTMLInputElement | null;
+  const galleryStatusFilter = document.getElementById("gallery-filter-status") as HTMLSelectElement | null;
+  const clearGalleryFiltersButton = document.getElementById("clear-gallery-filters-btn") as HTMLButtonElement | null;
+  const updateGalleryResetState = () => {
+    if (clearGalleryFiltersButton) clearGalleryFiltersButton.disabled = !Boolean(gallerySearchInput?.value.trim()) && galleryStatusFilter?.value === "ALL";
+  };
+  gallerySearchInput?.addEventListener("input", updateGalleryResetState);
+  galleryStatusFilter?.addEventListener("change", updateGalleryResetState);
+  clearGalleryFiltersButton?.addEventListener("click", () => {
+    if (gallerySearchInput) gallerySearchInput.value = "";
+    if (galleryStatusFilter) galleryStatusFilter.value = "ALL";
+    updateGalleryResetState();
+    galleryPagination.reset();
+    renderArticlesTable();
+  });
+  document.getElementById("gallery-mobile-sort")?.addEventListener("change", (event) => {
+    currentSortColumn = (event.currentTarget as HTMLSelectElement).value;
+    galleryPagination.reset();
+    renderArticlesTable();
+  });
+  document.getElementById("gallery-mobile-sort-direction")?.addEventListener("click", () => {
+    sortDirection = sortDirection === "desc" ? "asc" : "desc";
+    galleryPagination.reset();
+    renderArticlesTable();
+  });
+  document.querySelectorAll<HTMLTableCellElement>("#gallery-manager-root .sort-header").forEach((header) => {
+    header.addEventListener("click", () => {
+      const nextColumn = header.dataset.sort;
+      if (!nextColumn) return;
+      if (currentSortColumn === nextColumn) sortDirection = sortDirection === "desc" ? "asc" : "desc";
+      else {
+        currentSortColumn = nextColumn;
+        sortDirection = nextColumn === "publishedAt" ? "desc" : "asc";
+      }
+      galleryPagination.reset();
+      renderArticlesTable();
+    });
+  });
 
-  fetchArticles();
 </script>
